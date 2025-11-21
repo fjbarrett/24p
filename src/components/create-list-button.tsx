@@ -33,13 +33,10 @@ export function CreateListButton() {
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-slate-900/40 p-6 text-center shadow-xl">
-      <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Lists</p>
-      <h2 className="mt-2 text-3xl font-semibold text-white">Start a new shared list</h2>
-      <p className="mt-2 text-sm text-slate-400">Give it a name and invite collaborators once it is saved.</p>
+    <div className="text-center">
       <button
         onClick={() => setIsOpen(true)}
-        className="mt-4 inline-flex items-center justify-center rounded-full bg-sky-400 px-6 py-2 text-sm font-semibold text-slate-900 transition hover:bg-sky-300"
+        className="inline-flex items-center justify-center rounded-full border border-slate-500 px-6 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-800"
       >
         Create new list
       </button>
@@ -60,7 +57,7 @@ export function CreateListButton() {
                   autoFocus
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  className="mt-1 w-full rounded-2xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-sky-300 focus:outline-none"
+                  className="mt-1 w-full rounded-2xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-slate-400 focus:outline-none"
                   maxLength={64}
                 />
               </label>
@@ -76,7 +73,7 @@ export function CreateListButton() {
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="rounded-full bg-sky-400 px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+                  className="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
                 >
                   {isPending ? "Saving..." : "Save title"}
                 </button>

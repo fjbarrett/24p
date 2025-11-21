@@ -175,7 +175,7 @@ export function ListComposer({ movies }: ListComposerProps) {
         <label className="text-sm text-slate-400">
           List title
           <input
-            className="mt-1 w-full rounded-2xl border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 focus:border-sky-300 focus:outline-none"
+            className="mt-1 w-full rounded-2xl border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 focus:border-slate-400 focus:outline-none"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             maxLength={42}
@@ -186,7 +186,7 @@ export function ListComposer({ movies }: ListComposerProps) {
             type="checkbox"
             checked={isPublic}
             onChange={(event) => setIsPublic(event.target.checked)}
-            className="h-4 w-4 rounded border-slate-600 bg-slate-950 accent-sky-400"
+            className="h-4 w-4 rounded border-slate-600 bg-slate-950 accent-slate-300"
           />
           Public list (shareable link)
         </label>
@@ -206,8 +206,8 @@ export function ListComposer({ movies }: ListComposerProps) {
               onClick={() => toggleSuggested(movie)}
               className={`flex w-full items-center justify-between rounded-2xl border px-3 py-2 text-left text-sm transition ${
                 isSelected
-                  ? "border-sky-300/80 bg-sky-300/10 text-slate-50"
-                  : "border-slate-700/60 text-slate-400 hover:border-sky-300/40"
+                  ? "border-slate-300/80 bg-slate-200/10 text-slate-50"
+                  : "border-slate-700/60 text-slate-400 hover:border-slate-400/40"
               }`}
             >
               <span>
@@ -226,7 +226,7 @@ export function ListComposer({ movies }: ListComposerProps) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search millions of films..."
-          className="mt-2 w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-sky-300 focus:outline-none"
+          className="mt-2 w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-slate-400 focus:outline-none"
         />
         {searchError && <p className="mt-2 text-xs text-rose-300">{searchError}</p>}
         {detailError && !searchError && <p className="mt-2 text-xs text-rose-300">{detailError}</p>}
@@ -267,7 +267,7 @@ export function ListComposer({ movies }: ListComposerProps) {
                 <button
                   onClick={() => addTmdbResult(result)}
                   disabled={alreadySelected || selected.length >= MAX_MOVIES || addingMovieId === result.tmdbId}
-                  className="rounded-full border border-sky-300 px-3 py-1 text-xs font-semibold text-sky-200 transition enabled:hover:bg-sky-300/10 disabled:opacity-50"
+                  className="rounded-full border border-slate-400 px-3 py-1 text-xs font-semibold text-slate-200 transition enabled:hover:bg-slate-300/10 disabled:opacity-50"
                 >
                   {alreadySelected ? "Added" : addingMovieId === result.tmdbId ? "Adding..." : "Add"}
                 </button>

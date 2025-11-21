@@ -11,7 +11,9 @@ type MovieListActionsProps = {
 };
 
 export function MovieListActions({ lists, tmdbId, movieTitle }: MovieListActionsProps) {
-  const [selectedListId, setSelectedListId] = useState(lists[0]?.id ?? "");
+  const [selectedListId, setSelectedListId] = useState(
+    lists[0]?.id ?? lists[0]?.slug ?? "",
+  );
   const [newTitle, setNewTitle] = useState(`${movieTitle} watch party`);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -65,57 +67,62 @@ export function MovieListActions({ lists, tmdbId, movieTitle }: MovieListActions
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-slate-950/60 p-5 space-y-6">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Add to list</p>
-        <form className="mt-3 space-y-3" onSubmit={addToExisting}>
-          <label className="text-sm text-slate-300">
-            Choose existing
-            <select
-              value={selectedListId}
-              onChange={(event) => setSelectedListId(event.target.value)}
-              className="mt-1 w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">Select a list</option>
-              {lists.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="w-full rounded-full border border-sky-300 px-4 py-2 text-sm text-sky-200 transition hover:bg-sky-300/10 disabled:opacity-50"
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+      <form className="space-y-3" onSubmit={addToExisting}>
+        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2">
+          <span aria-hidden className="text-lg">
+            📂
+          </span>
+          <select
+            value={selectedListId}
+            onChange={(event) => setSelectedListId(event.target.value)}
+            className="w-full bg-transparent text-sm text-slate-100 outline-none"
           >
-            {isPending ? "Saving..." : "Add to list"}
-          </button>
-        </form>
-      </div>
+            <option value="">Select a list</option>
+            {lists.map((list) => (
+              <option key={list.id || list.slug} value={list.id || list.slug} className="bg-slate-900 text-slate-100">
+                {list.title}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-slate-400 to-slate-600 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-slate-800/30 transition hover:brightness-110 disabled:opacity-50"
+        >
+          <span aria-hidden className="text-lg">
+            ➕
+          </span>
+          <span>{isPending ? "Saving..." : "Add to list"}</span>
+        </button>
+      </form>
 
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Create new list</p>
-        <form className="mt-3 space-y-3" onSubmit={createNew}>
-          <label className="text-sm text-slate-300">
-            Title
-            <input
-              value={newTitle}
-              onChange={(event) => setNewTitle(event.target.value)}
-              className="mt-1 w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="w-full rounded-full bg-sky-400 px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
-          >
-            {isPending ? "Creating..." : "Create and add"}
-          </button>
-        </form>
-      </div>
+      <form className="space-y-3" onSubmit={createNew}>
+        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2">
+          <span aria-hidden className="text-lg">
+            🆕
+          </span>
+          <input
+            value={newTitle}
+            onChange={(event) => setNewTitle(event.target.value)}
+            className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 outline-none"
+            placeholder="New list title"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-slate-300 to-slate-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-slate-700/30 transition hover:brightness-110 disabled:opacity-50"
+        >
+          <span aria-hidden className="text-lg">
+            ✅
+          </span>
+          <span>{isPending ? "Creating..." : "Create + add"}</span>
+        </button>
+      </form>
 
-      {message && <p className="text-xs text-slate-300">{message}</p>}
+      {message && <p className="text-xs text-center text-slate-300">{message}</p>}
     </div>
   );
 }

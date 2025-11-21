@@ -55,8 +55,8 @@ export function RatingPanel({ movie }: RatingPanelProps) {
               onClick={() => setScore(value)}
               className={`rounded-full border px-4 py-2 text-sm transition ${
                 value === score
-                  ? "border-sky-300 bg-sky-300/10 text-sky-200"
-                  : "border-slate-600 text-slate-300 hover:border-sky-300/50"
+                  ? "border-slate-300 bg-slate-200/10 text-slate-100"
+                  : "border-slate-600 text-slate-300 hover:border-slate-400/50"
               }`}
             >
               {value}/10
@@ -69,7 +69,7 @@ export function RatingPanel({ movie }: RatingPanelProps) {
         <span>
           Your rating: <strong className="text-slate-50">{score}/10</strong>
         </span>
-        <button className="text-sky-300 hover:text-sky-200">Save rating</button>
+        <button className="text-slate-200 hover:text-white">Save rating</button>
       </div>
     </div>
   );

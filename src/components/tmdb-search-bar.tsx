@@ -70,7 +70,7 @@ export function TmdbSearchBar() {
           <Link
             key={movie.tmdbId}
             href={`/movies/${movie.tmdbId}`}
-            className="flex gap-4 rounded-3xl border border-white/5 bg-slate-900/70 p-4 transition hover:border-sky-300"
+            className="flex gap-4 rounded-3xl border border-white/5 bg-slate-900/70 p-4 transition hover:border-slate-400/70"
           >
             {movie.posterUrl ? (
               <Image

@@ -26,7 +26,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950 text-slate-50`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased text-slate-50`}
+        style={{ background: "radial-gradient(circle at 18% 0%, #111317, #050608 45%, #020303 100%)" }}
+      >
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

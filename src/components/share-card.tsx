@@ -8,7 +8,7 @@ type ShareCardProps = {
 export function ShareCard({ list }: ShareCardProps) {
   const shareUrl = `https://24p.app/${list.slug}`;
   return (
-    <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/80 via-slate-900/30 to-sky-900/30 p-6">
+    <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/80 via-slate-900/30 to-neutral-900/30 p-6">
       <p className="text-xs uppercase tracking-[0.4em] text-slate-300">Share</p>
       <h3 className="mt-3 text-2xl font-semibold text-white">{list.name}</h3>
       <p className="mt-1 text-sm text-slate-400">{list.description}</p>
@@ -28,7 +28,7 @@ export function ShareCard({ list }: ShareCardProps) {
           href={shareUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-1 block truncate text-sky-300 hover:text-sky-200"
+          className="mt-1 block truncate text-slate-200 hover:text-white"
         >
           {shareUrl}
         </Link>

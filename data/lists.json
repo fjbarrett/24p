@@ -1,5 +1,31 @@
 [
   {
+    "id": "39ea91e3-1d65-47b1-ae28-6a01a5bc5f7f",
+    "title": "Saturday Double Feature",
+    "slug": "saturday-double-feature-3",
+    "visibility": "public",
+    "createdAt": "2025-11-21T17:23:01.016Z",
+    "movies": []
+  },
+  {
+    "id": "16402196-edea-4922-a9b9-addc97fa686c",
+    "title": "Saturday Double Feature",
+    "slug": "saturday-double-feature-2",
+    "visibility": "public",
+    "createdAt": "2025-11-21T17:22:29.267Z",
+    "movies": []
+  },
+  {
+    "id": "d69b9aff-60c3-4f9d-b3ce-90ff6c1a12b2",
+    "title": "The Prestige watch party",
+    "slug": "the-prestige-watch-party",
+    "visibility": "public",
+    "createdAt": "2025-11-21T17:07:47.606Z",
+    "movies": [
+      1124
+    ]
+  },
+  {
     "id": "d4ea7bc5-e00e-4d3c-81be-bc8299dc5c01",
     "title": "Alpha watch party",
     "slug": "alpha-watch-party",
