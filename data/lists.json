@@ -1,0 +1,20 @@
+[
+  {
+    "id": "d4ea7bc5-e00e-4d3c-81be-bc8299dc5c01",
+    "title": "Alpha watch party",
+    "slug": "alpha-watch-party",
+    "visibility": "public",
+    "createdAt": "2025-11-21T16:59:25.896Z",
+    "movies": [
+      399360
+    ]
+  },
+  {
+    "id": "592919d6-cf9d-468f-abb4-11ec2de0f362",
+    "title": "Saturday Double Feature",
+    "slug": "saturday-double-feature",
+    "visibility": "public",
+    "createdAt": "2025-11-21T16:55:40.789Z",
+    "movies": []
+  }
+]
