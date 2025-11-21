@@ -54,15 +54,15 @@ export function TmdbSearchBar() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 rounded-3xl border border-slate-700 bg-slate-950/70 px-4 py-3 shadow-inner">
-        <span className="text-sm text-slate-500">🔍</span>
+      <div className="flex items-center gap-3 rounded-3xl border border-black-700 bg-black-950/70 px-4 py-3 shadow-inner">
+        <span className="text-sm text-black-500"></span>
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search for a movie title..."
-          className="flex-1 bg-transparent text-lg text-slate-100 placeholder:text-slate-500 focus:outline-none"
+          className="flex-1 bg-transparent text-lg text-black-100 placeholder:text-black-500 focus:outline-none"
         />
-        {isSearching && <span className="text-xs text-slate-500">Searching...</span>}
+        {isSearching && <span className="text-xs text-black-500">Searching...</span>}
       </div>
       {error && <p className="mt-2 text-xs text-rose-300">{error}</p>}
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -70,7 +70,7 @@ export function TmdbSearchBar() {
           <Link
             key={movie.tmdbId}
             href={`/movies/${movie.tmdbId}`}
-            className="flex gap-4 rounded-3xl border border-white/5 bg-slate-900/70 p-4 transition hover:border-slate-400/70"
+            className="flex gap-4 rounded-3xl border border-white/5 bg-black-900/70 p-4 transition hover:border-black-400/70"
           >
             {movie.posterUrl ? (
               <Image
@@ -81,26 +81,26 @@ export function TmdbSearchBar() {
                 className="h-24 w-16 rounded-xl object-cover"
               />
             ) : (
-              <div className="flex h-24 w-16 items-center justify-center rounded-xl bg-slate-800 text-xs text-slate-500">
+              <div className="flex h-24 w-16 items-center justify-center rounded-xl bg-black-800 text-xs text-black-500">
                 No art
               </div>
             )}
             <div className="flex-1">
               <h4 className="text-base font-semibold text-white">
-                {movie.title} {movie.releaseYear && <span className="text-xs text-slate-500">({movie.releaseYear})</span>}
+                {movie.title} {movie.releaseYear && <span className="text-xs text-black-500">({movie.releaseYear})</span>}
               </h4>
               {movie.genres?.length ? (
-                <p className="text-xs text-slate-500">{movie.genres.slice(0, 2).join(" • ")}</p>
+                <p className="text-xs text-black-500">{movie.genres.slice(0, 2).join(" • ")}</p>
               ) : null}
               {typeof movie.rating === "number" && (
-                <p className="text-xs text-slate-400">Community score: {movie.rating.toFixed(1)}/10</p>
+                <p className="text-xs text-black-400">Community score: {movie.rating.toFixed(1)}/10</p>
               )}
-              {movie.overview && <p className="mt-2 text-sm text-slate-400">{movie.overview}</p>}
+              {movie.overview && <p className="mt-2 text-sm text-black-400">{movie.overview}</p>}
             </div>
           </Link>
         ))}
         {!results.length && query.trim().length >= 2 && !isSearching && !error && (
-          <p className="text-sm text-slate-500">No matches yet. Try a different title.</p>
+          <p className="text-sm text-black-500">No matches yet. Try a different title.</p>
         )}
       </div>
     </div>

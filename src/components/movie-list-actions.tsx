@@ -67,20 +67,20 @@ export function MovieListActions({ lists, tmdbId, movieTitle }: MovieListActions
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-black-950/70 p-4">
       <form className="space-y-3" onSubmit={addToExisting}>
-        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black-900/70 px-3 py-2">
           <span aria-hidden className="text-lg">
             📂
           </span>
           <select
             value={selectedListId}
             onChange={(event) => setSelectedListId(event.target.value)}
-            className="w-full bg-transparent text-sm text-slate-100 outline-none"
+            className="w-full bg-transparent text-sm text-black-100 outline-none"
           >
             <option value="">Select a list</option>
             {lists.map((list) => (
-              <option key={list.id || list.slug} value={list.id || list.slug} className="bg-slate-900 text-slate-100">
+              <option key={list.id || list.slug} value={list.id || list.slug} className="bg-black-900 text-black-100">
                 {list.title}
               </option>
             ))}
@@ -89,7 +89,7 @@ export function MovieListActions({ lists, tmdbId, movieTitle }: MovieListActions
         <button
           type="submit"
           disabled={isPending}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-slate-400 to-slate-600 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-slate-800/30 transition hover:brightness-110 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-black-400 to-black-600 px-4 py-2 text-sm font-semibold text-black-950 shadow-lg shadow-black-800/30 transition hover:brightness-110 disabled:opacity-50"
         >
           <span aria-hidden className="text-lg">
             ➕
@@ -99,21 +99,21 @@ export function MovieListActions({ lists, tmdbId, movieTitle }: MovieListActions
       </form>
 
       <form className="space-y-3" onSubmit={createNew}>
-        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black-900/70 px-3 py-2">
           <span aria-hidden className="text-lg">
             🆕
           </span>
           <input
             value={newTitle}
             onChange={(event) => setNewTitle(event.target.value)}
-            className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 outline-none"
+            className="w-full bg-transparent text-sm text-black-100 placeholder:text-black-500 outline-none"
             placeholder="New list title"
           />
         </div>
         <button
           type="submit"
           disabled={isPending}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-slate-300 to-slate-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-slate-700/30 transition hover:brightness-110 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-black-300 to-black-500 px-4 py-2 text-sm font-semibold text-black-950 shadow-lg shadow-black-700/30 transition hover:brightness-110 disabled:opacity-50"
         >
           <span aria-hidden className="text-lg">
             ✅
@@ -122,7 +122,7 @@ export function MovieListActions({ lists, tmdbId, movieTitle }: MovieListActions
         </button>
       </form>
 
-      {message && <p className="text-xs text-center text-slate-300">{message}</p>}
+      {message && <p className="text-xs text-center text-black-300">{message}</p>}
     </div>
   );
 }

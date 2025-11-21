@@ -29,10 +29,10 @@ export default async function ListDetail({
 
   if (!list) {
     return (
-      <div className="px-4 py-10 text-slate-100">
-        <div className="mx-auto max-w-2xl rounded-3xl border border-white/10 bg-slate-900/40 p-8 text-center">
-          <p className="text-sm text-slate-400">List not found.</p>
-          <Link href="/" className="mt-4 inline-flex rounded-full border border-slate-600 px-5 py-2 text-sm text-slate-200">
+      <div className="px-4 py-10 text-black-100">
+        <div className="mx-auto max-w-2xl rounded-3xl border border-white/10 bg-black-900/40 p-8 text-center">
+          <p className="text-sm text-black-400">List not found.</p>
+          <Link href="/" className="mt-4 inline-flex rounded-full border border-black-600 px-5 py-2 text-sm text-black-200">
             Return home
           </Link>
         </div>
@@ -47,11 +47,11 @@ export default async function ListDetail({
   const fromParam = encodeURIComponent(`/lists/${list.slug}`);
 
   return (
-    <div className="px-4 py-10 text-slate-100 sm:px-8 lg:px-16">
-      <div className="mx-auto max-w-3xl space-y-6 rounded-3xl border border-white/10 bg-slate-900/40 p-8">
+    <div className="px-4 py-10 text-black-100 sm:px-8 lg:px-16">
+      <div className="mx-auto max-w-[1000px] space-y-6 rounded-3xl border border-white/10 bg-black-900/40 p-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-semibold text-white">{list.title}</h1>
-          <Link href="/" className="rounded-full border border-slate-600 px-4 py-2 text-sm text-slate-200">
+          <Link href="/" className="rounded-full border border-black-600 px-4 py-2 text-sm text-black-200">
             Close
           </Link>
         </div>
@@ -59,27 +59,27 @@ export default async function ListDetail({
 
         <section className="space-y-3">
         {sortedMovies.length === 0 ? (
-            <p className="text-sm text-slate-500">No movies yet. Add some from the detail pages.</p>
+            <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>
           ) : (
             <ul className="flex flex-wrap justify-start gap-3">
               {sortedMovies.map((movie) => (
                 <li key={movie.tmdbId}>
                   <Link
                     href={`/movies/${movie.tmdbId}?from=${fromParam}`}
-                    className="group relative block overflow-hidden rounded-lg border border-white/10 bg-slate-900/40 transition hover:border-slate-400"
-                    style={{ width: 200, height: 300 }}
+                    className="group relative block overflow-hidden rounded-lg border border-white/10 bg-black-900/40 transition hover:border-black-400"
+                    style={{ width: 160, height: 240 }}
                   >
                     {movie.posterUrl ? (
                       <Image
                         src={getLargePoster(movie.posterUrl)}
                         alt={`${movie.title} poster`}
-                        width={200}
-                        height={300}
-                        sizes="200px"
+                        width={160}
+                        height={240}
+                        sizes="160px"
                         className="h-full w-full rounded-md object-cover transition duration-300 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] text-slate-500">
+                      <div className="flex h-full w-full items-center justify-center bg-black-800 text-[10px] text-black-500">
                         No art
                       </div>
                     )}

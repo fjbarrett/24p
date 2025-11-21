@@ -30,7 +30,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased text-slate-50`}
         style={{ background: "radial-gradient(circle at 18% 0%, #111317, #050608 45%, #020303 100%)" }}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <div className="mx-auto w-full max-w-[1000px]">{children}</div>
+        </AuthProvider>
       </body>
     </html>
   );

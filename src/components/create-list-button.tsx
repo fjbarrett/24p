@@ -33,47 +33,47 @@ export function CreateListButton() {
   }
 
   return (
-    <div className="text-center">
+    <div className="text-left">
       <button
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center justify-center rounded-full border border-slate-500 px-6 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-800"
+        className="inline-flex items-center justify-center rounded-full border border-black-500 px-6 py-2 text-sm font-semibold text-black-100 transition hover:bg-black-800"
       >
         Create new list
       </button>
 
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black px-4"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900 p-6 text-left shadow-2xl">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black p-6 text-left shadow-2xl">
             <h3 className="text-xl font-semibold text-white">Name your list</h3>
-            <p className="mt-1 text-sm text-slate-400">We will use this to generate the shareable slug.</p>
+            <p className="mt-1 text-sm text-black-400">We will use this to generate the shareable slug.</p>
             <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
-              <label className="text-sm text-slate-300">
+              <label className="text-sm text-black-300">
                 Title
                 <input
                   autoFocus
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  className="mt-1 w-full rounded-2xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-slate-400 focus:outline-none"
+                  className="mt-1 w-full rounded-2xl border border-black-700 bg-black-950 px-3 py-2 text-sm text-black-100 focus:border-black-400 focus:outline-none"
                   maxLength={64}
                 />
               </label>
-              <div className="flex justify-end gap-2">
+              <div className="flex items-center justify-end gap-2">
+                {error && <p className="text-xs text-rose-300">{error}</p>}
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="rounded-full border border-slate-600 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-400"
+                  className="rounded-full border border-black-600 px-4 py-2 text-sm text-black-300 transition hover:border-black-400"
                 >
                   Cancel
                 </button>
-                {error && <p className="text-xs text-rose-300">{error}</p>}
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+                  className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
                 >
                   {isPending ? "Saving..." : "Save title"}
                 </button>

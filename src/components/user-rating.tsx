@@ -40,15 +40,15 @@ export function UserRating({ tmdbId, initialRating }: UserRatingProps) {
             disabled={isPending}
             className={`rounded-full border px-3 py-1.5 text-sm transition ${
               rating === value
-                ? "border-slate-300 bg-slate-200/10 text-slate-100"
-                : "border-slate-700 text-slate-200 hover:border-slate-400/50"
+                ? "border-black-300 bg-black-200/10 text-black-100"
+                : "border-black-700 text-black-200 hover:border-black-400/50"
             } ${isPending ? "cursor-wait opacity-60" : ""}`}
           >
             {value}
           </button>
         ))}
       </div>
-      {message && <p className="text-xs text-slate-500">{message}</p>}
+      {message && <p className="text-xs text-black-500">{message}</p>}
     </div>
   );
 }

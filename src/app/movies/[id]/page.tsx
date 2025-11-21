@@ -30,12 +30,12 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
   const backHref = getFromParam(resolvedSearchParams) ?? "/";
 
   return (
-    <div className="px-4 py-10 text-slate-100 sm:px-8 lg:px-16">
-      <article className="mx-auto max-w-3xl space-y-6 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-2xl backdrop-blur">
+    <div className="px-4 py-10 text-black-100 sm:px-8 lg:px-16">
+      <article className="mx-auto max-w-[1000px] space-y-6 rounded-3xl border border-white/10 bg-black-900/70 p-6 shadow-2xl backdrop-blur">
         <div className="flex justify-center">
           <Link
             href={backHref}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-300"
+            className="inline-flex items-center gap-2 rounded-full border border-black-700 px-4 py-2 text-sm text-black-200 transition hover:border-black-300"
             aria-label="Close"
           >
             <span aria-hidden>⟵</span>
@@ -45,27 +45,27 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
         <header className="flex flex-col items-start gap-4 text-left sm:flex-row sm:items-start">
           {movie.posterUrl ? (
             <Image
-              src={movie.posterUrl}
+              src={getLargePoster(movie.posterUrl)}
               alt={`${movie.title} poster`}
-              width={220}
-              height={330}
-              className="h-[330px] w-[220px] rounded-2xl object-cover shadow-lg"
+              width={200}
+              height={300}
+              className="h-[300px] w-[200px] rounded-2xl object-cover shadow-lg"
             />
           ) : (
-            <div className="flex h-[330px] w-[220px] items-center justify-center rounded-2xl bg-slate-800 text-sm text-slate-500">
+            <div className="flex h-[300px] w-[200px] items-center justify-center rounded-2xl bg-black-800 text-sm text-black-500">
               No art yet
             </div>
           )}
           <div className="flex-1 space-y-3">
             <h1 className="text-4xl font-semibold text-white sm:text-5xl">{movie.title}</h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-black-400">
               {movie.releaseYear ?? "—"} · {movie.runtime ? `${movie.runtime}m` : "Runtime TBD"}
             </p>
             {movie.genres?.length ? (
-              <p className="text-sm text-slate-400">{movie.genres.join(" • ")}</p>
+              <p className="text-sm text-black-400">{movie.genres.join(" • ")}</p>
             ) : null}
-            {movie.tagline && <p className="text-base italic text-slate-300">“{movie.tagline}”</p>}
-            {movie.overview && <p className="text-base text-slate-300">{movie.overview}</p>}
+            {movie.tagline && <p className="text-base italic text-black-300">“{movie.tagline}”</p>}
+            {movie.overview && <p className="text-base text-black-300">{movie.overview}</p>}
             <div className="h-1" />
           </div>
         </header>
@@ -108,6 +108,10 @@ function safeDecode(value: string) {
   }
 }
 
+function getLargePoster(url: string): string {
+  return url.includes("/w185/") ? url.replace("/w185/", "/w500/") : url;
+}
+
 function MovieRatingCard({
   userRating,
   lists,
@@ -118,17 +122,17 @@ function MovieRatingCard({
   tmdbId: number;
 }) {
   return (
-    <div className="space-y-5 rounded-3xl border border-white/10 bg-slate-950/60 p-5">
+    <div className="space-y-5 rounded-3xl border border-white/10 bg-black-950/60 p-5">
       <UserRating tmdbId={tmdbId} initialRating={userRating} />
       <div className="mt-4 border-t border-white/5 pt-4">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Lists featuring this film</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-black-400">Lists featuring this film</p>
         {lists.length === 0 ? (
-          <p className="mt-2 text-xs text-slate-500">Not in any list yet.</p>
+          <p className="mt-2 text-xs text-black-500">Not in any list yet.</p>
         ) : (
           <ul className="mt-2 space-y-1 text-sm">
             {lists.map((list) => (
               <li key={list.id}>
-                <Link href={`/lists/${list.slug}`} className="text-slate-200 hover:text-white">
+                <Link href={`/lists/${list.slug}`} className="text-black-200 hover:text-white">
                   {list.title}
                 </Link>
               </li>

@@ -169,35 +169,35 @@ export function ListComposer({ movies }: ListComposerProps) {
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-slate-900/40 p-6 shadow-xl">
-      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Build a list</p>
+    <div className="rounded-3xl border border-white/10 bg-black-900/40 p-6 shadow-xl">
+      <p className="text-xs uppercase tracking-[0.3em] text-black-400">Build a list</p>
       <div className="mt-3 flex flex-col gap-3">
-        <label className="text-sm text-slate-400">
+        <label className="text-sm text-black-400">
           List title
           <input
-            className="mt-1 w-full rounded-2xl border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 focus:border-slate-400 focus:outline-none"
+            className="mt-1 w-full rounded-2xl border border-black-700 bg-black-950/60 px-3 py-2 text-sm text-black-100 focus:border-black-400 focus:outline-none"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             maxLength={42}
           />
         </label>
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        <label className="flex items-center gap-2 text-sm text-black-300">
           <input
             type="checkbox"
             checked={isPublic}
             onChange={(event) => setIsPublic(event.target.checked)}
-            className="h-4 w-4 rounded border-slate-600 bg-slate-950 accent-slate-300"
+            className="h-4 w-4 rounded border-black-600 bg-black-950 accent-black-300"
           />
           Public list (shareable link)
         </label>
-        <p className="text-xs text-slate-500">
-          You can pin up to {MAX_MOVIES} titles. <span className="text-slate-300">{remainingSlots}</span> slot
+        <p className="text-xs text-black-500">
+          You can pin up to {MAX_MOVIES} titles. <span className="text-black-300">{remainingSlots}</span> slot
           {remainingSlots === 1 ? "" : "s"} left.
         </p>
       </div>
 
       <div className="mt-4 space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Starter picks</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-black-500">Starter picks</p>
         {movies.map((movie) => {
           const isSelected = selectedIds.has(`suggested-${movie.tmdbId}`);
           return (
@@ -206,13 +206,13 @@ export function ListComposer({ movies }: ListComposerProps) {
               onClick={() => toggleSuggested(movie)}
               className={`flex w-full items-center justify-between rounded-2xl border px-3 py-2 text-left text-sm transition ${
                 isSelected
-                  ? "border-slate-300/80 bg-slate-200/10 text-slate-50"
-                  : "border-slate-700/60 text-slate-400 hover:border-slate-400/40"
+                  ? "border-black-300/80 bg-black-200/10 text-black-50"
+                  : "border-black-700/60 text-black-400 hover:border-black-400/40"
               }`}
             >
               <span>
                 {movie.title}
-                {movie.releaseYear && <span className="ml-2 text-xs text-slate-500">{movie.releaseYear}</span>}
+                {movie.releaseYear && <span className="ml-2 text-xs text-black-500">{movie.releaseYear}</span>}
               </span>
               <span>{typeof movie.rating === "number" ? `${movie.rating.toFixed(1)}/10` : "—"}</span>
             </button>
@@ -220,27 +220,27 @@ export function ListComposer({ movies }: ListComposerProps) {
         })}
       </div>
 
-      <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Search TMDB</p>
+      <div className="mt-6 rounded-2xl border border-black-800 bg-black-950/40 p-4">
+        <p className="text-xs uppercase tracking-[0.3em] text-black-500">Search TMDB</p>
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search millions of films..."
-          className="mt-2 w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-slate-400 focus:outline-none"
+          className="mt-2 w-full rounded-2xl border border-black-800 bg-black-950/70 px-3 py-2 text-sm text-black-100 placeholder:text-black-600 focus:border-black-400 focus:outline-none"
         />
         {searchError && <p className="mt-2 text-xs text-rose-300">{searchError}</p>}
         {detailError && !searchError && <p className="mt-2 text-xs text-rose-300">{detailError}</p>}
         <div className="mt-3 max-h-60 space-y-2 overflow-y-auto pr-1 text-sm">
-          {isSearching && <p className="text-slate-500">Searching TMDB...</p>}
+          {isSearching && <p className="text-black-500">Searching TMDB...</p>}
           {!isSearching && searchResults.length === 0 && !searchError && query.trim().length >= 2 && (
-            <p className="text-slate-500">No matches yet. Try a different title.</p>
+            <p className="text-black-500">No matches yet. Try a different title.</p>
           )}
           {searchResults.map((result) => {
             const alreadySelected = selected.some((movie) => movie.tmdbId === result.tmdbId);
             return (
               <div
                 key={result.tmdbId}
-                className="flex items-center gap-3 rounded-2xl border border-slate-800/80 bg-slate-900/60 p-3"
+                className="flex items-center gap-3 rounded-2xl border border-black-800/80 bg-black-900/60 p-3"
               >
                 {result.posterUrl ? (
                   <Image
@@ -251,23 +251,23 @@ export function ListComposer({ movies }: ListComposerProps) {
                     className="h-16 w-12 rounded-lg object-cover"
                   />
                 ) : (
-                  <div className="flex h-16 w-12 items-center justify-center rounded-lg bg-slate-800 text-xs text-slate-500">
+                  <div className="flex h-16 w-12 items-center justify-center rounded-lg bg-black-800 text-xs text-black-500">
                     No art
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="font-medium text-slate-50">
+                  <p className="font-medium text-black-50">
                     {result.title}{" "}
-                    {result.releaseYear && <span className="text-xs text-slate-500">({result.releaseYear})</span>}
+                    {result.releaseYear && <span className="text-xs text-black-500">({result.releaseYear})</span>}
                   </p>
                   {typeof result.rating === "number" && (
-                    <p className="text-xs text-slate-500">Community score: {result.rating.toFixed(1)}/10</p>
+                    <p className="text-xs text-black-500">Community score: {result.rating.toFixed(1)}/10</p>
                   )}
                 </div>
                 <button
                   onClick={() => addTmdbResult(result)}
                   disabled={alreadySelected || selected.length >= MAX_MOVIES || addingMovieId === result.tmdbId}
-                  className="rounded-full border border-slate-400 px-3 py-1 text-xs font-semibold text-slate-200 transition enabled:hover:bg-slate-300/10 disabled:opacity-50"
+                  className="rounded-full border border-black-400 px-3 py-1 text-xs font-semibold text-black-200 transition enabled:hover:bg-black-300/10 disabled:opacity-50"
                 >
                   {alreadySelected ? "Added" : addingMovieId === result.tmdbId ? "Adding..." : "Add"}
                 </button>
@@ -277,19 +277,19 @@ export function ListComposer({ movies }: ListComposerProps) {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl bg-slate-950/60 p-4">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Preview</p>
-        <h4 className="mt-2 text-lg font-semibold text-slate-50">{title || "Untitled"}</h4>
-        <p className="text-xs text-slate-400">
+      <div className="mt-6 rounded-2xl bg-black-950/60 p-4">
+        <p className="text-xs uppercase tracking-[0.3em] text-black-500">Preview</p>
+        <h4 className="mt-2 text-lg font-semibold text-black-50">{title || "Untitled"}</h4>
+        <p className="text-xs text-black-400">
           {isPublic ? "Public" : "Private"} • {selectedCount} film{selectedCount === 1 ? "" : "s"}
         </p>
-        <ol className="mt-3 space-y-3 text-sm text-slate-200">
+        <ol className="mt-3 space-y-3 text-sm text-black-200">
           {selected.map((movie, index) => {
             const overview = truncate(movie.overview);
             return (
-              <li key={movie.id} className="flex flex-col gap-2 rounded-xl border border-slate-800/70 p-3">
+              <li key={movie.id} className="flex flex-col gap-2 rounded-xl border border-black-800/70 p-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-slate-500">{index + 1}.</span>
+                  <span className="text-xs text-black-500">{index + 1}.</span>
                   {movie.posterUrl ? (
                     <Image
                       src={movie.posterUrl}
@@ -299,29 +299,29 @@ export function ListComposer({ movies }: ListComposerProps) {
                       className="h-12 w-9 rounded-md object-cover"
                     />
                   ) : (
-                    <div className="flex h-12 w-9 items-center justify-center rounded-md bg-slate-800 text-[10px] text-slate-400">
+                    <div className="flex h-12 w-9 items-center justify-center rounded-md bg-black-800 text-[10px] text-black-400">
                       24p
                     </div>
                   )}
                   <div className="flex-1">
-                    <p className="font-medium text-slate-50">
+                    <p className="font-medium text-black-50">
                       {movie.title}{" "}
-                      {movie.releaseYear && <span className="text-xs text-slate-500">({movie.releaseYear})</span>}
+                      {movie.releaseYear && <span className="text-xs text-black-500">({movie.releaseYear})</span>}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-black-500">
                       {movie.source === "tmdb" ? "TMDB search" : "24p pick"}
                       {movie.runtime ? ` • ${movie.runtime}m` : ""}
                       {typeof movie.rating === "number" ? ` • ${movie.rating.toFixed(1)}/10` : ""}
                     </p>
-                    {movie.tagline && <p className="text-xs italic text-slate-400">“{movie.tagline}”</p>}
-                    {overview && <p className="text-xs text-slate-500">{overview}</p>}
+                    {movie.tagline && <p className="text-xs italic text-black-400">“{movie.tagline}”</p>}
+                    {overview && <p className="text-xs text-black-500">{overview}</p>}
                     {movie.genres?.length ? (
-                      <p className="text-[11px] text-slate-500">{movie.genres.slice(0, 3).join(" • ")}</p>
+                      <p className="text-[11px] text-black-500">{movie.genres.slice(0, 3).join(" • ")}</p>
                     ) : null}
                   </div>
                   <button
                     onClick={() => removeMovie(movie.id)}
-                    className="text-xs text-slate-400 transition hover:text-rose-300"
+                    className="text-xs text-black-400 transition hover:text-rose-300"
                   >
                     Remove
                   </button>
@@ -329,7 +329,7 @@ export function ListComposer({ movies }: ListComposerProps) {
               </li>
             );
           })}
-          {selected.length === 0 && <li className="text-slate-500">Select a film to start curating.</li>}
+          {selected.length === 0 && <li className="text-black-500">Select a film to start curating.</li>}
         </ol>
       </div>
     </div>

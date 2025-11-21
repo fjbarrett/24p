@@ -20,8 +20,8 @@ export function SignInButton({ variant = "primary", className = "" }: SignInButt
 
   const styles =
     variant === "primary"
-      ? "bg-slate-200 text-slate-900 hover:bg-slate-300"
-      : "border border-slate-600 text-slate-100 hover:border-white/80";
+      ? "bg-black-200 text-black-900 hover:bg-black-300"
+      : "border border-black-600 text-white hover:border-white/80";
 
   async function handleClick() {
     if (session?.user) {
@@ -39,7 +39,7 @@ export function SignInButton({ variant = "primary", className = "" }: SignInButt
   return (
     <button
       onClick={handleClick}
-      className={`rounded-full px-5 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300 ${styles} ${className}`}
+      className={`rounded-full px-5 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black-300 ${styles} ${className}`}
       disabled={pending}
     >
       {label}

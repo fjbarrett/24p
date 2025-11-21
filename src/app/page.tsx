@@ -1,9 +1,7 @@
-import Link from "next/link";
 import { CreateListButton } from "@/components/create-list-button";
-import { ImportListForm } from "@/components/import-list-form";
 import { ListGallery } from "@/components/list-gallery";
+import { ImportListModal } from "@/components/import-list-modal";
 import { SignInButton } from "@/components/sign-in-button";
-import { StatsBar } from "@/components/stats-bar";
 import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import { loadLists } from "@/lib/list-store";
 import { getServerSession } from "next-auth";
@@ -13,24 +11,31 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  const showHero = !session;
-  const lists = await loadLists();
+  const lists = session ? await loadLists() : [];
+
+  if (!session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 py-10 text-black-100 sm:px-8 lg:px-16">
+        <div className="w-full flex items-center justify-center">
+          <Header isSignedIn={false} centered />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="px-4 py-10 text-slate-100 sm:px-8 lg:px-16">
-      <div className="mx-auto max-w-6xl space-y-14">
-        <Header />
+    <div className="px-4 py-10 text-black-100 sm:px-8 lg:px-16">
+      <div className="mx-auto max-w-[1000px] space-y-14">
+        <Header isSignedIn />
 
         <main className="space-y-12">
           <div className="grid gap-8 lg:grid-cols-[3fr,2fr]">
             <SearchSection />
-            {showHero && <HeroSection />}
           </div>
 
-          <div className="space-y-6 rounded-3xl border border-white/10 bg-slate-900/30 p-6 backdrop-blur" id="lists">
+          <div className="space-y-6 rounded-3xl border border-white/10 bg-black-900/30 p-6 backdrop-blur" id="lists">
             <CreateListButton />
             <ListGallery lists={lists} />
-            <ImportListForm />
           </div>
         </main>
       </div>
@@ -38,13 +43,19 @@ export default async function Home() {
   );
 }
 
-function Header() {
+function Header({ isSignedIn, centered = false }: { isSignedIn: boolean; centered?: boolean }) {
+  const layoutClass = centered
+    ? "flex flex-col items-center gap-4 text-center"
+    : "flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center";
   return (
-    <header className="flex flex-col items-start justify-between gap-4 rounded-3xl border border-white/5 bg-slate-900/40 px-6 py-5 shadow-xl shadow-neutral-900/20 sm:flex-row sm:items-center">
+    <header
+      className={`${layoutClass} rounded-3xl border border-white/5 bg-black-900/40 px-6 py-5 shadow-xl shadow-neutral-900/20`}
+    >
       <div>
         <p className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">24p</p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className={`flex flex-wrap gap-2 ${centered ? "justify-center" : ""}`}>
+        {isSignedIn && <ImportListModal />}
         <SignInButton />
       </div>
     </header>
@@ -53,40 +64,8 @@ function Header() {
 
 function SearchSection() {
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-900/50 p-6 shadow-lg">
-      <h1 className="text-3xl font-semibold text-white">Search</h1>
-      <p className="text-sm text-slate-400">Use the search below to pull posters, runtimes, and genres directly from TMDB.</p>
-      <div className="mt-6">
+    <div>
         <TmdbSearchBar />
-      </div>
-    </section>
-  );
-}
-
-function HeroSection() {
-  return (
-    <section className="space-y-10 rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/70 to-slate-950/70 p-8 shadow-2xl">
-      <span className="inline-flex rounded-full border border-slate-500/50 px-4 py-1 text-xs uppercase tracking-[0.4em] text-slate-200">
-        Connect. Curate. Share.
-      </span>
-      <div className="space-y-4">
-        <h2 className="text-4xl font-semibold leading-tight text-white md:text-5xl">
-          24p brings your movie diary, curated lists, and Google account into one web app.
-        </h2>
-        <p className="text-lg text-slate-300">
-          Sign in with Google, drop 1–10 ratings, build collaborative shelves, and broadcast the lists that define your taste.
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <SignInButton className="text-base" />
-        <Link
-          href="#lists"
-          className="rounded-full border border-white/20 px-5 py-2 text-sm font-medium text-white transition hover:border-white"
-        >
-          Browse demo lists
-        </Link>
-      </div>
-      <StatsBar />
-    </section>
+    </div>
   );
 }
