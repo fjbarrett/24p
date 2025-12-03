@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { rustApiFetch } from "@/lib/rust-api-client";
 
 type ImportListFormProps = {
+  userEmail?: string | null;
   onComplete?: () => void;
 };
 
-export function ImportListForm({ onComplete }: ImportListFormProps) {
+export function ImportListForm({ userEmail, onComplete }: ImportListFormProps) {
   const [title, setTitle] = useState("Imported list");
   const [raw, setRaw] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -16,20 +18,24 @@ export function ImportListForm({ onComplete }: ImportListFormProps) {
     event.preventDefault();
     startTransition(async () => {
       setMessage(null);
-      const response = await fetch("/api/lists/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, data: raw }),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setMessage(data.error ?? "Unable to import lists");
+      const email = userEmail?.trim().toLowerCase() ?? "";
+      if (!email) {
+        setMessage("Sign in to import lists.");
         return;
       }
-      setRaw("");
-      setMessage("Import complete");
-      onComplete?.();
-      window.location.reload();
+
+      try {
+        await rustApiFetch("/lists/import", {
+          method: "POST",
+          body: JSON.stringify({ title, data: raw, userEmail: email }),
+        });
+        setRaw("");
+        setMessage("Import complete");
+        onComplete?.();
+        window.location.reload();
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Unable to import lists");
+      }
     });
   }
 
@@ -62,7 +68,7 @@ export function ImportListForm({ onComplete }: ImportListFormProps) {
         {message && <p className="text-xs text-black-400">{message}</p>}
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || !userEmail}
           className="rounded-full border border-black-500 px-4 py-2 text-sm text-black-100 transition hover:bg-black-800 disabled:opacity-50"
         >
           {isPending ? "Importing..." : "Import list"}

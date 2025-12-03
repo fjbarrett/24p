@@ -3,21 +3,30 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { SavedList } from "@/lib/list-store";
+import { rustApiFetch } from "@/lib/rust-api-client";
 
 type MovieListActionsProps = {
   lists: SavedList[];
   tmdbId: number;
   movieTitle: string;
+  userEmail: string | null;
 };
 
-export function MovieListActions({ lists, tmdbId, movieTitle }: MovieListActionsProps) {
-  const [selectedListId, setSelectedListId] = useState(
-    lists[0]?.id ?? lists[0]?.slug ?? "",
-  );
+export function MovieListActions({ lists, tmdbId, movieTitle, userEmail }: MovieListActionsProps) {
+  const normalizedEmail = userEmail?.trim().toLowerCase() ?? "";
+  const [selectedListId, setSelectedListId] = useState(lists[0]?.id ?? "");
   const [newTitle, setNewTitle] = useState(`${movieTitle} watch party`);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  if (!normalizedEmail) {
+    return (
+      <div className="space-y-2 rounded-2xl bg-black-950/70 p-4">
+        <p className="text-sm text-black-200">Sign in to create or save lists.</p>
+      </div>
+    );
+  }
 
   function addToExisting(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,19 +35,17 @@ export function MovieListActions({ lists, tmdbId, movieTitle }: MovieListActions
       return;
     }
     startTransition(async () => {
-      setMessage(null);
-      const response = await fetch(`/api/lists/${selectedListId}/items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tmdbId }),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setMessage(data.error ?? "Unable to add movie");
-        return;
+      try {
+        setMessage(null);
+        await rustApiFetch(`/lists/${selectedListId}/items`, {
+          method: "POST",
+          body: JSON.stringify({ tmdbId, userEmail: normalizedEmail }),
+        });
+        setMessage("Movie added to list");
+        router.refresh();
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Unable to add movie");
       }
-      setMessage("Movie added to list");
-      router.refresh();
     });
   }
 
@@ -49,27 +56,25 @@ export function MovieListActions({ lists, tmdbId, movieTitle }: MovieListActions
       return;
     }
     startTransition(async () => {
-      setMessage(null);
-      const response = await fetch("/api/lists", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle, tmdbId }),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setMessage(data.error ?? "Unable to create list");
-        return;
+      try {
+        setMessage(null);
+        await rustApiFetch("/lists", {
+          method: "POST",
+          body: JSON.stringify({ title: newTitle, tmdbId, userEmail: normalizedEmail }),
+        });
+        setNewTitle("");
+        setMessage("New list created with movie");
+        router.refresh();
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Unable to create list");
       }
-      setNewTitle("");
-      setMessage("New list created with movie");
-      router.refresh();
     });
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-black-950/70 p-4">
+    <div className="space-y-3 rounded-2xl bg-black-950/70 p-4">
       <form className="space-y-3" onSubmit={addToExisting}>
-        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black-900/70 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-xl bg-black-900/70 px-3 py-2">
           <span aria-hidden className="text-lg">
             📂
           </span>
@@ -80,7 +85,12 @@ export function MovieListActions({ lists, tmdbId, movieTitle }: MovieListActions
           >
             <option value="">Select a list</option>
             {lists.map((list) => (
-              <option key={list.id || list.slug} value={list.id || list.slug} className="bg-black-900 text-black-100">
+              <option
+                key={list.id || list.slug}
+                value={list.id ?? ""}
+                disabled={!list.id}
+                className="bg-black-900 text-black-100"
+              >
                 {list.title}
               </option>
             ))}
@@ -99,7 +109,7 @@ export function MovieListActions({ lists, tmdbId, movieTitle }: MovieListActions
       </form>
 
       <form className="space-y-3" onSubmit={createNew}>
-        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black-900/70 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-xl bg-black-900/70 px-3 py-2">
           <span aria-hidden className="text-lg">
             🆕
           </span>

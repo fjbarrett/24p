@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { SimplifiedMovie } from "@/lib/tmdb";
+import { rustApiFetch } from "@/lib/rust-api-client";
 
 export function TmdbSearchBar() {
   const [query, setQuery] = useState("");
@@ -24,13 +25,10 @@ export function TmdbSearchBar() {
     const timeout = setTimeout(async () => {
       try {
         setIsSearching(true);
-        const response = await fetch(`/api/tmdb/search?query=${encodeURIComponent(trimmed)}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          throw new Error("TMDB search is unavailable right now.");
-        }
-        const payload = (await response.json()) as { results: SimplifiedMovie[] };
+        const payload = await rustApiFetch<{ results: SimplifiedMovie[] }>(
+          `/tmdb/search?query=${encodeURIComponent(trimmed)}`,
+          { signal: controller.signal },
+        );
         if (!controller.signal.aborted) {
           setResults(payload.results ?? []);
           setError(null);
@@ -54,7 +52,7 @@ export function TmdbSearchBar() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 rounded-3xl border border-black-700 bg-black-950/70 px-4 py-3 shadow-inner">
+      <div className="flex items-center gap-3 rounded-3xl bg-black-950/70 px-4 py-3 shadow-inner">
         <span className="text-sm text-black-500"></span>
         <input
           value={query}

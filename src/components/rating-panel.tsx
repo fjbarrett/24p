@@ -66,9 +66,6 @@ export function RatingPanel({ movie }: RatingPanelProps) {
       </div>
 
       <div className="mt-4 flex items-center justify-between text-sm text-black-300">
-        <span>
-          Your rating: <strong className="text-black-50">{score}/10</strong>
-        </span>
         <button className="text-black-200 hover:text-white">Save rating</button>
       </div>
     </div>

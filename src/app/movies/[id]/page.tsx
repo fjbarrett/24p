@@ -21,24 +21,23 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
     throw new Error("Invalid TMDB id");
   }
 
-  const movie = await fetchTmdbMovie(tmdbId);
-  const lists = await loadLists();
+  const [movie, session] = await Promise.all([fetchTmdbMovie(tmdbId), getServerSession(authOptions)]);
+  const userEmail = session?.user?.email?.toLowerCase() ?? null;
+  const lists = userEmail ? await loadLists(userEmail) : [];
   const listsContaining = lists.filter((list) => list.movies.includes(tmdbId));
-  const session = await getServerSession(authOptions);
-  const userEmail = session?.user?.email?.toLowerCase();
   const userRating = userEmail ? await getRating(userEmail, tmdbId) : null;
   const backHref = getFromParam(resolvedSearchParams) ?? "/";
 
   return (
     <div className="px-4 py-10 text-black-100 sm:px-8 lg:px-16">
       <article className="mx-auto max-w-[1000px] space-y-6 rounded-3xl border border-white/10 bg-black-900/70 p-6 shadow-2xl backdrop-blur">
-        <div className="flex justify-center">
+        <div className="flex justify-left">
           <Link
             href={backHref}
-            className="inline-flex items-center gap-2 rounded-full border border-black-700 px-4 py-2 text-sm text-black-200 transition hover:border-black-300"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm text-black-200 transition hover:border-black-300"
             aria-label="Close"
           >
-            <span aria-hidden>⟵</span>
+            {/* <span aria-hidden>⟵</span> */}
             <span>Back</span>
           </Link>
         </div>
@@ -76,8 +75,9 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
             userRating={userRating}
             lists={listsContaining}
             tmdbId={tmdbId}
+            userEmail={userEmail ?? null}
           />
-          <MovieListActions lists={lists} tmdbId={tmdbId} movieTitle={movie.title} />
+          <MovieListActions lists={lists} tmdbId={tmdbId} movieTitle={movie.title} userEmail={userEmail} />
         </section>
       </article>
     </div>
@@ -116,15 +116,17 @@ function MovieRatingCard({
   userRating,
   lists,
   tmdbId,
+  userEmail,
 }: {
   userRating: number | null;
   lists: SavedList[];
   tmdbId: number;
+  userEmail: string | null;
 }) {
   return (
-    <div className="space-y-5 rounded-3xl border border-white/10 bg-black-950/60 p-5">
-      <UserRating tmdbId={tmdbId} initialRating={userRating} />
-      <div className="mt-4 border-t border-white/5 pt-4">
+    <div className="space-y-5 rounded-3xl bg-black-950/60 p-5">
+      <UserRating tmdbId={tmdbId} initialRating={userRating} userEmail={userEmail} />
+      <div className="mt-4 pt-4">
         <p className="text-xs uppercase tracking-[0.3em] text-black-400">Lists featuring this film</p>
         {lists.length === 0 ? (
           <p className="mt-2 text-xs text-black-500">Not in any list yet.</p>

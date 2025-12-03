@@ -4,44 +4,58 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { SavedList } from "@/lib/list-store";
 import { DEFAULT_LIST_COLOR_ID, normalizeListColor } from "@/lib/list-colors";
+import { rustApiFetch } from "@/lib/rust-api-client";
 
-export function ListEditor({ list }: { list: SavedList }) {
+export function ListEditor({ list, viewerEmail }: { list: SavedList; viewerEmail?: string | null }) {
+  const normalizedViewerEmail = viewerEmail?.trim().toLowerCase() ?? "";
+  const isOwner = Boolean(normalizedViewerEmail && normalizedViewerEmail === list.userEmail);
   const [title, setTitle] = useState(list.title);
   const [slug, setSlug] = useState(list.slug);
-  const [color] = useState(normalizeListColor(list.color ?? DEFAULT_LIST_COLOR_ID));
+  const [color, setColor] = useState(normalizeListColor(list.color ?? DEFAULT_LIST_COLOR_ID));
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
 
+  if (!isOwner) {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm text-black-300" style={{ paddingLeft: 16 }}>
+          /{slug}
+        </p>
+        <p className="text-xs text-black-500" style={{ paddingLeft: 16 }}>
+          Only the creator can edit this list.
+        </p>
+      </div>
+    );
+  }
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     startTransition(async () => {
-      setMessage(null);
-      const response = await fetch(`/api/lists/${list.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, slug, color }),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setMessage(data.error ?? "Unable to save");
-        return;
+      try {
+        setMessage(null);
+        await rustApiFetch(`/lists/${list.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ title, slug, color, userEmail: list.userEmail }),
+        });
+        setMessage("Saved changes");
+        router.refresh();
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Unable to save");
       }
-      setMessage("Saved changes");
-      router.refresh();
     });
   }
 
   if (!isEditing) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-slate-300">/{slug}</p>
-        {message && <p className="text-xs text-slate-400">{message}</p>}
+        <p className="text-sm text-black-300" style={{ paddingLeft: 16 }}>/{slug}</p>
+        {message && <p className="text-xs text-black-400" style={{ paddingLeft: 16 }}>{message}</p>}
         <button
           type="button"
           onClick={() => setIsEditing(true)}
-          className="rounded-full border border-slate-500 px-4 py-2 text-sm text-slate-100 transition hover:bg-slate-800"
+          className="rounded-full px-4 py-2 text-sm text-black-100 transition hover:bg-black-800"
         >
           Edit list
         </button>
@@ -90,15 +104,17 @@ export function ListEditor({ list }: { list: SavedList }) {
           disabled={isPending}
           onClick={() => {
             startTransition(async () => {
-              setMessage(null);
-              const response = await fetch(`/api/lists/${list.id}`, { method: "DELETE" });
-              if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                setMessage(data.error ?? "Unable to delete");
-                return;
+              try {
+                setMessage(null);
+                await rustApiFetch(`/lists/${list.id}`, {
+                  method: "DELETE",
+                  body: JSON.stringify({ userEmail: list.userEmail }),
+                });
+                router.push("/");
+                router.refresh();
+              } catch (error) {
+                setMessage(error instanceof Error ? error.message : "Unable to delete");
               }
-              router.push("/");
-              router.refresh();
             });
           }}
           className="rounded-full border border-rose-400 px-4 py-2 text-sm text-rose-300 disabled:opacity-50"

@@ -1,0 +1,92 @@
+# Command History
+- cat HISTORY.md — attempted to read project history (file missing).
+- cat CONTEXT.md — attempted to read project context (file missing).
+- cat AGENTS.md — read repository guidelines.
+- apply_patch — created HISTORY.md and recorded initial commands.
+- apply_patch — recorded apply_patch usage in history log.
+- rg "/source/app/api" — searched repository for node API path references (none found).
+- apply_patch — logged search command in history.
+- cat README.md — reviewed project overview and API usage notes.
+- apply_patch — logged README review in history.
+- rg "RUST_API" src rust-api — located Rust API configuration references.
+- apply_patch — logged rust API search in history.
+- find src/app/api -maxdepth 3 -type f — enumerated Next.js API route files.
+- rg "/api/lists" src — searched for list API fetch usage.
+- rg "/api/" src — searched for Next API fetch calls across components.
+- apply_patch — logged API route discovery and search commands.
+- find rust-api/src -maxdepth 2 -type f — inspected Rust API source layout.
+- cat next.config.ts — checked Next.js configuration for API routing.
+- cat rust-api/Cargo.toml — reviewed Rust API dependencies.
+- apply_patch — logged latest inspection commands.
+- cat package.json — inspected project dependencies and scripts.
+- apply_patch — logged package.json review.
+- apply_patch (rust-api/src/main.rs) — added Query/warn imports and TMDB constants for Rust API expansion.
+- apply_patch (rust-api/src/main.rs) — wired TMDB client/config, new routes, and state for Rust API.
+- rg "async fn create_list" -n rust-api/src/main.rs — located list creation handler for refactor.
+- apply_patch (rust-api/src/main.rs) — routed list creation through helper and added import handler.
+- apply_patch (rust-api/src/main.rs) — refactored ratings route to shared upsert helper.
+- apply_patch (rust-api/src/main.rs) — added TMDB fetch helpers, import parsing, and shared list/rating helpers.
+- apply_patch (src/components/user-rating.tsx) — sent ratings directly to Rust API using user email.
+- apply_patch (src/app/movies/[id]/page.tsx) — passed user email into rating component.
+- apply_patch (src/components/import-list-modal.tsx) — threaded session email into import form.
+- apply_patch (src/components/import-list-form.tsx) — posted imports to Rust API and gated on sign-in.
+- apply_patch (src/components/tmdb-search-bar.tsx) — pulled TMDB search results from Rust API.
+- apply_patch (src/components/list-composer 2.tsx) — moved TMDB search/detail fetches to Rust API.
+- apply_patch (src/lib/tmdb-server.ts) — fetched TMDB detail through Rust API.
+- rg "/api/" src — verified removal of direct Next.js API fetch calls.
+- apply_patch — logged command batch in history.
+- apply_patch (README.md) — documented Rust API endpoints replacing Next.js API routes.
+- apply_patch (CONTEXT.md) — added project context reflecting Rust API usage and env needs.
+- apply_patch — logged doc/context updates.
+- 2025-11-24 01:43:49 MST — cat HISTORY.md — reviewed history log per instructions.
+- 2025-11-24 01:43:49 MST — cat CONTEXT.md — reviewed project context.
+- 2025-11-24 01:43:57 MST — apply_patch — logged command usage updates in HISTORY.md.
+- 2025-11-24 01:44:10 MST — cat AGENTS.md — reviewed repository guidelines.
+- 2025-11-24 01:44:20 MST — rg --files --hidden -g '!.git/*' -g '!node_modules/*' -g '!rust-api/target/*' — enumerated repository files (excluding caches).
+- 2025-11-24 01:45:00 MST — cat README.md — refreshed on project overview and setup.
+- 2025-11-24 01:45:11 MST — cat package.json — reviewed scripts and dependencies.
+- 2025-11-24 01:45:20 MST — cat next.config.ts tsconfig.json eslint.config.mjs postcss.config.mjs — reviewed build/lint configuration.
+- 2025-11-24 01:45:30 MST — cat .gitignore ./.gitignore 2 — reviewed ignore patterns.
+- 2025-11-24 01:45:39 MST — cat src/app/layout.tsx src/app/globals.css src/app/page.tsx — reviewed layout, global styles, and home page logic.
+- 2025-11-24 01:45:51 MST — cat src/lib/auth.ts src/lib/rust-api-client.ts src/lib/list-store.ts src/lib/ratings-store.ts — reviewed auth and Rust API client utilities.
+- 2025-11-24 01:46:01 MST — cat src/lib/tmdb-server.ts src/lib/tmdb.ts src/lib/list-colors.ts src/lib/app-data.ts src/types/next-auth.d.ts — reviewed TMDB helpers, list colors, curated data, and NextAuth types.
+- 2025-11-24 01:46:12 MST — cat src/components/share-card.tsx src/components/create-list-button.tsx src/components/feature-grid.tsx src/components/sign-in-button.tsx — reviewed card, list creation, feature grid, and auth button components.
+- 2025-11-24 01:46:23 MST — cat src/components/import-list-modal.tsx src/components/movie-list-actions.tsx src/components/list-gallery.tsx src/components/import-list-form.tsx — reviewed import modal/form, movie actions, and list gallery components.
+- 2025-11-24 01:46:35 MST — cat src/components/list-editor.tsx src/components/user-rating.tsx \"src/components/list-composer 2.tsx\" — reviewed list editor, rating widget, and list composer components.
+- 2025-11-24 01:46:48 MST — cat src/components/providers/session-provider.tsx src/components/tmdb-search-bar.tsx src/components/rating-panel.tsx src/components/stats-bar.tsx — reviewed session provider, search, rating, and stats components.
+- 2025-11-24 01:47:03 MST — cat src/app/movies/[id]/page.tsx src/app/lists/[slug]/page.tsx — reviewed movie detail and list detail pages.
+- 2025-11-24 01:47:17 MST — cat src/app/api/auth/[...nextauth]/route.ts src/app/api/ratings/route.ts src/app/api/tmdb/search/route.ts src/app/api/tmdb/movie/route.ts src/app/api/lists/route.ts src/app/api/lists/[id]/route.ts src/app/api/lists/[id]/items/route.ts src/app/api/lists/import/route.ts — reviewed Next.js API routes.
+- 2025-11-24 01:47:30 MST — cat data/lists.json data/ratings.json — reviewed seed data for lists and ratings.
+- 2025-11-24 01:47:44 MST — cat public/window.svg public/globe.svg public/next.svg public/vercel.svg public/file.svg — reviewed public SVG assets.
+- 2025-11-24 01:47:57 MST — cat next-env.d.ts — reviewed generated Next.js type declarations.
+- 2025-11-24 01:48:11 MST — cat rust-api/.gitignore rust-api/Cargo.toml — reviewed Rust API gitignore and dependencies.
+- 2025-11-24 01:48:22 MST — cat rust-api/src/main.rs — reviewed Rust API server, routes, and TMDB helpers.
+- 2025-11-24 01:48:58 MST — apply_patch — logged recent command history entries.
+- 2025-11-24 01:50:57 MST — psql select 1 — attempted DB connectivity using provided DATABASE_URL (connection failed: no server on 5432).
+- 2025-11-24 01:52:32 MST — docker ps -a — docker unavailable (command not found) while checking for existing containers.
+- 2025-11-24 01:52:32 MST — date — captured current timestamp for logging.
+- 2025-11-24 01:56:46 MST — npm run dev — confirmed Next.js dev server starts with Turbopack (stopped after initial ready).
+- 2025-11-24 01:57:00 MST — cargo run — built Rust API with dummy env; startup failed due to Postgres pool timeout (no database running).
+- 2025-11-25 17:28:42 MST — apply_patch — added tower-http trace layer to log Rust API requests.
+- 2025-11-25 17:28:42 MST — apply_patch — refreshed CONTEXT.md to note Rust request logging.
+- 2025-11-25 09:27:40 MST — apply_patch — removed legacy Next.js data API routes and documented the Rust-only backend running beside Postgres.
+- 2025-11-25 19:17:14 MST — apply_patch — added list owner email to API rows/responses.
+- 2025-11-25 19:17:14 MST — apply_patch — introduced list query/create payload fields for userEmail and tmdbId.
+- 2025-11-25 19:17:14 MST — apply_patch — updated schema defaults to private lists and ensured user_email column/index exist.
+- 2025-11-25 19:17:14 MST — apply_patch — scoped list listing to userEmail via query validation.
+- 2025-11-25 19:17:14 MST — apply_patch — required creator email on list creation and auto-seeded movies when provided.
+- 2025-11-25 19:17:14 MST — apply_patch — threaded import list creation through owner email.
+- 2025-11-25 19:17:14 MST — apply_patch — enforced owner checks on list updates.
+- 2025-11-25 19:17:14 MST — apply_patch — enforced owner checks on adding movies to lists.
+- 2025-11-25 19:17:14 MST — apply_patch — enforced owner checks on list deletion.
+- 2025-11-25 19:17:14 MST — apply_patch — stored private visibility and owner email when inserting lists.
+- 2025-11-25 19:17:14 MST — apply_patch — normalized owner email in list API responses.
+- 2025-11-25 19:17:14 MST — apply_patch — added userEmail handling to list-store utilities and API payloads.
+- 2025-11-25 19:17:14 MST — apply_patch — guarded API list mapping against missing owner email.
+- 2025-11-25 19:17:14 MST — apply_patch — passed signed-in email into CreateListButton and list loading on home.
+- 2025-11-25 19:17:14 MST — apply_patch — scoped movie detail list loading to signed-in user email.
+- 2025-11-25 19:17:14 MST — apply_patch — gated movie list actions behind sign-in and forwarded userEmail to list mutations.
+- 2025-11-25 19:17:14 MST — apply_patch — restricted list editing/deleting to owners and forwarded userEmail to API.
+- 2025-11-25 19:17:14 MST — apply_patch — propagated viewer email into list detail editor access.
+- 2025-11-25 19:17:14 MST — apply_patch — recorded new history entries for recent modifications.
+- 2025-11-25 19:17:14 MST — apply_patch — refreshed CONTEXT.md to describe list ownership and privacy changes.

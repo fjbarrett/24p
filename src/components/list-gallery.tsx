@@ -19,7 +19,7 @@ export function ListGallery({ lists }: ListGalleryProps) {
   return (
     <section id="lists" className="space-y-4">
       {/* <p className="text-xs uppercase tracking-[0.4em] text-black-400">Your latest lists</p> */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2" style={{ paddingLeft: 16 }}>
         {lists.map((list) => (
           <Link
             key={list.id}

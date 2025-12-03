@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { ImportListForm } from "@/components/import-list-form";
 
 export function ImportListModal() {
   const [isOpen, setIsOpen] = useState(false);
+  const { data: session } = useSession();
+  const userEmail = session?.user?.email?.toLowerCase() ?? null;
 
   return (
     <>
@@ -28,7 +31,7 @@ export function ImportListModal() {
               </button>
             </div>
             <div className="mt-4">
-              <ImportListForm onComplete={() => setIsOpen(false)} />
+              <ImportListForm userEmail={userEmail} onComplete={() => setIsOpen(false)} />
             </div>
           </div>
         </div>

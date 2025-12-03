@@ -1,41 +1,36 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { Pool } from "pg";
+const DEFAULT_RUST_API_BASE_URL = process.env.NODE_ENV === "development" ? "http://localhost:8080" : "";
+const RUST_API_BASE_URL = [
+  process.env.RUST_API_BASE_URL,
+  process.env.RUST_API_URL,
+  process.env.NEXT_PUBLIC_RUST_API_BASE_URL,
+  process.env.NEXT_PUBLIC_RUST_API_URL,
+  DEFAULT_RUST_API_BASE_URL,
+].find((value) => typeof value === "string" && value.trim());
 
-const DATABASE_URL = process.env.DATABASE_URL;
-const DATA_PATH = path.join(process.cwd(), "data", "ratings.json");
-
-const pool = DATABASE_URL ? new Pool({ connectionString: DATABASE_URL }) : null;
-let ensuredTable = false;
-
-type RatingRow = {
-  user_email: string;
-  tmdb_id: number;
-  rating: number;
-  source: string;
-  updated_at: string;
-};
-
-async function ensureTable() {
-  if (!pool || ensuredTable) return;
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS user_ratings (
-      user_email text NOT NULL,
-      tmdb_id integer NOT NULL,
-      rating integer NOT NULL,
-      source text NOT NULL,
-      updated_at timestamptz NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (user_email, tmdb_id)
-    );
-  `);
-  ensuredTable = true;
+function getRustApiBaseUrl() {
+  const base = RUST_API_BASE_URL?.trim();
+  if (!base) {
+    throw new Error("Rust API base URL is not configured. Set RUST_API_BASE_URL or NEXT_PUBLIC_RUST_API_BASE_URL.");
+  }
+  return base.replace(/\/$/, "");
 }
 
-async function query<T = RatingRow>(sql: string, params: unknown[] = []) {
-  if (!pool) throw new Error("DATABASE_URL is not configured");
-  await ensureTable();
-  const result = await pool.query<T>(sql, params);
-  return result.rows;
+async function fetchFromRustApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const baseUrl = getRustApiBaseUrl();
+  const suffix = path.startsWith("/") ? path : `/${path}`;
+  const response = await fetch(`${baseUrl}${suffix}`, {
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    ...init,
+  });
+  const isJson = response.headers.get("content-type")?.includes("application/json");
+  const data = isJson ? await response.json().catch(() => ({})) : {};
+  if (!response.ok) {
+    const detail = typeof (data as Record<string, unknown>).error === "string"
+      ? (data as { error: string }).error
+      : response.statusText;
+    throw new Error(detail);
+  }
+  return data as T;
 }
 
 export async function saveRatings(
@@ -43,74 +38,29 @@ export async function saveRatings(
   ratings: Array<{ tmdbId: number; rating: number; source: string }>,
 ) {
   if (!ratings.length) return;
-  if (!pool) {
-    const existing = await loadRatingsFromFile();
-    const key = userEmail.toLowerCase();
-    const current = existing[key] ?? {};
-    ratings.forEach(({ tmdbId, rating, source }) => {
-      current[tmdbId] = { rating, source, updatedAt: new Date().toISOString() };
-    });
-    existing[key] = current;
-    await saveRatingsToFile(existing);
-    return;
-  }
-  const sql = `
-    INSERT INTO user_ratings (user_email, tmdb_id, rating, source)
-    VALUES ($1, $2, $3, $4)
-    ON CONFLICT (user_email, tmdb_id)
-    DO UPDATE SET rating = EXCLUDED.rating, source = EXCLUDED.source, updated_at = NOW()
-  `;
-  for (const entry of ratings) {
-    await query(sql, [userEmail, entry.tmdbId, entry.rating, entry.source]);
-  }
+  await fetchFromRustApi<{ updated: number }>("/ratings", {
+    method: "POST",
+    body: JSON.stringify({
+      userEmail,
+      ratings,
+    }),
+  });
 }
 
 export async function getRating(userEmail: string, tmdbId: number) {
-  if (!pool) {
-    const existing = await loadRatingsFromFile();
-    const key = userEmail.toLowerCase();
-    return existing[key]?.[tmdbId]?.rating ?? null;
-  }
-  const rows = await query<RatingRow>(
-    "SELECT rating FROM user_ratings WHERE user_email = $1 AND tmdb_id = $2",
-    [userEmail, tmdbId],
+  const result = await fetchFromRustApi<{ rating: number | null }>(
+    `/ratings/${encodeURIComponent(userEmail)}/${tmdbId}`,
   );
-  return rows.length ? rows[0].rating : null;
+  return typeof result.rating === "number" ? result.rating : null;
 }
 
 export async function getRatingsForUser(userEmail: string) {
-  if (!pool) {
-    const existing = await loadRatingsFromFile();
-    const key = userEmail.toLowerCase();
-    return existing[key] ? { ...existing[key] } : {};
-  }
-  const rows = await query<RatingRow>(
-    "SELECT tmdb_id, rating FROM user_ratings WHERE user_email = $1",
-    [userEmail],
-  );
+  const result = await fetchFromRustApi<{
+    ratings: Array<{ tmdbId: number; rating: number; source: string; updatedAt: string }>;
+  }>(`/ratings/${encodeURIComponent(userEmail)}`);
   const map: Record<number, number> = {};
-  rows.forEach((row) => {
-    map[row.tmdb_id] = row.rating;
+  result.ratings.forEach((entry) => {
+    map[entry.tmdbId] = entry.rating;
   });
   return map;
-}
-
-type FileRatings = Record<string, Record<number, { rating: number; source: string; updatedAt: string }>>;
-
-async function loadRatingsFromFile(): Promise<FileRatings> {
-  try {
-    const contents = await fs.readFile(DATA_PATH, "utf8");
-    return JSON.parse(contents) as FileRatings;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      await fs.mkdir(path.dirname(DATA_PATH), { recursive: true });
-      await fs.writeFile(DATA_PATH, "{}\n", "utf8");
-      return {};
-    }
-    throw error;
-  }
-}
-
-async function saveRatingsToFile(data: FileRatings) {
-  await fs.writeFile(DATA_PATH, JSON.stringify(data, null, 2), "utf8");
 }

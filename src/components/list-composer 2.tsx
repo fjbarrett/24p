@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import type { SimplifiedMovie } from "@/lib/tmdb";
+import { rustApiFetch } from "@/lib/rust-api-client";
 
 type ListComposerProps = {
   movies: SimplifiedMovie[];
@@ -70,13 +71,10 @@ export function ListComposer({ movies }: ListComposerProps) {
     const delay = setTimeout(async () => {
       try {
         setIsSearching(true);
-        const response = await fetch(`/api/tmdb/search?query=${encodeURIComponent(trimmed)}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          throw new Error("Unable to search TMDB right now.");
-        }
-        const payload = (await response.json()) as { results: SimplifiedMovie[] };
+        const payload = await rustApiFetch<{ results: SimplifiedMovie[] }>(
+          `/tmdb/search?query=${encodeURIComponent(trimmed)}`,
+          { signal: controller.signal },
+        );
         if (!controller.signal.aborted) {
           setSearchResults(payload.results ?? []);
           setSearchError(null);
@@ -126,14 +124,7 @@ export function ListComposer({ movies }: ListComposerProps) {
     try {
       let detail = detailCache[movie.tmdbId];
       if (!detail) {
-        const response = await fetch(`/api/tmdb/movie?tmdbId=${movie.tmdbId}`);
-        if (!response.ok) {
-          throw new Error("Unable to load TMDB metadata.");
-        }
-        const payload = (await response.json()) as { detail: SimplifiedMovie };
-        if (!payload.detail) {
-          throw new Error("TMDB response missing detail payload.");
-        }
+        const payload = await rustApiFetch<{ detail: SimplifiedMovie }>(`/tmdb/movie/${movie.tmdbId}`);
         detail = payload.detail;
         setDetailCache((previous) => ({ ...previous, [movie.tmdbId]: detail }));
       }

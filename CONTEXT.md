@@ -1,0 +1,11 @@
+# Project Context
+- Next.js 16 app uses the Rust API (default `http://localhost:8080`) for lists, ratings, TMDB search/detail, and list imports; Next.js API routes remain only for NextAuth.
+- Node/Next.js data API routes have been removed (`/api/lists`, `/api/ratings`, `/api/tmdb`); the frontend only calls the Rust service through `rustApiFetch`/`buildRustApiUrl`.
+- Rust API emits request logs via `tower_http::trace::TraceLayer`; control verbosity with `RUST_LOG`.
+- Rust API is intended to run alongside Postgres on the same host; configure `DATABASE_URL` for the local database and use `APP_HOST`/`APP_PORT` to expose the service.
+- Rust API endpoints: `/lists`, `/lists/{id}`, `/lists/by-slug/{slug}`, `/lists/{id}/items`, `/lists/import`, `/ratings` plus `/ratings/{user}/{tmdbId}`, `/tmdb/search`, and `/tmdb/movie/{tmdbId}`. It requires `DATABASE_URL` and `TMDB_API_KEY` in the Rust process environment.
+- Frontend calls go through `rustApiFetch`/`buildRustApiUrl`: list creation/import, movie rating updates (with user email), TMDB search/detail (`TmdbSearchBar`, list composer), and server-side movie detail fetches (`fetchTmdbMovie`).
+- Lists: each list stores `user_email` and defaults to `visibility='private'`. `/lists` requires a `userEmail` query and returns only that user’s lists; create/update/delete/add-item calls also require matching `userEmail`. Slug detail remains accessible if the URL is shared.
+- Frontend list handling: home loads lists only for signed-in users and passes `userEmail` into `CreateListButton`. Movie detail pages load lists for the signed-in user (or none when signed out) and gate list actions behind sign-in. `ListEditor` allows edits/deletes only for the creator based on `userEmail`.
+- Auth: Google via NextAuth (`src/app/api/auth/[...nextauth]/route.ts`); UI expects `RUST_API_BASE_URL` and `NEXT_PUBLIC_RUST_API_BASE_URL` to be set for client/server calls.
+- Data: TMDB images are allowed in `next.config.ts`; app data seeds live in `src/lib/app-data.ts`. Tests folder not yet present; Rust API in `rust-api/`.

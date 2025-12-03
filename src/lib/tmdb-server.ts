@@ -1,37 +1,27 @@
 import "server-only";
 
 import { cache } from "react";
-import {
-  mapTmdbMovieDetails,
-  type SimplifiedMovie,
-  type TmdbMovieDetailsResult,
-} from "@/lib/tmdb";
+import type { SimplifiedMovie } from "@/lib/tmdb";
+import { buildRustApiUrl } from "@/lib/rust-api-client";
 
-const TMDB_API_BASE = "https://api.themoviedb.org/3";
-const TMDB_API_KEY = process.env.TMDB_API_KEY;
-
-if (!TMDB_API_KEY) {
-  console.warn("TMDB_API_KEY is not set. Server-side movie rendering will be skipped until configured.");
-}
+const RUST_TMDB_REVALIDATE_SECONDS = 60 * 60;
 
 export const fetchTmdbMovie = cache(async (tmdbId: number): Promise<SimplifiedMovie> => {
-  if (!TMDB_API_KEY) {
-    throw new Error("TMDB_API_KEY is not configured.");
-  }
-
-  const endpoint = `${TMDB_API_BASE}/movie/${tmdbId}?api_key=${TMDB_API_KEY}&language=en-US`;
-  const response = await fetch(endpoint, {
-    next: { revalidate: 60 * 60 },
+  const response = await fetch(buildRustApiUrl(`/tmdb/movie/${tmdbId}`), {
+    next: { revalidate: RUST_TMDB_REVALIDATE_SECONDS },
     headers: { Accept: "application/json" },
   });
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`TMDB lookup failed for id ${tmdbId}: ${body}`);
+    throw new Error(`Rust TMDB lookup failed for id ${tmdbId}: ${body}`);
   }
 
-  const payload = (await response.json()) as TmdbMovieDetailsResult;
-  return mapTmdbMovieDetails(payload);
+  const payload = (await response.json()) as { detail?: SimplifiedMovie };
+  if (!payload.detail) {
+    throw new Error(`Rust TMDB response missing detail for id ${tmdbId}`);
+  }
+  return payload.detail;
 });
 
 export async function fetchTmdbMovies(tmdbIds: number[]): Promise<SimplifiedMovie[]> {

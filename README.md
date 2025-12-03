@@ -7,6 +7,10 @@ A Next.js 14 + App Router experience for 24p, the collaborative movie-listing ap
 - NextAuth.js (Google OAuth provider, session management)
 - React server components + client components for interactive list/rating builders
 
+## Backend architecture
+- Rust Axum API is the sole backend for lists, ratings, and TMDB queries; it runs on the same host as Postgres, using `APP_HOST`/`APP_PORT` to bind and `DATABASE_URL` to reach the local database.
+- The Next.js API folder now only houses NextAuth; legacy `/api/lists`, `/api/ratings`, and `/api/tmdb` routes have been removed in favor of the Rust service accessed via `RUST_API_BASE_URL`/`NEXT_PUBLIC_RUST_API_BASE_URL`.
+
 ## Getting started
 1. Install deps (the repo ships without `node_modules`):
    ```bash
@@ -17,8 +21,8 @@ A Next.js 14 + App Router experience for 24p, the collaborative movie-listing ap
    ```bash
    cp .env.example .env.local
    ```
-3. Populate `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`, `TMDB_API_KEY`, and `DATABASE_URL` (any Postgres connection string). `NEXTAUTH_URL` should match the dev server URL. Request the TMDB key from https://www.themoviedb.org/settings/api (use the “API Read Access Token (v4 auth)” or v3 key).
-4. Run the dev server:
+3. Populate `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`, `TMDB_API_KEY`, `DATABASE_URL` (any Postgres connection string), **and** point the frontend at the Rust API with `RUST_API_BASE_URL=http://localhost:8080` and `NEXT_PUBLIC_RUST_API_BASE_URL=http://localhost:8080`. `NEXTAUTH_URL` should match the dev server URL. Request the TMDB key from https://www.themoviedb.org/settings/api (use the “API Read Access Token (v4 auth)” or v3 key). The TMDB key is consumed by the Rust API now, so export it in the shell that runs `cargo run -p rust-api` (or add it to a `.env` file in `rust-api/`).
+4. Start the Rust API (`cargo run -p rust-api` from the `rust-api/` directory) and then run the dev server:
    ```bash
    npm run dev
    ```
@@ -31,18 +35,20 @@ A Next.js 14 + App Router experience for 24p, the collaborative movie-listing ap
 - Wrap additional routes in `getServerSession(authOptions)` to protect dashboards once you connect storage.
 
 ## Lists, ratings, and sharing
+- All list and rating reads/writes now go through the Rust API (`http://localhost:8080` by default); there is no Next.js/Postgres fallback, so keep the Rust service running and the base URL env vars set.
 - Mock curated metadata + TMDB IDs live in `src/lib/app-data.ts`. Replace it with real queries once you attach Postgres.
-- `CreateListButton` (`src/components/create-list-button.tsx`) posts to `/api/lists` (backed by Postgres via the `pg` client). `ImportListForm` (`src/components/import-list-form.tsx`) ingests Letterboxd/IMDb CSV text through `/api/lists/import` (sign-in required); imported rows also store your personal rating (via the `user_ratings` table) using your Google account email. The saved lists render under the hero via `ListGallery` (`src/components/list-gallery.tsx`). List detail pages (`/lists/[slug]`) let you rename or delete a list via `ListEditor`.
-- `TmdbSearchBar` (`src/components/tmdb-search-bar.tsx`) powers the prominent home search so users can jump straight into finding films and click through to detail pages.
+- `CreateListButton` (`src/components/create-list-button.tsx`) posts directly to the Rust API `/lists` endpoint. `ImportListForm` (`src/components/import-list-form.tsx`) now sends CSV/text imports to the Rust API `/lists/import` route (sign-in required) and forwards your email so imported ratings are persisted in `user_ratings`. The saved lists render under the hero via `ListGallery` (`src/components/list-gallery.tsx`). List detail pages (`/lists/[slug]`) let you rename or delete a list via `ListEditor`.
+- `TmdbSearchBar` (`src/components/tmdb-search-bar.tsx`) powers the prominent home search so users can jump straight into finding films and click through to detail pages using the Rust TMDB proxy.
 - `ShareCard` (`src/components/share-card.tsx`) represents the social card we will hydrate with dynamic stats per list.
-- Movie detail pages live under `/movies/[id]`, pulling TMDB data server-side; the page now lets you add the film to an existing list or create a new one on the fly.
+- Movie detail pages live under `/movies/[id]`, pulling TMDB data server-side through the Rust API; the page now lets you add the film to an existing list or create a new one on the fly.
+- Point list reads/writes at the Rust service by setting `NEXT_PUBLIC_RUST_API_BASE_URL` (e.g. `http://localhost:8080`); server components can also read `RUST_API_BASE_URL` to stay in sync. With these set, the UI now talks to the Rust API for list CRUD and movie additions instead of the Next.js API routes.
 
 
 ## TMDB-powered list creator
-- The API route `src/app/api/tmdb/search/route.ts` proxies the TMDB movie search endpoint and trims the payload to the fields the UI needs (title, release year, rating, poster).
-- The detail route `src/app/api/tmdb/movie/route.ts` fetches per-film metadata (runtime, genres, tagline) used across search results and detail pages.
-- The lists API (`src/app/api/lists/route.ts`, `src/app/api/lists/[id]/route.ts`, and `src/app/api/lists/[id]/items/route.ts`) reads/writes the Postgres table defined below via helpers from `src/lib/list-store.ts`.
-- Provide `TMDB_API_KEY` and `DATABASE_URL` to the environment. Without them the routes respond with HTTP 500.
+- The Rust API exposes `/tmdb/search` (movie search) and `/tmdb/movie/{tmdbId}` (detail) and trims payloads to the fields the UI needs (title, release year, rating, poster, runtime, genres, tagline).
+- The Rust lists API (`/lists`, `/lists/{id}`, `/lists/by-slug/{slug}`, `/lists/{id}/items`) reads/writes the Postgres table defined below via helpers from `src/lib/list-store.ts`.
+- Imports are handled by the Rust `/lists/import` route, which parses Letterboxd/IMDb CSV text, looks up TMDB IDs, creates the list, and upserts any personal ratings under your email.
+- Provide `TMDB_API_KEY` and `DATABASE_URL` to the Rust API environment. Without them the endpoints respond with HTTP 500.
 - Remote poster art is loaded from `image.tmdb.org`; see `next.config.ts` for the configured allowlist.
 
 ## Scripts

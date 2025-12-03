@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  const lists = session ? await loadLists() : [];
+  const userEmail = session?.user?.email?.toLowerCase() ?? "";
+  const lists = userEmail ? await loadLists(userEmail) : [];
 
   if (!session) {
     return (
@@ -33,8 +34,8 @@ export default async function Home() {
             <SearchSection />
           </div>
 
-          <div className="space-y-6 rounded-3xl border border-white/10 bg-black-900/30 p-6 backdrop-blur" id="lists">
-            <CreateListButton />
+          <div className="space-y-6 rounded-3xl bg-black-900/30 p-6 backdrop-blur" id="lists">
+            <CreateListButton userEmail={userEmail} />
             <ListGallery lists={lists} />
           </div>
         </main>

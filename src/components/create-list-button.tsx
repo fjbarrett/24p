@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { rustApiFetch } from "@/lib/rust-api-client";
 
-export function CreateListButton() {
+export function CreateListButton({ userEmail }: { userEmail: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("Saturday Double Feature");
   const [error, setError] = useState<string | null>(null);
@@ -15,15 +16,15 @@ export function CreateListButton() {
     startTransition(async () => {
       try {
         setError(null);
-        const response = await fetch("/api/lists", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title }),
-        });
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          throw new Error(data.error ?? "Unable to save list");
+        const email = userEmail.trim().toLowerCase();
+        if (!email) {
+          setError("Sign in to create lists");
+          return;
         }
+        await rustApiFetch("/lists", {
+          method: "POST",
+          body: JSON.stringify({ title, userEmail: email }),
+        });
         setIsOpen(false);
         router.refresh();
       } catch (err) {

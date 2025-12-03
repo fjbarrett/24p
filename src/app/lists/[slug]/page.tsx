@@ -42,26 +42,30 @@ export default async function ListDetail({
 
   const movies = list.movies.length ? await fetchTmdbMovies(list.movies) : [];
   const session = await getServerSession(authOptions);
-  const ratingsMap = session?.user?.email ? await getRatingsForUser(session.user.email) : {};
+  const viewerEmail = session?.user?.email?.toLowerCase() ?? null;
+  const ratingsMap = viewerEmail ? await getRatingsForUser(viewerEmail) : {};
   const sortedMovies = sort === "rating" ? sortMoviesByRating(movies, ratingsMap, list.movies) : movies;
   const fromParam = encodeURIComponent(`/lists/${list.slug}`);
 
   return (
     <div className="px-4 py-10 text-black-100 sm:px-8 lg:px-16">
-      <div className="mx-auto max-w-[1000px] space-y-6 rounded-3xl border border-white/10 bg-black-900/40 p-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold text-white">{list.title}</h1>
-          <Link href="/" className="rounded-full border border-black-600 px-4 py-2 text-sm text-black-200">
-            Close
+      <div className="mx-auto max-w-[1000px] space-y-6 rounded-3xl border border-white/10 bg-black-900/70 p-6 shadow-2xl backdrop-blur">
+              <div className="flex justify-left">
+       <Link href="/" className="rounded-full px-4 py-2 text-sm text-black-200">
+            {/* <span aria-hidden>⟵</span> */}
+            <span>Back</span>
           </Link>
         </div>
-        <ListEditor list={list} />
+        <div className="flex items-center justify-between" style={{paddingLeft: 16}}>
+          <h1 className="text-3xl font-semibold text-white">{list.title}</h1>
+        </div>
+        <ListEditor list={list} viewerEmail={viewerEmail} />
 
         <section className="space-y-3">
         {sortedMovies.length === 0 ? (
             <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>
           ) : (
-            <ul className="flex flex-wrap justify-start gap-3">
+            <ul className="flex flex-wrap justify-start gap-3" style={{ paddingLeft: 16 }}>
               {sortedMovies.map((movie) => (
                 <li key={movie.tmdbId}>
                   <Link

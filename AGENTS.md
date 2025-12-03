@@ -1,5 +1,13 @@
 # Repository Guidelines
 
+# On boot
+- Read in each file in repo (excluding venv and cache directories)
+- Read in HISTORY.md to give history of project
+- Read in CONTEXT.md to give project context
+
+## On each command
+- Append any command that modifies a file or directory with a tiny explanation and date time to HISTORY.md (do not include basic directory commands like ls and sed)
+- Format CONTEXT.md on each change to give agent updated project context
 Use this guide to keep early contributions to 24p consistent while the codebase is still being assembled; update it whenever new tooling lands.
 
 ## Project Structure & Module Organization
