@@ -90,3 +90,155 @@
 - 2025-11-25 19:17:14 MST — apply_patch — propagated viewer email into list detail editor access.
 - 2025-11-25 19:17:14 MST — apply_patch — recorded new history entries for recent modifications.
 - 2025-11-25 19:17:14 MST — apply_patch — refreshed CONTEXT.md to describe list ownership and privacy changes.
+- 2025-12-03 00:38:16 MST — apply_patch — added tower-http CORS dependency and middleware to Rust API for browser requests.
+- 2025-12-03 00:38:17 MST — apply_patch — recorded tower-http as a direct dependency in Cargo.lock.
+- 2025-12-03 00:38:18 MST — cargo check — verified Rust API builds cleanly after adding CORS support.
+- 2025-12-03 00:38:19 MST — apply_patch — documented Rust API CORS support in CONTEXT.md.
+- 2025-12-03 00:49:28 MST — apply_patch — removed movie-detail UI to create lists and stripped icons from MovieListActions.
+- 2025-12-03 00:49:28 MST — apply_patch — updated movie detail page to stop passing movieTitle into list actions.
+- 2025-12-03 00:50:11 MST — apply_patch — enlarged movie-detail add-to-list select/button to match rating control sizing.
+- 2025-12-03 00:54:25 MST — apply_patch — added floating GlobalSearchTray for TMDB search on every page.
+- 2025-12-03 00:54:25 MST — apply_patch — wired GlobalSearchTray into root layout for persistence.
+- 2025-12-03 00:53:24 MST — apply_patch — adjusted GlobalSearchTray layout to mirror home search styling and center at top.
+- 2025-12-03 00:54:23 MST — apply_patch — removed GlobalSearchTray and reverted layout import to stop floating search UI.
+- 2025-12-03 00:58:29 MST — apply_patch — restored list ownership in Rust API (user_email column, private visibility, ownership checks on CRUD).
+- 2025-12-03 00:58:29 MST — apply_patch — scoped list fetches by userEmail and required owner for list lookup by slug/id.
+- 2025-12-03 00:58:29 MST — apply_patch — updated frontend list-store and list detail to pass viewer email for private access.
+- 2025-12-03 00:58:29 MST — cargo check — verified Rust API builds after ownership changes.
+- 2025-12-03 01:01:39 MST — apply_patch — set global page background to pure black.
+- 2025-12-04 09:25:37 MST — apply_patch (rust-api/src/main.rs) — attempted TMDB lookups via Strawberry Worker cache before TMDB fallback.
+- 2025-12-04 09:25:37 MST — apply_patch (CONTEXT.md) — documented optional Strawberry TMDB proxy env.
+- 2025-12-04 09:48:20 MST — apply_patch — forced TMDB search/detail to use the Strawberry proxy exclusively in rust-api/src/main.rs.
+- 2025-12-04 09:48:20 MST — apply_patch — updated CONTEXT.md to note the required Strawberry proxy for TMDB data.
+- 2025-12-04 09:48:20 MST — cargo check — verified Rust API builds after Strawberry-only TMDB routing changes.
+- 2025-12-04 09:49:21 MST — apply_patch (src/components/user-rating.tsx) — sorted rating selector 10→1 and removed “/10” labels.
+- 2025-12-04 09:49:21 MST — apply_patch (CONTEXT.md) — noted rating selector ordering change.
+- 2025-12-04 09:54:00 MST — apply_patch (src/components/list-gallery.tsx) — added list preview modal with poster grid fetched from Rust TMDB endpoint and handled client-side interaction.
+- 2025-12-04 09:54:00 MST — apply_patch (CONTEXT.md) — documented dashboard list modal behavior.
+- 2025-12-04 09:54:42 MST — apply_patch (src/components/list-gallery.tsx) — fixed client directive quoting to restore parsing.
+- 2025-12-04 09:56:27 MST — apply_patch (src/components/list-gallery.tsx) — reduced modal size, increased backdrop transparency to 50%, and constrained poster grid columns.
+- 2025-12-04 09:57:53 MST — apply_patch (src/components/list-gallery.tsx) — tightened modal width and set poster tiles to a fixed aspect to prevent overflow.
+- 2025-12-04 09:58:34 MST — apply_patch (src/components/list-gallery.tsx) — set modal backdrop to solid black.
+- 2025-12-04 10:01:56 MST — apply_patch (src/components/list-gallery.tsx) — forced modal backdrop color via inline style to ensure full opacity.
+- 2025-12-04 10:04:44 MST — apply_patch (src/components/list-gallery.tsx) — reinforced modal backdrop with full-screen sizing and explicit rgba(0,0,0,1).
+- 2025-12-04 10:05:55 MST — apply_patch (src/components/list-gallery.tsx) — recentered modal overlay with padded, solid-black backdrop.
+- 2025-12-04 10:25:11 MST — apply_patch (src/components/list-gallery.tsx) — reverted list gallery to simple links (removed modal preview overlay).
+- 2025-12-04 10:25:11 MST — apply_patch (CONTEXT.md) — removed modal preview note.
+- 2025-12-04 10:27:00 MST — apply_patch (rust-api/src/main.rs) — added IMDb/Letterboxd rating fields to TMDB DTOs sourced via Strawberry.
+- 2025-12-04 10:27:00 MST — apply_patch (src/lib/tmdb.ts) — surfaced IMDb/Letterboxd ratings on SimplifiedMovie.
+- 2025-12-04 10:27:00 MST — apply_patch (src/components/tmdb-search-bar.tsx, src/components/list-composer 2.tsx) — displayed community ratings using IMDb/Letterboxd when present.
+- 2025-12-04 10:27:00 MST — cargo check — verified Rust API builds after rating field additions.
+- 2025-12-04 10:28:34 MST — apply_patch (src/app/movies/[id]/page.tsx) — showed IMDb/Letterboxd community ratings on movie detail header.
+- 2025-12-04 10:31:00 MST — apply_patch (rust-api/src/main.rs) — fetched IMDb/Letterboxd ratings via Strawberry /ratings/:imdbID and included them in TMDB detail responses.
+- 2025-12-04 10:31:00 MST — cargo check — verified Rust API builds after ratings fetch integration.
+- 2025-12-04 10:33:00 MST — apply_patch (src/app/movies/[id]/page.tsx) — styled IMDb/Letterboxd ratings with badges and removed score denominators on movie detail.
+- 2025-12-04 10:34:00 MST — apply_patch (src/app/movies/[id]/page.tsx) — turned community ratings into IMDb/Letterboxd links without labels.
+- 2025-12-04 10:35:38 MST — apply_patch (src/app/movies/[id]/page.tsx) — simplified community ratings into inline IMDb/LB links without labels or colors.
+- 2025-12-04 10:37:30 MST — apply_patch (rust-api/src/main.rs, src/lib/tmdb.ts) — returned imdbId in movie payloads for external rating links; cargo check.
+- 2025-12-04 10:38:30 MST — apply_patch (src/lib/tmdb.ts) — ensured movie detail mapping includes imdbId so IMDb links resolve.
+- 2025-12-04 10:41:15 MST — apply_patch (rust-api/src/main.rs, src/lib/tmdb.ts, src/app/movies/[id]/page.tsx) — requested TMDB external_ids, carried imdbId through mapping, and limited detail view to IMDb/Letterboxd links (no TMDB fallback).
+- 2025-12-04 10:43:51 MST — apply_patch (src/lib/tmdb-server.ts) — disabled caching for TMDB detail fetches to keep ratings fresh; updated CONTEXT.md.
+- 2025-12-04 10:46:38 MST — apply_patch (src/lib/tmdb-server.ts) — throttled TMDB detail fetches to reduce concurrent Strawberry requests when loading large lists.
+- 2025-12-04 10:49:02 MST — apply_patch (src/app/lists/[slug]/page.tsx) — shrank posters and centered a 5-column grid on desktop for list detail.
+- 2025-12-04 10:51:21 MST — apply_patch (src/app/lists/[slug]/page.tsx) — switched list detail posters to the lower-res w185 TMDB images.
+- 2025-12-04 10:52:54 MST — apply_patch (src/lib/list-store.ts) — added localStorage caching for lists and cache updates on list mutations.
+- 2025-12-04 10:55:00 MST — apply_patch (src/lib/tmdb-server.ts) — added sessionStorage cache for TMDB movie details to reduce repeat Strawberry requests.
+- 2025-12-04 10:58:43 MST — apply_patch (src/app/lists/[slug]/page.tsx, src/components/list-movies-grid.tsx) — moved list movie loading to a client grid with sessionStorage cache and chunked fetches for Strawberry; adjusted layout remains 5-across.
+- 2025-12-04 10:57:08 MST — apply_patch (src/lib/tmdb-server.ts) — added server-side in-memory TMDB cache with TTL for faster list loads.
+- 2025-12-04 11:00:00 MST — apply_patch (src/lib/tmdb-server.ts) — removed server-side TMDB cache per request; kept client sessionStorage-only caching.
+- 2025-12-04 11:01:24 MST — apply_patch (src/components/list-movies-grid.tsx) — removed hover zoom effect on list posters.
+- 2025-12-04 13:18:20 MST — apply_patch (package.json) — added Bun packageManager hint.
+- 2025-12-04 13:18:27 MST — rm -rf node_modules package-lock.json — removed npm artifacts before Bun install.
+- 2025-12-04 13:18:34 MST — bun install — installed dependencies with Bun and generated bun.lock.
+- 2025-12-04 13:20:07 MST — apply_patch (README.md) — documented Bun usage in setup and scripts.
+- 2025-12-04 13:45:52 MST — apply_patch (src/components/list-sort-controls.tsx) — added list sort control for rating sources.
+- 2025-12-04 13:45:52 MST — apply_patch (src/app/lists/[slug]/page.tsx) — surfaced sort control on list detail pages.
+- 2025-12-04 13:45:52 MST — apply_patch (src/components/list-movies-grid.tsx) — enabled sorting by IMDb or Letterboxd ratings with list-order fallback.
+- 2025-12-04 13:45:52 MST — apply_patch (CONTEXT.md) — recorded list sort options in project context.
+- 2025-12-04 13:48:15 MST — apply_patch (src/components/list-sort-controls.tsx) — added asc/desc toggle behavior and indicator for list sorting.
+- 2025-12-04 13:48:15 MST — apply_patch (src/app/lists/[slug]/page.tsx) — threaded sort direction through query params to list grid.
+- 2025-12-04 13:48:15 MST — apply_patch (src/components/list-movies-grid.tsx) — respected asc/desc direction when sorting ratings.
+- 2025-12-04 13:48:15 MST — apply_patch (CONTEXT.md) — noted sortable asc/desc list control.
+- 2025-12-04 13:50:22 MST — apply_patch (src/components/list-movies-grid.tsx) — overlaid active sort rating on list posters.
+- 2025-12-04 13:51:16 MST — apply_patch (src/components/list-movies-grid.tsx) — set rating badge background to solid black.
+- 2025-12-04 13:52:10 MST — apply_patch (src/components/list-movies-grid.tsx) — forced rating badge background to pure black with inline style for visibility.
+- 2025-12-05 11:13:10 MST — apply_patch (src/components/list-movies-grid.tsx) — added list title prop and export state scaffolding for CSV download.
+- 2025-12-05 11:13:11 MST — apply_patch (src/components/list-movies-grid.tsx) — mapped export rows to include list name, IDs, years, and ratings.
+- 2025-12-05 11:13:12 MST — apply_patch (src/components/list-movies-grid.tsx) — wired export button UI and download trigger for CSV.
+- 2025-12-05 11:13:13 MST — apply_patch (src/components/list-movies-grid.tsx) — added filename slugifier for CSV exports.
+- 2025-12-05 11:13:14 MST — apply_patch (src/components/list-movies-grid.tsx) — fixed CSV escaping to handle quotes and newlines.
+- 2025-12-05 11:13:15 MST — apply_patch (src/app/lists/[slug]/page.tsx) — passed list title into movie grid for export metadata.
+- 2025-12-05 12:48:52 MST — apply_patch (rust-api/src/main.rs) — added tmdb_id to parsed import entries for reusing exported CSVs.
+- 2025-12-05 12:48:53 MST — apply_patch (rust-api/src/main.rs) — preferred provided TMDB ids during list import and reused rating storage.
+- 2025-12-05 12:48:54 MST — apply_patch (rust-api/src/main.rs) — extended CSV header parsing to accept movie title/TMDB id columns from exports.
+- 2025-12-05 12:48:55 MST — apply_patch (rust-api/src/main.rs) — ensured non-header imports include tmdb_id placeholder.
+- 2025-12-05 12:48:56 MST — apply_patch (src/components/import-list-form.tsx) — noted that exports from the page can be pasted for import.
+- 2025-12-05 12:57:50 MST — apply_patch (rust-api/src/main.rs) — set import default rating source to “import” when “Your Rating” column exists.
+- 2025-12-05 12:57:50 MST — apply_patch (rust-api/src/main.rs) — added unit test for parsing exported CSV with TMDB ids.
+- 2025-12-05 12:57:50 MST — cargo test parses_exported_csv_with_tmdb_ids --quiet — verified exported CSV parsing covers TMDB ids and ratings.
+- 2025-12-06 11:55:12 MST — apply_patch (src/app/page.tsx, CONTEXT.md) — replaced header title with larger logo-only presentation and noted context.
+- 2025-12-06 12:07:13 MST — apply_patch (src/app/page.tsx, src/components/import-list-modal.tsx, CONTEXT.md) — aligned create/import buttons together with matching styling on the home lists section.
+- 2025-12-06 12:08:16 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — swapped search placeholder text for a magnifying glass icon and documented it.
+- 2025-12-06 12:08:44 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — set the search placeholder magnifying glass to white and updated context.
+- 2025-12-06 12:09:37 MST — bun add lucide-react — added lucide-react icon pack dependency for search icon.
+- 2025-12-06 12:09:37 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — replaced Unicode placeholder with lucide Search icon and documented usage.
+- 2025-12-06 12:10:24 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — enlarged the lucide search icon in the TMDB search input and updated context.
+- 2025-12-06 12:14:45 MST — apply_patch (src/components/tmdb-search-bar.tsx, src/app/page.tsx, CONTEXT.md) — moved search beside the auth button, added slide-out input with dropdown results, and updated context.
+- 2025-12-06 12:15:25 MST — apply_patch (src/components/tmdb-search-bar.tsx) — removed border around search icon button, keeping hover fill only.
+- 2025-12-06 12:16:30 MST — apply_patch (src/components/tmdb-search-bar.tsx) — focused the expanding search input and set the caret at the end on open.
+- 2025-12-06 12:18:41 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — positioned the search icon inside the expanded input on the left and updated context description.
+- 2025-12-06 12:19:55 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — collapsed search on blur when empty while keeping queries open; updated context.
+- 2025-12-06 14:44:33 MST — apply_patch (src/app/page.tsx, src/components/list-gallery.tsx, CONTEXT.md) — adjusted home layout for mobile-first (stacked actions, compact list section padding, corrected empty-state copy) and documented the layout tuning.
+- 2025-12-06 14:46:39 MST — apply_patch (src/app/page.tsx, CONTEXT.md) — repositioned mobile header actions (sign-out top-right, search beneath) and updated context.
+- 2025-12-06 16:02:14 MST — apply_patch (src/app/page.tsx, CONTEXT.md) — compressed header height and reordered mobile header: sign-out at top-right, logo centered beneath, search under the logo.
+- 2025-12-06 16:03:13 MST — apply_patch (src/app/page.tsx, src/components/tmdb-search-bar.tsx, CONTEXT.md) — centered header stack (sign-out, larger logo, bigger search icon/input) and documented layout update.
+- 2025-12-06 16:04:32 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — made search icon start centered then slide left into the input on open; updated context.
+- 2025-12-06 16:05:21 MST — apply_patch (src/app/page.tsx) — removed outer page padding to make the view flush.
+- 2025-12-06 16:05:21 MST — apply_patch (CONTEXT.md) — noted removal of outer page padding for mobile-first layout.
+- 2025-12-06 11:52:35 MST — apply_patch (src/app/page.tsx) — added logo image next to 24p title with rounded corners.
+- 2025-12-06 16:26:05 MST — apply_patch (src/app/page.tsx) — hid the TMDB search bar/magnifying icon when the user is signed out.
+- 2025-12-06 16:28:12 MST — apply_patch (src/app/page.tsx, src/components/sign-in-button.tsx, CONTEXT.md) — moved the auth button below the logo, renamed it to "Sign in with Google," and updated context.
+- 2025-12-06 16:29:05 MST — apply_patch (HISTORY.md, CONTEXT.md) — normalized sign-in description quotes to ASCII.
+- 2025-12-06 16:31:34 MST — apply_patch (src/components/sign-in-button.tsx, src/app/page.tsx, CONTEXT.md) — made the logo a borderless sign-in/out button and updated context.
+- 2025-12-06 16:34:02 MST — apply_patch (src/app/page.tsx, CONTEXT.md) — added a slight pressed effect to the logo sign-in button and noted it in context.
+- 2025-12-06 16:35:59 MST — apply_patch (src/components/sign-in-button.tsx, src/app/page.tsx) — removed the border from the logo sign-in button by adding a borderless style option.
+- 2025-12-06 16:46:07 MST — apply_patch (src/app/layout.tsx, CONTEXT.md) — set viewport to disable mobile zoom (maximumScale=1, userScalable=false) for stable dialogs.
+- 2025-12-06 16:47:56 MST — apply_patch (src/components/create-list-button.tsx, CONTEXT.md) — raised Create List modal input/buttons to 16px to stop iOS form zooming.
+- 2025-12-06 16:51:00 MST — apply_patch (src/app/movies/[id]/page.tsx, CONTEXT.md) — removed outer padding on the movie detail page and noted layout change.
+- 2025-12-06 16:51:52 MST — apply_patch (src/app/lists/[slug]/page.tsx, CONTEXT.md) — removed outer padding and the surrounding border on list detail pages.
+- 2025-12-06 16:53:18 MST — apply_patch (src/app/page.tsx, src/components/create-list-button.tsx, src/components/import-list-modal.tsx, CONTEXT.md) — made Create/Import list buttons full-width white, placed Create above the gallery and Import below it.
+- 2025-12-06 16:54:34 MST — apply_patch (src/app/page.tsx, CONTEXT.md) — stopped using the logo as the sign-out control; added a dedicated sign-out button above the static logo while keeping logo-as-sign-in for guests.
+- 2025-12-06 16:56:19 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — made the search trigger stick to the top of the viewport while scrolling and documented the behavior.
+- 2025-12-06 16:57:45 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — fixed the search bar to the top of the viewport with a centered container so it stays visible on scroll.
+- 2025-12-06 16:59:19 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — reverted the fixed search bar; returned to sticky positioning near the top.
+- 2025-12-06 17:00:42 MST — apply_patch (src/app/page.tsx) — tightened spacing between the header search and Create List by removing extra margin and reducing vertical gap.
+- 2025-12-06 17:02:37 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — made search results a solid black sheet without borders, filtered to poster-having movies sorted by rating, and updated context.
+- 2025-12-06 17:04:06 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — removed descriptions/community ratings from search results and noted the change.
+- 2025-12-06 17:05:55 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — laid out search results as a poster grid with title/year only, keeping the solid-black, borderless sheet.
+- 2025-12-06 17:07:41 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — reverted search results back to the vertical list (poster + title/year) on a solid-black sheet.
+- 2025-12-06 17:09:04 MST — apply_patch (src/components/tmdb-search-bar.tsx, CONTEXT.md) — tightened search list layout: closer poster/text spacing, vertically centered, unified text size.
+- 2025-12-06 17:16:07 MST — apply_patch (rust-api/src/main.rs, src/components/list-movies-grid.tsx, src/components/list-detail-client.tsx, src/components/list-editor.tsx, src/app/lists/[slug]/page.tsx, CONTEXT.md) — added DELETE /lists/:id/items/:tmdbId and inline poster “×” controls in edit mode to remove movies from lists.
+- 2025-12-06 17:16:49 MST — apply_patch (src/components/tmdb-search-bar.tsx) — enlarged search result title/year text and removed bold weight.
+- 2025-12-06 17:17:55 MST — apply_patch (src/components/list-editor.tsx, src/components/list-movies-grid.tsx) — closed edit mode after saving and made list movie delete “×” buttons bright red for visibility.
+- 2025-12-06 17:18:30 MST — apply_patch (src/components/tmdb-search-bar.tsx) — centered posters and aligned title/year text for search results.
+- 2025-12-07 14:27:10 MST — apply_patch (rust-api/src/main.rs) — imported axum delete route helper for list item removal endpoint.
+- 2025-12-07 14:27:37 MST — cargo check — verified Rust API builds after adding the delete route import.
+- 2025-12-07 14:29:10 MST — apply_patch (src/lib/list-store.ts) — guarded list loading against Rust API failures by returning cached/empty lists instead of throwing.
+- 2025-12-07 14:29:10 MST — apply_patch (CONTEXT.md) — noted list loading fallback behavior when the Rust API is unreachable.
+- 2025-12-07 14:36:47 MST — apply_patch (src/lib/smart-list-store.ts) — added smart list storage helpers and rule summaries backed by localStorage.
+- 2025-12-07 14:36:47 MST — apply_patch (src/components/smart-lists-panel.tsx) — introduced UI to build rule-based smart lists and preview auto-updated matches.
+- 2025-12-07 14:36:47 MST — apply_patch (src/app/page.tsx) — surfaced Smart Lists panel on the home page beneath import.
+- 2025-12-07 14:36:47 MST — apply_patch (CONTEXT.md) — documented smart list behavior on the home page.
+- 2025-12-07 14:37:17 MST — apply_patch (src/lib/smart-list-store.ts) — normalized smart list rule summaries to use ASCII quotes.
+- 2025-12-07 14:37:17 MST — apply_patch (src/components/smart-lists-panel.tsx) — swapped smart list helper copy to ASCII quotes.
+- 2025-12-07 14:42:25 MST — apply_patch (src/lib/smart-list-store.ts, src/components/smart-lists-panel.tsx) — added rating rule support and updated smart list UI (gear badge, stacked creation button).
+- 2025-12-07 14:42:25 MST — apply_patch (src/app/page.tsx) — stacked the smart list button beneath the create list button.
+- 2025-12-07 14:42:40 MST — apply_patch (CONTEXT.md) — documented rating-based smart lists and gear-badged cards.
+- 2025-12-07 14:53:30 MST — apply_patch — replaced smart list panel with a unified ListsSection that stacks create buttons, merges smart/normal lists in the gallery, adds gear-badged smart cards, rating rules, and rule-edit modal with match grid.
+- 2025-12-07 14:47:32 MST — apply_patch — removed obsolete smart-lists-panel and wired ListsSection into the home page.
+- 2025-12-07 14:49:23 MST — apply_patch — adjusted smart list interaction to open a detail modal with movie titles and a separate edit-rules flow, keeping smart lists interleaved with normal lists.
+- 2025-12-07 14:50:00 MST — apply_patch — aligned smart list detail view with regular list layout (sort controls + grid), added on-tile gear to open rule editor, and introduced local sort controls helper.
+- 2025-12-07 15:08:13 MST — apply_patch (src/components/list-gallery.tsx) — fixed nested button hydration error by wrapping the smart gear in a non-button container.
+- 2025-12-07 16:08:49 MST — apply_patch (src/components/list-gallery.tsx) — replaced the smart gear button with a span + click/keyboard handlers to remove button nesting entirely.
+- 2025-12-07 19:53:44 MST — apply_patch (src/lib/apple-links.ts) — added helper to fetch Apple TV links via Strawberry CheapCharts.
+- 2025-12-07 19:54:11 MST — apply_patch (src/app/movies/[id]/page.tsx) — surfaced Apple TV link on movie detail using Strawberry CheapCharts when IMDb id is present.

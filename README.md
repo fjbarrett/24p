@@ -6,6 +6,7 @@ A Next.js 14 + App Router experience for 24p, the collaborative movie-listing ap
 - Next.js 16 (App Router, TypeScript, Tailwind CSS v4)
 - NextAuth.js (Google OAuth provider, session management)
 - React server components + client components for interactive list/rating builders
+- Bun for package management (`bun.lock`)
 
 ## Backend architecture
 - Rust Axum API is the sole backend for lists, ratings, and TMDB queries; it runs on the same host as Postgres, using `APP_HOST`/`APP_PORT` to bind and `DATABASE_URL` to reach the local database.
@@ -14,9 +15,8 @@ A Next.js 14 + App Router experience for 24p, the collaborative movie-listing ap
 ## Getting started
 1. Install deps (the repo ships without `node_modules`):
    ```bash
-   npm install
+   bun install
    ```
-   If you run into cache permission issues on macOS, set a local npm cache: `npm_config_cache="$(pwd)/.npm-cache" npm install`.
 2. Copy the env template:
    ```bash
    cp .env.example .env.local
@@ -24,13 +24,13 @@ A Next.js 14 + App Router experience for 24p, the collaborative movie-listing ap
 3. Populate `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`, `TMDB_API_KEY`, `DATABASE_URL` (any Postgres connection string), **and** point the frontend at the Rust API with `RUST_API_BASE_URL=http://localhost:8080` and `NEXT_PUBLIC_RUST_API_BASE_URL=http://localhost:8080`. `NEXTAUTH_URL` should match the dev server URL. Request the TMDB key from https://www.themoviedb.org/settings/api (use the “API Read Access Token (v4 auth)” or v3 key). The TMDB key is consumed by the Rust API now, so export it in the shell that runs `cargo run -p rust-api` (or add it to a `.env` file in `rust-api/`).
 4. Start the Rust API (`cargo run -p rust-api` from the `rust-api/` directory) and then run the dev server:
    ```bash
-   npm run dev
+   bun run dev
    ```
 5. Visit http://localhost:3000 to interact with the mocked rating/list builders.
 
 ## Auth configuration
 - Create a Google Cloud OAuth client (Web application) and add `http://localhost:3000/api/auth/callback/google` to the authorized redirect URIs.
-- Update `.env.local` with your client ID/secret and restart `npm run dev`.
+- Update `.env.local` with your client ID/secret and restart `bun run dev`.
 - The route `src/app/api/auth/[...nextauth]/route.ts` already exports the configured handler, so `signIn("google")` from the UI works immediately once credentials exist.
 - Wrap additional routes in `getServerSession(authOptions)` to protect dashboards once you connect storage.
 
@@ -52,10 +52,10 @@ A Next.js 14 + App Router experience for 24p, the collaborative movie-listing ap
 - Remote poster art is loaded from `image.tmdb.org`; see `next.config.ts` for the configured allowlist.
 
 ## Scripts
-- `npm run dev` – local development with hot reload.
-- `npm run lint` – ESLint with `eslint-config-next`. Run before committing.
-- `npm run build` – creates the production bundle; best run in CI with env vars present.
-- `npm run start` – serves the built app (used in production).
+- `bun run dev` – local development with hot reload.
+- `bun run lint` – ESLint with `eslint-config-next`. Run before committing.
+- `bun run build` – creates the production bundle; best run in CI with env vars present.
+- `bun run start` – serves the built app (used in production).
 
 ## Database setup
 Create the backing table in your Postgres instance (adjust schema/extension names as needed):

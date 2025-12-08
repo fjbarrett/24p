@@ -3,22 +3,22 @@ use std::{env, net::SocketAddr, time::Duration};
 use anyhow::Context;
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
-    routing::{get, post},
+    http::{Method, StatusCode},
+    routing::{delete, get, post},
     Json, Router,
 };
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, FromRow, PgPool};
+use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
-use tower_http::trace::TraceLayer;
 use uuid::Uuid;
 
 #[derive(Clone)]
 struct AppState {
     db: PgPool,
-    tmdb_api_key: Option<String>,
+    strawberry_base_url: String,
     client: reqwest::Client,
 }
 
@@ -34,7 +34,6 @@ struct ErrorResponse {
 
 type ApiResult<T> = Result<Json<T>, (StatusCode, Json<ErrorResponse>)>;
 
-const TMDB_API_BASE: &str = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE: &str = "https://image.tmdb.org/t/p/w185";
 
 #[derive(FromRow)]
@@ -137,6 +136,12 @@ struct SimplifiedMovieDto {
     #[serde(rename = "releaseYear")]
     release_year: Option<i32>,
     rating: Option<f32>,
+    #[serde(rename = "imdbRating")]
+    imdb_rating: Option<f32>,
+    #[serde(rename = "letterboxdRating")]
+    letterboxd_rating: Option<f32>,
+    #[serde(rename = "imdbId")]
+    imdb_id: Option<String>,
     #[serde(rename = "posterUrl")]
     poster_url: Option<String>,
     runtime: Option<i32>,
@@ -161,7 +166,7 @@ struct TmdbSearchParams {
     year: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct TmdbMovieResult {
     id: i32,
     title: Option<String>,
@@ -173,15 +178,19 @@ struct TmdbMovieResult {
     vote_average: Option<f32>,
     #[serde(rename = "poster_path")]
     poster_path: Option<String>,
+    #[serde(rename = "imdb_rating")]
+    imdb_rating: Option<f32>,
+    #[serde(rename = "letterboxd_rating")]
+    letterboxd_rating: Option<f32>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct TmdbGenre {
     id: i32,
     name: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct TmdbMovieDetailsResult {
     id: i32,
     title: Option<String>,
@@ -196,17 +205,17 @@ struct TmdbMovieDetailsResult {
     runtime: Option<i32>,
     genres: Option<Vec<TmdbGenre>>,
     tagline: Option<String>,
+    #[serde(rename = "imdb_rating")]
+    imdb_rating: Option<f32>,
+    #[serde(rename = "letterboxd_rating")]
+    letterboxd_rating: Option<f32>,
+    #[serde(rename = "imdb_id")]
+    imdb_id: Option<String>,
 }
 
 #[derive(Deserialize)]
 struct TmdbSearchResponse {
     results: Vec<TmdbMovieResult>,
-}
-
-#[derive(Deserialize)]
-struct ListsQuery {
-    #[serde(rename = "userEmail")]
-    user_email: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -246,6 +255,12 @@ struct AddMovieBody {
 }
 
 #[derive(Deserialize)]
+struct RemoveMovieBody {
+    #[serde(rename = "userEmail")]
+    user_email: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct DeleteListBody {
     #[serde(rename = "userEmail")]
     user_email: Option<String>,
@@ -272,6 +287,7 @@ struct ParsedEntry {
     year: Option<String>,
     rating: Option<i32>,
     source: String,
+    tmdb_id: Option<i32>,
 }
 
 #[derive(Clone)]
@@ -279,6 +295,18 @@ struct RatingInput {
     tmdb_id: i32,
     rating: i32,
     source: String,
+}
+
+#[derive(Deserialize)]
+struct ListsQuery {
+    #[serde(rename = "userEmail")]
+    user_email: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct OwnerQuery {
+    #[serde(rename = "userEmail")]
+    user_email: Option<String>,
 }
 
 const DEFAULT_COLOR: &str = "sky";
@@ -293,10 +321,11 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let tmdb_api_key = env::var("TMDB_API_KEY").ok();
-    if tmdb_api_key.is_none() {
-        warn!("TMDB_API_KEY is not set. TMDB endpoints will return 500 until configured.");
-    }
+    let strawberry_base_url = env::var("STRAWBERRY_BASE_URL")
+        .map(|value| value.trim().to_string())
+        .ok()
+        .filter(|value| !value.is_empty())
+        .context("STRAWBERRY_BASE_URL must be set to route TMDB lookups through Strawberry")?;
 
     let max_conns: u32 = env::var("DB_MAX_CONNECTIONS")
         .ok()
@@ -322,9 +351,13 @@ async fn main() -> anyhow::Result<()> {
 
     let state = AppState {
         db: pool,
-        tmdb_api_key,
+        strawberry_base_url,
         client,
     };
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE, Method::OPTIONS])
+        .allow_headers(Any)
+        .allow_origin(Any);
     let app = Router::new()
         .route("/health/live", get(live))
         .route("/health/ready", get(ready))
@@ -332,13 +365,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/lists/:id", get(get_list).patch(update_list).delete(delete_list))
         .route("/lists/by-slug/:slug", get(get_list_by_slug))
         .route("/lists/:id/items", post(add_movie_to_list))
+        .route("/lists/:id/items/:tmdb_id", delete(remove_movie_from_list))
         .route("/lists/import", post(import_list))
         .route("/ratings", post(save_ratings))
         .route("/ratings/:user_email/:tmdb_id", get(get_rating))
         .route("/ratings/:user_email", get(list_ratings_for_user))
         .route("/tmdb/search", get(tmdb_search))
         .route("/tmdb/movie/:tmdb_id", get(tmdb_movie))
-        .layer(TraceLayer::new_for_http())
+        .layer(cors)
         .with_state(state);
 
     let host = env::var("APP_HOST").unwrap_or_else(|_| "0.0.0.0".into());
@@ -518,7 +552,7 @@ async fn import_list(
 ) -> ApiResult<ListEnvelope> {
     let title = payload.title.unwrap_or_default().trim().to_string();
     let raw = payload.data.unwrap_or_default();
-    let user_email = normalize_email(&payload.user_email.unwrap_or_default());
+    let user_email = payload.user_email.unwrap_or_default().trim().to_lowercase();
 
     if title.is_empty() || raw.trim().is_empty() {
         return Err(bad_request("Title and data are required"));
@@ -536,15 +570,23 @@ async fn import_list(
     let mut ratings: Vec<RatingInput> = Vec::new();
 
     for entry in entries {
-        if let Some(tmdb_id) = search_tmdb_id(&state, &entry.title, entry.year.as_deref()).await? {
-            ids.push(tmdb_id);
-            if let Some(rating) = entry.rating {
-                ratings.push(RatingInput {
-                    tmdb_id,
-                    rating,
-                    source: entry.source.clone(),
-                });
-            }
+        let tmdb_id = if let Some(id) = entry.tmdb_id {
+            Some(id)
+        } else {
+            search_tmdb_id(&state, &entry.title, entry.year.as_deref()).await?
+        };
+
+        let Some(tmdb_id) = tmdb_id else {
+            continue;
+        };
+
+        ids.push(tmdb_id);
+        if let Some(rating) = entry.rating {
+            ratings.push(RatingInput {
+                tmdb_id,
+                rating,
+                source: entry.source.clone(),
+            });
         }
     }
 
@@ -563,7 +605,15 @@ async fn import_list(
 async fn get_list(
     Path(id): Path<Uuid>,
     State(state): State<AppState>,
+    Query(params): Query<OwnerQuery>,
 ) -> ApiResult<ListEnvelope> {
+    let user_email = params
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+
     let row = sqlx::query_as::<_, ListRow>("SELECT * FROM lists WHERE id = $1")
         .bind(id)
         .fetch_optional(&state.db)
@@ -572,13 +622,24 @@ async fn get_list(
     let Some(list) = row else {
         return Err(not_found("List not found"));
     };
+    if list.user_email != user_email {
+        return Err(not_found("List not found"));
+    }
     Ok(Json(ListEnvelope { list: list.into() }))
 }
 
 async fn get_list_by_slug(
     Path(slug): Path<String>,
     State(state): State<AppState>,
+    Query(params): Query<OwnerQuery>,
 ) -> ApiResult<ListEnvelope> {
+    let user_email = params
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+
     let row = sqlx::query_as::<_, ListRow>("SELECT * FROM lists WHERE slug = $1")
         .bind(&slug)
         .fetch_optional(&state.db)
@@ -587,6 +648,9 @@ async fn get_list_by_slug(
     let Some(list) = row else {
         return Err(not_found("List not found"));
     };
+    if list.user_email != user_email {
+        return Err(not_found("List not found"));
+    }
     Ok(Json(ListEnvelope { list: list.into() }))
 }
 
@@ -595,6 +659,13 @@ async fn update_list(
     State(state): State<AppState>,
     Json(payload): Json<UpdateListBody>,
 ) -> ApiResult<ListEnvelope> {
+    let requestor = payload
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+
     let current = sqlx::query_as::<_, ListRow>("SELECT * FROM lists WHERE id = $1")
         .bind(id)
         .fetch_optional(&state.db)
@@ -603,15 +674,8 @@ async fn update_list(
     let Some(existing) = current else {
         return Err(not_found("List not found"));
     };
-
-    let requestor = payload
-        .user_email
-        .as_ref()
-        .map(|value| normalize_email(value))
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| bad_request("userEmail is required"))?;
     if existing.user_email != requestor {
-        return Err(bad_request("Only the creator can update this list"));
+        return Err(not_found("List not found"));
     }
 
     let mut next_title = existing.title.clone();
@@ -675,12 +739,50 @@ async fn add_movie_to_list(
         return Err(not_found("List not found"));
     };
     if list.user_email != user_email {
-        return Err(bad_request("Only the creator can update this list"));
+        return Err(not_found("List not found"));
     }
 
     if !list.movies.contains(&tmdb_id) {
         list.movies.insert(0, tmdb_id);
     }
+
+    let row = sqlx::query_as::<_, ListRow>(
+        "UPDATE lists SET movies = $2 WHERE id = $1 RETURNING *",
+    )
+    .bind(id)
+    .bind(&list.movies)
+    .fetch_one(&state.db)
+    .await
+    .map_err(internal_error)?;
+
+    Ok(Json(ListEnvelope { list: row.into() }))
+}
+
+async fn remove_movie_from_list(
+    Path((id, tmdb_id)): Path<(Uuid, i32)>,
+    State(state): State<AppState>,
+    Json(payload): Json<RemoveMovieBody>,
+) -> ApiResult<ListEnvelope> {
+    let user_email = payload
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+
+    let current = sqlx::query_as::<_, ListRow>("SELECT * FROM lists WHERE id = $1")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(internal_error)?;
+    let Some(mut list) = current else {
+        return Err(not_found("List not found"));
+    };
+    if list.user_email != user_email {
+        return Err(not_found("List not found"));
+    }
+
+    list.movies.retain(|movie_id| *movie_id != tmdb_id);
 
     let row = sqlx::query_as::<_, ListRow>(
         "UPDATE lists SET movies = $2 WHERE id = $1 RETURNING *",
@@ -715,14 +817,17 @@ async fn delete_list(
         return Err(not_found("List not found"));
     };
     if list.user_email != user_email {
-        return Err(bad_request("Only the creator can delete this list"));
+        return Err(not_found("List not found"));
     }
 
-    sqlx::query_scalar::<_, Uuid>("DELETE FROM lists WHERE id = $1 RETURNING id")
+    let deleted = sqlx::query_scalar::<_, Uuid>("DELETE FROM lists WHERE id = $1 RETURNING id")
         .bind(id)
         .fetch_optional(&state.db)
         .await
         .map_err(internal_error)?;
+    if deleted.is_none() {
+        return Err(not_found("List not found"));
+    }
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 
@@ -761,35 +866,17 @@ async fn fetch_tmdb_search(
     query: &str,
     year: Option<&str>,
 ) -> Result<Vec<SimplifiedMovieDto>, (StatusCode, Json<ErrorResponse>)> {
-    let api_key = require_tmdb_key(state)?;
-    let mut request = state
-        .client
-        .get(format!("{TMDB_API_BASE}/search/movie"))
-        .query(&[
-            ("query", query),
-            ("include_adult", "false"),
-            ("language", "en-US"),
-            ("page", "1"),
-        ])
-        .header("Accept", "application/json");
+    let mut params: Vec<(&str, &str)> = vec![
+        ("query", query),
+        ("include_adult", "false"),
+        ("language", "en-US"),
+        ("page", "1"),
+    ];
     if let Some(year) = year {
-        request = request.query(&[("year", year)]);
-    }
-    let response = with_tmdb_auth(request, &api_key)
-        .send()
-        .await
-        .map_err(|error| internal_error(error.to_string()))?;
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        error!("TMDB search failed ({}): {}", status, body);
-        return Err(internal_error("Unable to reach TMDB"));
+        params.push(("year", year));
     }
 
-    let payload: TmdbSearchResponse = response
-        .json()
-        .await
-        .map_err(|error| internal_error(error.to_string()))?;
+    let payload = fetch_from_strawberry::<TmdbSearchResponse>(state, "/search/movie", &params).await?;
     let results = payload
         .results
         .into_iter()
@@ -803,28 +890,25 @@ async fn fetch_tmdb_movie(
     state: &AppState,
     tmdb_id: i32,
 ) -> Result<SimplifiedMovieDto, (StatusCode, Json<ErrorResponse>)> {
-    let api_key = require_tmdb_key(state)?;
-    let request = state
-        .client
-        .get(format!("{TMDB_API_BASE}/movie/{tmdb_id}"))
-        .query(&[("language", "en-US")])
-        .header("Accept", "application/json");
-    let response = with_tmdb_auth(request, &api_key)
-        .send()
-        .await
-        .map_err(|error| internal_error(error.to_string()))?;
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        error!("TMDB movie lookup failed ({}): {}", status, body);
-        return Err(internal_error("Unable to fetch movie"));
+    let params = [("language", "en-US"), ("append_to_response", "external_ids")];
+
+    let payload =
+        fetch_from_strawberry::<TmdbMovieDetailsResult>(state, &format!("/movie/{tmdb_id}"), &params).await?;
+    let mut movie = map_tmdb_movie_details(payload.clone());
+
+    if let Some(imdb_id) = payload
+        .imdb_id
+        .as_ref()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+    {
+        if let Some((imdb_rating, letterboxd_rating)) = fetch_external_ratings(state, imdb_id).await {
+            movie.imdb_rating = imdb_rating;
+            movie.letterboxd_rating = letterboxd_rating;
+        }
     }
 
-    let payload: TmdbMovieDetailsResult = response
-        .json()
-        .await
-        .map_err(|error| internal_error(error.to_string()))?;
-    Ok(map_tmdb_movie_details(payload))
+    Ok(movie)
 }
 
 async fn search_tmdb_id(
@@ -836,22 +920,64 @@ async fn search_tmdb_id(
     Ok(results.first().map(|movie| movie.tmdb_id))
 }
 
-fn with_tmdb_auth(builder: reqwest::RequestBuilder, api_key: &str) -> reqwest::RequestBuilder {
-    let trimmed = api_key.trim();
-    if trimmed.starts_with("eyJ") {
-        builder.bearer_auth(trimmed)
-    } else {
-        builder.query(&[("api_key", trimmed)])
+async fn fetch_from_strawberry<T>(
+    state: &AppState,
+    path: &str,
+    query: &[(&str, &str)],
+) -> Result<T, (StatusCode, Json<ErrorResponse>)>
+where
+    T: DeserializeOwned,
+{
+    let url = format!("{}/tmdb{}", state.strawberry_base_url.trim_end_matches('/'), path);
+    let response = state
+        .client
+        .get(url)
+        .query(query)
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .map_err(|error| internal_error(error.to_string()))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        warn!("Strawberry TMDB returned {}: {}", status, body);
+        return Err(internal_error("Unable to fetch TMDB data from Strawberry"));
     }
+
+    response
+        .json::<T>()
+        .await
+        .map_err(|error| internal_error(error.to_string()))
 }
 
-fn require_tmdb_key(state: &AppState) -> Result<String, (StatusCode, Json<ErrorResponse>)> {
-    state
-        .tmdb_api_key
-        .as_ref()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| internal_error("TMDB_API_KEY is not configured"))
+async fn fetch_external_ratings(
+    state: &AppState,
+    imdb_id: &str,
+) -> Option<(Option<f32>, Option<f32>)> {
+    let url = format!("{}/ratings/{}", state.strawberry_base_url.trim_end_matches('/'), imdb_id);
+    let response = state
+        .client
+        .get(url)
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .ok()?;
+
+    if !response.status().is_success() {
+        return None;
+    }
+
+    let body: serde_json::Value = response.json().await.ok()?;
+    let imdb_rating = body
+        .get("imdbRating")
+        .and_then(|value| value.as_f64())
+        .map(|value| value as f32);
+    let letterboxd_rating = body
+        .get("letterboxdRating")
+        .and_then(|value| value.as_f64())
+        .map(|value| value as f32);
+    Some((imdb_rating, letterboxd_rating))
 }
 
 fn map_tmdb_movie(result: TmdbMovieResult) -> Option<SimplifiedMovieDto> {
@@ -871,6 +997,9 @@ fn map_tmdb_movie(result: TmdbMovieResult) -> Option<SimplifiedMovieDto> {
         overview: result.overview,
         release_year,
         rating,
+        imdb_rating: result.imdb_rating,
+        letterboxd_rating: result.letterboxd_rating,
+        imdb_id: None,
         poster_url,
         runtime: None,
         genres: None,
@@ -901,6 +1030,9 @@ fn map_tmdb_movie_details(result: TmdbMovieDetailsResult) -> SimplifiedMovieDto 
         overview: result.overview,
         release_year,
         rating,
+        imdb_rating: result.imdb_rating,
+        letterboxd_rating: result.letterboxd_rating,
+        imdb_id: result.imdb_id,
         poster_url,
         runtime: result.runtime,
         genres,
@@ -925,7 +1057,11 @@ fn parse_imported_titles(raw: &str) -> Vec<ParsedEntry> {
     }
 
     let first_line = lines[0].to_lowercase();
-    let default_source = if first_line.contains("letterboxd") {
+    let default_source = if first_line.contains("your rating") {
+        "import"
+    } else if first_line.contains("imdb") {
+        "imdb"
+    } else if first_line.contains("letterboxd") {
         "letterboxd"
     } else {
         "imdb"
@@ -937,15 +1073,23 @@ fn parse_imported_titles(raw: &str) -> Vec<ParsedEntry> {
             .into_iter()
             .map(|cell| cell.to_lowercase())
             .collect::<Vec<_>>();
-        let title_index = headers
-            .iter()
-            .position(|cell| cell == "title" || cell == "primarytitle" || cell == "name");
+        let title_index = headers.iter().position(|cell| {
+            cell == "title"
+                || cell == "primarytitle"
+                || cell == "name"
+                || cell == "movie title"
+                || cell == "film title"
+                || (cell.contains("title") && !cell.contains("list"))
+        });
         if title_index.is_none() {
             return Vec::new();
         }
         let year_index = headers
             .iter()
             .position(|cell| cell == "year" || cell == "release year" || cell == "startyear");
+        let tmdb_id_index = headers
+            .iter()
+            .position(|cell| cell == "tmdb id" || cell == "tmdbid" || cell == "tmdb_id");
         let rating_index = headers
             .iter()
             .position(|cell| cell == "your rating" || cell == "rating");
@@ -961,6 +1105,9 @@ fn parse_imported_titles(raw: &str) -> Vec<ParsedEntry> {
                     .and_then(|idx| cells.get(idx))
                     .map(|value| value.trim().to_string())
                     .filter(|value| !value.is_empty());
+                let tmdb_id = tmdb_id_index
+                    .and_then(|idx| cells.get(idx))
+                    .and_then(|value| value.trim().parse::<i32>().ok());
                 let rating = rating_index
                     .and_then(|idx| cells.get(idx))
                     .and_then(|value| normalize_import_rating(Some(value.as_str())));
@@ -969,6 +1116,7 @@ fn parse_imported_titles(raw: &str) -> Vec<ParsedEntry> {
                     year,
                     rating,
                     source: default_source.clone(),
+                    tmdb_id,
                 })
             })
             .collect();
@@ -989,6 +1137,7 @@ fn parse_imported_titles(raw: &str) -> Vec<ParsedEntry> {
                         year: Some(year_candidate.to_string()),
                         rating: None,
                         source: default_source.clone(),
+                        tmdb_id: None,
                     });
                 }
             }
@@ -997,6 +1146,7 @@ fn parse_imported_titles(raw: &str) -> Vec<ParsedEntry> {
                 year: None,
                 rating: None,
                 source: default_source.clone(),
+                tmdb_id: None,
             })
         })
         .collect()
@@ -1084,6 +1234,24 @@ fn normalize_color(color: Option<String>) -> String {
         trimmed
     } else {
         DEFAULT_COLOR.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_exported_csv_with_tmdb_ids() {
+        let raw = "List Name,Movie Title,TMDB ID,Release Year,Your Rating,TMDB Rating,IMDb Rating,Letterboxd Rating\nSaturday Double Feature,Memento,77,2000,10,8.2,8.4,4.18";
+        let entries = parse_imported_titles(raw);
+        assert_eq!(entries.len(), 1);
+        let entry = &entries[0];
+        assert_eq!(entry.title, "Memento");
+        assert_eq!(entry.tmdb_id, Some(77));
+        assert_eq!(entry.year.as_deref(), Some("2000"));
+        assert_eq!(entry.rating, Some(10));
+        assert_eq!(entry.source, "import");
     }
 }
 

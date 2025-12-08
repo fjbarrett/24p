@@ -251,8 +251,8 @@ export function ListComposer({ movies }: ListComposerProps) {
                     {result.title}{" "}
                     {result.releaseYear && <span className="text-xs text-black-500">({result.releaseYear})</span>}
                   </p>
-                  {typeof result.rating === "number" && (
-                    <p className="text-xs text-black-500">Community score: {result.rating.toFixed(1)}/10</p>
+                  {formatCommunityRatings(result) && (
+                    <p className="text-xs text-black-500">Community: {formatCommunityRatings(result)}</p>
                   )}
                 </div>
                 <button
@@ -302,7 +302,7 @@ export function ListComposer({ movies }: ListComposerProps) {
                     <p className="text-xs text-black-500">
                       {movie.source === "tmdb" ? "TMDB search" : "24p pick"}
                       {movie.runtime ? ` • ${movie.runtime}m` : ""}
-                      {typeof movie.rating === "number" ? ` • ${movie.rating.toFixed(1)}/10` : ""}
+                      {formatCommunityRatings(movie) ? ` • ${formatCommunityRatings(movie)}` : ""}
                     </p>
                     {movie.tagline && <p className="text-xs italic text-black-400">“{movie.tagline}”</p>}
                     {overview && <p className="text-xs text-black-500">{overview}</p>}
@@ -325,4 +325,18 @@ export function ListComposer({ movies }: ListComposerProps) {
       </div>
     </div>
   );
+}
+
+function formatCommunityRatings(movie: {
+  rating?: number;
+  imdbRating?: number;
+  letterboxdRating?: number;
+}): string | null {
+  const parts: string[] = [];
+  if (typeof movie.imdbRating === "number") parts.push(`IMDb ${movie.imdbRating.toFixed(1)}/10`);
+  if (typeof movie.letterboxdRating === "number") parts.push(`Letterboxd ${movie.letterboxdRating.toFixed(2)}/5`);
+  if (!parts.length && typeof movie.rating === "number") {
+    parts.push(`TMDB ${movie.rating.toFixed(1)}/10`);
+  }
+  return parts.length ? parts.join(" • ") : null;
 }

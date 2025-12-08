@@ -3,9 +3,15 @@ import "./globals.css";
 import { AuthProvider } from "@/components/providers/session-provider";
 
 export const metadata: Metadata = {
-  title: "24p — your shared movie list",
+  title: "24p",
   description:
     "Log films, capture ratings, and share collaborative shelves with friends using Google sign-in.",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 export default function RootLayout({
@@ -17,7 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className="antialiased text-slate-50"
-        style={{ background: "radial-gradient(circle at 18% 0%, #111317, #050608 45%, #020303 100%)" }}
+        style={{ background: "#000" }}
       >
         <AuthProvider>
           <div className="mx-auto w-full max-w-[1000px]">{children}</div>

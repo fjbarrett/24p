@@ -6,7 +6,15 @@ import type { SavedList } from "@/lib/list-store";
 import { DEFAULT_LIST_COLOR_ID, normalizeListColor } from "@/lib/list-colors";
 import { rustApiFetch } from "@/lib/rust-api-client";
 
-export function ListEditor({ list, viewerEmail }: { list: SavedList; viewerEmail?: string | null }) {
+export function ListEditor({
+  list,
+  viewerEmail,
+  onEditingChange,
+}: {
+  list: SavedList;
+  viewerEmail?: string | null;
+  onEditingChange?: (isEditing: boolean) => void;
+}) {
   const normalizedViewerEmail = viewerEmail?.trim().toLowerCase() ?? "";
   const isOwner = Boolean(normalizedViewerEmail && normalizedViewerEmail === list.userEmail);
   const [title, setTitle] = useState(list.title);
@@ -40,6 +48,8 @@ export function ListEditor({ list, viewerEmail }: { list: SavedList; viewerEmail
           body: JSON.stringify({ title, slug, color, userEmail: list.userEmail }),
         });
         setMessage("Saved changes");
+        setIsEditing(false);
+        onEditingChange?.(false);
         router.refresh();
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Unable to save");
@@ -54,7 +64,10 @@ export function ListEditor({ list, viewerEmail }: { list: SavedList; viewerEmail
         {message && <p className="text-xs text-black-400" style={{ paddingLeft: 16 }}>{message}</p>}
         <button
           type="button"
-          onClick={() => setIsEditing(true)}
+          onClick={() => {
+            setIsEditing(true);
+            onEditingChange?.(true);
+          }}
           className="rounded-full px-4 py-2 text-sm text-black-100 transition hover:bg-black-800"
         >
           Edit list
@@ -94,6 +107,7 @@ export function ListEditor({ list, viewerEmail }: { list: SavedList; viewerEmail
             setSlug(list.slug);
             setColor(normalizeListColor(list.color ?? DEFAULT_LIST_COLOR_ID));
             setIsEditing(false);
+            onEditingChange?.(false);
           }}
           className="rounded-full border border-slate-600 px-4 py-2 text-sm text-slate-200 disabled:opacity-50"
         >

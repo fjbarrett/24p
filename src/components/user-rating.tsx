@@ -61,9 +61,9 @@ export function UserRating({ tmdbId, initialRating, userEmail }: UserRatingProps
           <option value="" disabled>
             {normalizedEmail ? (rating != null ? "Update rating" : "Select rating") : "Sign in to rate"}
           </option>
-          {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+          {Array.from({ length: 10 }, (_, index) => 10 - index).map((value) => (
             <option key={value} value={value}>
-              {value} / 10
+              {value}
             </option>
           ))}
         </select>

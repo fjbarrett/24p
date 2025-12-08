@@ -44,7 +44,9 @@ export function ImportListForm({ userEmail, onComplete }: ImportListFormProps) {
       <div>
         <p className="text-xs uppercase tracking-[0.4em] text-black-400">Import</p>
         <h2 className="mt-2 text-2xl font-semibold text-white">Bring in Letterboxd or IMDb lists</h2>
-        <p className="text-sm text-black-400">Paste CSV text or newline titles; we will match them on TMDB.</p>
+        <p className="text-sm text-black-400">
+          Paste CSV text (including exports from this page) or newline titles; we will match them on TMDB.
+        </p>
       </div>
       <form className="space-y-3" onSubmit={handleSubmit}>
         <label className="text-sm text-black-300">

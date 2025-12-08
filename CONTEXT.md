@@ -1,11 +1,30 @@
 # Project Context
 - Next.js 16 app uses the Rust API (default `http://localhost:8080`) for lists, ratings, TMDB search/detail, and list imports; Next.js API routes remain only for NextAuth.
 - Node/Next.js data API routes have been removed (`/api/lists`, `/api/ratings`, `/api/tmdb`); the frontend only calls the Rust service through `rustApiFetch`/`buildRustApiUrl`.
+- Package management uses Bun (`bun@1.3.3`); install dependencies with `bun install` (produces `bun.lock`, npm lockfile removed).
 - Rust API emits request logs via `tower_http::trace::TraceLayer`; control verbosity with `RUST_LOG`.
-- Rust API is intended to run alongside Postgres on the same host; configure `DATABASE_URL` for the local database and use `APP_HOST`/`APP_PORT` to expose the service.
-- Rust API endpoints: `/lists`, `/lists/{id}`, `/lists/by-slug/{slug}`, `/lists/{id}/items`, `/lists/import`, `/ratings` plus `/ratings/{user}/{tmdbId}`, `/tmdb/search`, and `/tmdb/movie/{tmdbId}`. It requires `DATABASE_URL` and `TMDB_API_KEY` in the Rust process environment.
-- Frontend calls go through `rustApiFetch`/`buildRustApiUrl`: list creation/import, movie rating updates (with user email), TMDB search/detail (`TmdbSearchBar`, list composer), and server-side movie detail fetches (`fetchTmdbMovie`).
-- Lists: each list stores `user_email` and defaults to `visibility='private'`. `/lists` requires a `userEmail` query and returns only that user’s lists; create/update/delete/add-item calls also require matching `userEmail`. Slug detail remains accessible if the URL is shared.
+- Rust API enables CORS (all origins, common methods/headers) so browser calls from the Next.js client can reach it directly.
+- Rust API is intended to run alongside Postgres on the same host; configure `DATABASE_URL` for the local database and use `APP_HOST`/`APP_PORT` to expose the service. `STRAWBERRY_BASE_URL` is required and all TMDB search/detail requests go through that proxy (it will handle TMDB lookups if not cached).
+- Rust API endpoints: `/lists`, `/lists/{id}`, `/lists/by-slug/{slug}`, `/lists/{id}/items`, `/lists/import`, `/ratings` plus `/ratings/{user}/{tmdbId}`, `/tmdb/search`, and `/tmdb/movie/{tmdbId}`. It requires `DATABASE_URL` and `STRAWBERRY_BASE_URL` in the Rust process environment for TMDB data.
+- Frontend calls go through `rustApiFetch`/`buildRustApiUrl`: list creation/import, movie rating updates (with user email), TMDB search/detail (`TmdbSearchBar`, list composer), and server-side movie detail fetches (`fetchTmdbMovie`, `cache: "no-store"` to always show current ratings).
+- Movie detail rating selector lists values from 10 down to 1 without the trailing “/10”.
+- Home header shows only the 24p logo image on the left with a 5px radius and larger size.
+- Home list actions use full-width white buttons: Create List sits above the gallery, Import List sits below.
+- Header stacks a sign-out button above a logo; guests click the logo to "Sign in with Google" (with a slight pressed state), while signed-in users see a separate sign-out button above the static logo. The magnifying glass starts centered and slides left into the input when opened (collapsing on blur when empty) and stays sticky near the top while scrolling. Search results show only movies with posters, sorted by rating, in a solid-black, borderless list with poster, title, and year aligned on one text size (no descriptions or community rating text).
+- Search (magnifying icon + input) only appears for signed-in users; signed-out visitors just see the clickable logo without search beneath it.
+- Viewport disables zooming (`maximumScale: 1`, `userScalable: false`) to keep the mobile layout stable during taps/dialog interactions.
+- Create List modal input/buttons use 16px font sizing to prevent iOS from zooming when focusing the title field.
+- Home page layout is tuned for mobile first: header elements stack centered, list action buttons stack on small screens, and the page no longer adds outer padding around the view.
+- Home page now includes a Smart Lists section: users can create rule-based lists (source list rules plus release year/genre/rating filters). Smart lists are stored per user in localStorage, auto-recompute matches from existing lists, and appear alongside normal lists with a gear badge; tapping opens a detail view like a normal list, and the gear icon opens the rule editor.
+- Lists: each list stores `user_email` and defaults to `visibility='private'`. `/lists` requires a `userEmail` query and returns only that user’s lists; create/update/delete/add-item and slug/id lookups require matching `userEmail` and will 404 otherwise.
+- List loading falls back to cached/empty lists if the Rust API fetch fails so signed-in pages keep rendering when the backend is down.
 - Frontend list handling: home loads lists only for signed-in users and passes `userEmail` into `CreateListButton`. Movie detail pages load lists for the signed-in user (or none when signed out) and gate list actions behind sign-in. `ListEditor` allows edits/deletes only for the creator based on `userEmail`.
+- List detail pages include a sort control (list order, list/user rating, IMDb rating, Letterboxd rating) with toggled asc/desc ordering that reorders the movie grid without affecting the stored list order.
+- List detail pages offer an Export CSV button above the grid that downloads the list (name, TMDB id, release year, user/TMDB/IMDb/Letterboxd ratings) in the current sort order.
+- List edit mode now overlays delete “×” controls on movie posters so owners can remove items inline; backend exposes `DELETE /lists/:id/items/:tmdbId` to persist removals.
+- Import flow accepts CSV exports from the list page (reads movie title, TMDB id, release year, user rating columns) and uses provided TMDB ids when present to avoid search.
+- Movie detail pages call the Strawberry worker `/cheapcharts` route when an IMDb id is present and surface a “Watch on Apple TV” button (with price when available) linking to the product page.
 - Auth: Google via NextAuth (`src/app/api/auth/[...nextauth]/route.ts`); UI expects `RUST_API_BASE_URL` and `NEXT_PUBLIC_RUST_API_BASE_URL` to be set for client/server calls.
 - Data: TMDB images are allowed in `next.config.ts`; app data seeds live in `src/lib/app-data.ts`. Tests folder not yet present; Rust API in `rust-api/`.
+- Movie detail page removes outer page padding; content sits in the centered card without extra surrounding space.
+- List detail pages remove outer page padding and the surrounding border, leaving only the card background and drop shadow.

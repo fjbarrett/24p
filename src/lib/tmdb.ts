@@ -8,6 +8,8 @@ export type TmdbMovieSearchResult = {
   release_date?: string;
   vote_average?: number;
   poster_path?: string | null;
+  imdb_rating?: number | null;
+  letterboxd_rating?: number | null;
 };
 
 export type SimplifiedMovie = {
@@ -16,6 +18,9 @@ export type SimplifiedMovie = {
   overview?: string;
   releaseYear?: number;
   rating?: number;
+  imdbRating?: number;
+  letterboxdRating?: number;
+  imdbId?: string | null;
   posterUrl?: string | null;
   runtime?: number;
   genres?: string[];
@@ -33,6 +38,7 @@ export type TmdbMovieDetailsResult = TmdbMovieSearchResult & {
   runtime?: number;
   genres?: { id: number; name?: string | null }[];
   tagline?: string | null;
+  imdb_id?: string | null;
 };
 
 function baseMovieMapping(result: TmdbMovieSearchResult): SimplifiedMovie {
@@ -40,6 +46,11 @@ function baseMovieMapping(result: TmdbMovieSearchResult): SimplifiedMovie {
   const releaseYear = rawYear ? Number(rawYear) : undefined;
   const rating = typeof result.vote_average === "number" ? Number(result.vote_average.toFixed(1)) : undefined;
   const posterUrl = result.poster_path ? `${TMDB_IMAGE_BASE}${result.poster_path}` : null;
+  const imdbRating = typeof result.imdb_rating === "number" ? Number(result.imdb_rating.toFixed(1)) : undefined;
+  const letterboxdRating =
+    typeof result.letterboxd_rating === "number" ? Number(result.letterboxd_rating.toFixed(2)) : undefined;
+  const imdbId = (result as { imdb_id?: string | null }).imdb_id ?? null;
+  const imdbId = result.imdb_id ?? null;
 
   return {
     tmdbId: result.id,
@@ -47,6 +58,10 @@ function baseMovieMapping(result: TmdbMovieSearchResult): SimplifiedMovie {
     overview: result.overview,
     releaseYear,
     rating,
+    imdbRating,
+    letterboxdRating,
+    imdbId,
+    imdbId,
     posterUrl,
   };
 }
@@ -64,5 +79,6 @@ export function mapTmdbMovieDetails(result: TmdbMovieDetailsResult): SimplifiedM
       ? result.genres.map((genre) => genre.name).filter((name): name is string => Boolean(name))
       : undefined,
     tagline: result.tagline ?? null,
+    imdbId: result.imdb_id ?? base.imdbId ?? null,
   };
 }

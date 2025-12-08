@@ -13,7 +13,7 @@ export function ImportListModal() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="rounded-full border border-black-600 px-4 py-2 text-sm font-medium text-white transition hover:border-white/80"
+        className="flex w-full items-center justify-center rounded-2xl bg-white px-4 py-3 text-base font-semibold text-black shadow-lg shadow-black-800/30 transition hover:brightness-95"
       >
         Import list
       </button>

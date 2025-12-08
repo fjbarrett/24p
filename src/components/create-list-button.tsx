@@ -34,10 +34,10 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
   }
 
   return (
-    <div className="text-left">
+    <div className="w-full">
       <button
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center justify-center rounded-full border border-black-500 px-6 py-2 text-sm font-semibold text-black-100 transition hover:bg-black-800"
+        className="flex w-full items-center justify-center rounded-2xl bg-white px-4 py-3 text-base font-semibold text-black shadow-lg shadow-black-800/30 transition hover:brightness-95"
       >
         Create new list
       </button>
@@ -58,7 +58,7 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
                   autoFocus
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  className="mt-1 w-full rounded-2xl border border-black-700 bg-black-950 px-3 py-2 text-sm text-black-100 focus:border-black-400 focus:outline-none"
+                  className="mt-1 w-full rounded-2xl border border-black-700 bg-black-950 px-3 py-2 text-base text-black-100 focus:border-black-400 focus:outline-none"
                   maxLength={64}
                 />
               </label>
@@ -67,14 +67,14 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="rounded-full border border-black-600 px-4 py-2 text-sm text-black-300 transition hover:border-black-400"
+                  className="rounded-full border border-black-600 px-4 py-2 text-base text-black-300 transition hover:border-black-400"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+                  className="rounded-full bg-white px-4 py-2 text-base font-semibold text-black disabled:opacity-50"
                 >
                   {isPending ? "Saving..." : "Save title"}
                 </button>

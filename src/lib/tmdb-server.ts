@@ -1,14 +1,22 @@
 import "server-only";
 
-import { cache } from "react";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 import { buildRustApiUrl } from "@/lib/rust-api-client";
 
-const RUST_TMDB_REVALIDATE_SECONDS = 60 * 60;
+export async function fetchTmdbMovie(tmdbId: number): Promise<SimplifiedMovie> {
+  if (typeof window !== "undefined") {
+    const cached = window.sessionStorage.getItem(`tmdb:${tmdbId}`);
+    if (cached) {
+      try {
+        return JSON.parse(cached) as SimplifiedMovie;
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }
 
-export const fetchTmdbMovie = cache(async (tmdbId: number): Promise<SimplifiedMovie> => {
   const response = await fetch(buildRustApiUrl(`/tmdb/movie/${tmdbId}`), {
-    next: { revalidate: RUST_TMDB_REVALIDATE_SECONDS },
+    cache: "no-store",
     headers: { Accept: "application/json" },
   });
 
@@ -21,12 +29,29 @@ export const fetchTmdbMovie = cache(async (tmdbId: number): Promise<SimplifiedMo
   if (!payload.detail) {
     throw new Error(`Rust TMDB response missing detail for id ${tmdbId}`);
   }
+  if (typeof window !== "undefined") {
+    try {
+      window.sessionStorage.setItem(`tmdb:${tmdbId}`, JSON.stringify(payload.detail));
+    } catch {
+      // ignore cache errors
+    }
+  }
   return payload.detail;
-});
+}
 
 export async function fetchTmdbMovies(tmdbIds: number[]): Promise<SimplifiedMovie[]> {
-  const results = await Promise.allSettled(tmdbIds.map((id) => fetchTmdbMovie(id)));
-  return results
-    .filter((result): result is PromiseFulfilledResult<SimplifiedMovie> => result.status === "fulfilled")
-    .map((result) => result.value);
+  const concurrency = 6;
+  const results: SimplifiedMovie[] = [];
+
+  for (let i = 0; i < tmdbIds.length; i += concurrency) {
+    const chunk = tmdbIds.slice(i, i + concurrency);
+    const settled = await Promise.allSettled(chunk.map((id) => fetchTmdbMovie(id)));
+    settled.forEach((result) => {
+      if (result.status === "fulfilled") {
+        results.push(result.value);
+      }
+    });
+  }
+
+  return results;
 }

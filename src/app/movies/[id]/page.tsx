@@ -8,6 +8,7 @@ import { UserRating } from "@/components/user-rating";
 import { getRating } from "@/lib/ratings-store";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { fetchAppleTvLink } from "@/lib/apple-links";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -23,14 +24,15 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
 
   const [movie, session] = await Promise.all([fetchTmdbMovie(tmdbId), getServerSession(authOptions)]);
   const userEmail = session?.user?.email?.toLowerCase() ?? null;
+  const appleLink = movie.imdbId ? await fetchAppleTvLink(movie.imdbId, movie.title) : { url: null, price: null };
   const lists = userEmail ? await loadLists(userEmail) : [];
   const listsContaining = lists.filter((list) => list.movies.includes(tmdbId));
   const userRating = userEmail ? await getRating(userEmail, tmdbId) : null;
   const backHref = getFromParam(resolvedSearchParams) ?? "/";
 
   return (
-    <div className="px-4 py-10 text-black-100 sm:px-8 lg:px-16">
-      <article className="mx-auto max-w-[1000px] space-y-6 rounded-3xl border border-white/10 bg-black-900/70 p-6 shadow-2xl backdrop-blur">
+    <div className="text-black-100">
+      <article className="mx-auto max-w-[1000px] space-y-6 rounded-3xl bg-black-900/70 p-6 shadow-2xl backdrop-blur">
         <div className="flex justify-left">
           <Link
             href={backHref}
@@ -63,6 +65,8 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
             {movie.genres?.length ? (
               <p className="text-sm text-black-400">{movie.genres.join(" • ")}</p>
             ) : null}
+            {renderCommunityRatings(movie)}
+            <WatchOnAppleTv url={appleLink.url} price={appleLink.price} />
             {movie.tagline && <p className="text-base italic text-black-300">“{movie.tagline}”</p>}
             {movie.overview && <p className="text-base text-black-300">{movie.overview}</p>}
             <div className="h-1" />
@@ -77,7 +81,7 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
             tmdbId={tmdbId}
             userEmail={userEmail ?? null}
           />
-          <MovieListActions lists={lists} tmdbId={tmdbId} movieTitle={movie.title} userEmail={userEmail} />
+          <MovieListActions lists={lists} tmdbId={tmdbId} userEmail={userEmail} />
         </section>
       </article>
     </div>
@@ -110,6 +114,57 @@ function safeDecode(value: string) {
 
 function getLargePoster(url: string): string {
   return url.includes("/w185/") ? url.replace("/w185/", "/w500/") : url;
+}
+
+function renderCommunityRatings(movie: {
+  rating?: number;
+  imdbRating?: number;
+  letterboxdRating?: number;
+  imdbId?: string;
+  tmdbId?: number;
+}) {
+  const items: { key: string; href: string; value: string }[] = [];
+  if (typeof movie.imdbRating === "number" && movie.imdbId) {
+    const href = `https://www.imdb.com/title/${movie.imdbId}/`;
+    items.push({ key: "imdb", href, value: movie.imdbRating.toFixed(1) });
+  }
+  if (typeof movie.letterboxdRating === "number" && movie.tmdbId != null) {
+    const href = `https://letterboxd.com/tmdb/${movie.tmdbId}/`;
+    items.push({ key: "lb", href, value: movie.letterboxdRating.toFixed(2) });
+  }
+  if (!items.length) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-sm text-black-200">
+      {items.map((item) => (
+        <a
+          key={item.key}
+          href={item.href}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 underline-offset-4 hover:underline"
+        >
+          <span className="text-black-400 uppercase text-[10px] tracking-[0.15em]">{item.key.toUpperCase()}</span>
+          <span className="text-black-100">{item.value}</span>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function WatchOnAppleTv({ url, price }: { url: string | null; price: string | null }) {
+  if (!url) return null;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:-translate-y-0.5 hover:shadow-lg"
+    >
+      <span>Watch on Apple TV</span>
+      {price ? <span className="text-black-500">({price})</span> : null}
+    </a>
+  );
 }
 
 function MovieRatingCard({

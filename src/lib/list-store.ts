@@ -88,8 +88,34 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
   if (!email) {
     throw new Error("userEmail is required to load lists");
   }
-  const data = await fetchFromRustApi<{ lists: ApiList[] }>(`/lists?userEmail=${encodeURIComponent(email)}`);
-  return data.lists.map(mapApiList);
+  if (typeof window !== "undefined") {
+    const cached = window.localStorage.getItem(`lists:${email}`);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as SavedList[];
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      } catch {
+        // ignore parse errors and fall through to network
+      }
+    }
+  }
+  try {
+    const data = await fetchFromRustApi<{ lists: ApiList[] }>(`/lists?userEmail=${encodeURIComponent(email)}`);
+    const mapped = data.lists.map(mapApiList);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(`lists:${email}`, JSON.stringify(mapped));
+      } catch {
+        // ignore write errors
+      }
+    }
+    return mapped;
+  } catch (error) {
+    console.error("Failed to load lists from Rust API", error);
+    return [];
+  }
 }
 
 export async function addList(
@@ -108,7 +134,18 @@ export async function addList(
     method: "POST",
     body: JSON.stringify(payload),
   });
-  return mapApiList(data.list);
+  const mapped = mapApiList(data.list);
+  if (typeof window !== "undefined") {
+    try {
+      const email = normalizeEmail(userEmail);
+      const existing = window.localStorage.getItem(`lists:${email}`);
+      const parsed = existing ? (JSON.parse(existing) as SavedList[]) : [];
+      window.localStorage.setItem(`lists:${email}`, JSON.stringify([mapped, ...parsed]));
+    } catch {
+      // ignore cache write errors
+    }
+  }
+  return mapped;
 }
 
 export async function addMovieToList(listId: string, tmdbId: number, userEmail: string): Promise<SavedList> {
@@ -120,7 +157,9 @@ export async function addMovieToList(listId: string, tmdbId: number, userEmail: 
     method: "POST",
     body: JSON.stringify({ tmdbId, userEmail: email }),
   });
-  return mapApiList(data.list);
+  const mapped = mapApiList(data.list);
+  cacheSingleList(email, mapped);
+  return mapped;
 }
 
 export async function updateList(
@@ -140,13 +179,23 @@ export async function updateList(
     method: "PATCH",
     body: JSON.stringify(payload),
   });
-  return mapApiList(result.list);
+  const mapped = mapApiList(result.list);
+  cacheSingleList(email, mapped);
+  return mapped;
 }
 
-export async function getListBySlug(slug: string): Promise<SavedList | undefined> {
+export async function getListBySlug(slug: string, userEmail: string): Promise<SavedList | undefined> {
+  const email = normalizeEmail(userEmail);
+  if (!email) {
+    throw new Error("userEmail is required to load a list");
+  }
   try {
-    const data = await fetchFromRustApi<{ list: ApiList }>(`/lists/by-slug/${encodeURIComponent(slug)}`);
-    return mapApiList(data.list);
+    const data = await fetchFromRustApi<{ list: ApiList }>(
+      `/lists/by-slug/${encodeURIComponent(slug)}?userEmail=${encodeURIComponent(email)}`,
+    );
+    const mapped = mapApiList(data.list);
+    cacheSingleList(email, mapped);
+    return mapped;
   } catch {
     return undefined;
   }
@@ -161,4 +210,28 @@ export async function deleteList(listId: string, userEmail: string): Promise<voi
     method: "DELETE",
     body: JSON.stringify({ userEmail: email }),
   });
+  if (typeof window !== "undefined") {
+    try {
+      const existing = window.localStorage.getItem(`lists:${email}`);
+      if (existing) {
+        const parsed = JSON.parse(existing) as SavedList[];
+        const filtered = parsed.filter((list) => list.id !== listId);
+        window.localStorage.setItem(`lists:${email}`, JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore cache write errors
+    }
+  }
+}
+
+function cacheSingleList(email: string, updated: SavedList) {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = window.localStorage.getItem(`lists:${email}`);
+    const parsed = existing ? (JSON.parse(existing) as SavedList[]) : [];
+    const next = [updated, ...parsed.filter((list) => list.id !== updated.id)];
+    window.localStorage.setItem(`lists:${email}`, JSON.stringify(next));
+  } catch {
+    // ignore cache write errors
+  }
 }
