@@ -68,7 +68,7 @@ function Header({
             height={192}
             priority
             loading="eager"
-            className="mt-10 h-[192px] w-[192px] rounded-[10px]"
+            className="mt-10 h-[192px] w-[219px] rounded-[10px]"
           />
         ) : (
           <SignInButton
