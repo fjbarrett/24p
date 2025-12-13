@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getListBySlug } from "@/lib/list-store";
 import type { SimplifiedMovie } from "@/lib/tmdb";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { getRatingsForUser } from "@/lib/ratings-store";
 import { ListSortControls } from "@/components/list-sort-controls";

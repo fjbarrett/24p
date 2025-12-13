@@ -12,3 +12,5 @@
 - 2025-12-12 — Added a plus button on search results to pick a list and save the movie inline.
 - 2025-12-12 — Pruned HISTORY/CONTEXT for brevity while keeping key milestones and current behavior notes.
 - 2025-12-13 — Externalized jose in Next config to stop NextAuth webcrypto bundling errors and synced CONTEXT.
+- 2025-12-13 — Ran `bun run dev` to repro Next build issues; blocked by port permissions in sandbox (no code changes).
+- 2025-12-13 — Updated NextAuth server session imports to use next-auth/next for production build typing.

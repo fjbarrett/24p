@@ -2,7 +2,7 @@ import { ListsSection } from "@/components/lists-section";
 import { SignInButton } from "@/components/sign-in-button";
 import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import { loadLists } from "@/lib/list-store";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import Image from "next/image";
 import { authOptions } from "@/lib/auth";
 
