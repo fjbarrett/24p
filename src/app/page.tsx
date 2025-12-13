@@ -65,7 +65,7 @@ function Header({
             src="/icon-new.png"
             alt="24p logo"
             width={192}
-            // height={192}
+            height={219}
             priority
             loading="eager"
             className="mt-10 h-[192px] w-[192px] rounded-[10px]"
