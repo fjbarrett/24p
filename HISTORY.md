@@ -15,3 +15,7 @@
 - 2025-12-13 — Ran `bun run dev` to repro Next build issues; blocked by port permissions in sandbox (no code changes).
 - 2025-12-13 — Updated NextAuth server session imports to use next-auth/next for production build typing.
 - 2025-12-13 — Added explicit Session typing around getServerSession usages to satisfy NextAuth types in prod build.
+
+- 2025-12-13 18:31 UTC — Moved viewport config to Next viewport export and set hero icon images to eager priority/sizing to clear warnings.
+- 2025-12-13 19:11 UTC — Added /api/rust proxy, defaulted browser calls to the proxy to avoid mixed content, refactored list/rating stores to use the shared client, and updated docs/context.
+- 2025-12-13 19:16 UTC — Removed unused demo components, sample data, and diagrams to trim the codebase; cleaned README/CONTEXT to match.

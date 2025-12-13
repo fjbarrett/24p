@@ -1,10 +1,17 @@
-const DEFAULT_RUST_API_BASE_URL = process.env.NODE_ENV === "development" ? "http://localhost:8080" : "";
+const DEFAULT_CLIENT_BASE_URL = "/api/rust";
+const DEFAULT_SERVER_BASE_URL =
+  process.env.RUST_API_ORIGIN ??
+  process.env.RUST_API_BASE_URL ??
+  process.env.RUST_API_URL ??
+  process.env.NEXT_PUBLIC_RUST_API_BASE_URL ??
+  process.env.NEXT_PUBLIC_RUST_API_URL ??
+  (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8080" : "");
 
 const clientBaseUrl =
   process.env.NEXT_PUBLIC_RUST_API_BASE_URL ??
   process.env.NEXT_PUBLIC_RUST_API_URL ??
-  DEFAULT_RUST_API_BASE_URL;
-const serverBaseUrl = process.env.RUST_API_BASE_URL ?? process.env.RUST_API_URL ?? DEFAULT_RUST_API_BASE_URL;
+  DEFAULT_CLIENT_BASE_URL;
+const serverBaseUrl = DEFAULT_SERVER_BASE_URL;
 
 function normalize(base: string) {
   return base.replace(/\/$/, "");
@@ -15,7 +22,7 @@ export function getRustApiBaseUrl() {
   const normalized = candidate ? normalize(candidate) : "";
   if (!normalized) {
     throw new Error(
-      "Rust API base URL is not configured. Set NEXT_PUBLIC_RUST_API_BASE_URL (and RUST_API_BASE_URL for SSR) to the Rust service origin.",
+      "Rust API base URL is not configured. Set RUST_API_ORIGIN (and NEXT_PUBLIC_RUST_API_BASE_URL if overriding the proxy).",
     );
   }
   return normalized;

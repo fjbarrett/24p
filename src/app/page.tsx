@@ -61,7 +61,15 @@ function Header({
     >
       <div className="flex items-center justify-center">
         {isSignedIn ? (
-          <Image src="/icon-new.png" alt="24p logo" width={192} height={192} className="mt-[40] rounded-[10px]" />
+          <Image
+            src="/icon-new.png"
+            alt="24p logo"
+            width={192}
+            height={192}
+            priority
+            loading="eager"
+            className="mt-10 h-[192px] w-[192px] rounded-[10px]"
+          />
         ) : (
           <SignInButton
             variant="ghost"
@@ -74,7 +82,9 @@ function Header({
               alt="24p logo"
               width={128}
               height={128}
-              className="rounded-[10px] transition hover:opacity-90"
+              priority
+              loading="eager"
+              className="h-[128px] w-[128px] rounded-[10px] transition hover:opacity-90"
             />
           </SignInButton>
         )}

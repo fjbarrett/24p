@@ -1,4 +1,5 @@
 import { normalizeListColor } from "@/lib/list-colors";
+import { rustApiFetch } from "@/lib/rust-api-client";
 
 export type SavedList = {
   id: string;
@@ -11,15 +12,6 @@ export type SavedList = {
   userEmail: string;
 };
 
-const DEFAULT_RUST_API_BASE_URL = process.env.NODE_ENV === "development" ? "http://localhost:8080" : "";
-const RUST_API_BASE_URL = [
-  process.env.RUST_API_BASE_URL,
-  process.env.RUST_API_URL,
-  process.env.NEXT_PUBLIC_RUST_API_BASE_URL,
-  process.env.NEXT_PUBLIC_RUST_API_URL,
-  DEFAULT_RUST_API_BASE_URL,
-].find((value) => typeof value === "string" && value.trim());
-
 type ApiList = {
   id: string;
   title: string;
@@ -30,31 +22,6 @@ type ApiList = {
   color?: string | null;
   userEmail: string;
 };
-
-function getRustApiBaseUrl() {
-  const base = RUST_API_BASE_URL?.trim();
-  if (!base) {
-    throw new Error("Rust API base URL is not configured. Set RUST_API_BASE_URL or NEXT_PUBLIC_RUST_API_BASE_URL.");
-  }
-  return base.replace(/\/$/, "");
-}
-
-async function fetchFromRustApi<T>(path: string, init?: RequestInit): Promise<T> {
-  const baseUrl = getRustApiBaseUrl();
-  const suffix = path.startsWith("/") ? path : `/${path}`;
-  const response = await fetch(`${baseUrl}${suffix}`, {
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    ...init,
-  });
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    const detail = typeof (data as Record<string, unknown>).error === "string"
-      ? (data as { error: string }).error
-      : response.statusText;
-    throw new Error(detail);
-  }
-  return (await response.json()) as T;
-}
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -102,7 +69,7 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
     }
   }
   try {
-    const data = await fetchFromRustApi<{ lists: ApiList[] }>(`/lists?userEmail=${encodeURIComponent(email)}`);
+    const data = await rustApiFetch<{ lists: ApiList[] }>(`/lists?userEmail=${encodeURIComponent(email)}`);
     const mapped = data.lists.map(mapApiList);
     if (typeof window !== "undefined") {
       try {
@@ -130,7 +97,7 @@ export async function addList(
   }
   const normalizedColor = normalizeListColor(color);
   const payload = { title, movies: initialMovies, color: normalizedColor, userEmail: email };
-  const data = await fetchFromRustApi<{ list: ApiList }>("/lists", {
+  const data = await rustApiFetch<{ list: ApiList }>("/lists", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -153,7 +120,7 @@ export async function addMovieToList(listId: string, tmdbId: number, userEmail: 
   if (!email) {
     throw new Error("userEmail is required to update a list");
   }
-  const data = await fetchFromRustApi<{ list: ApiList }>(`/lists/${listId}/items`, {
+  const data = await rustApiFetch<{ list: ApiList }>(`/lists/${listId}/items`, {
     method: "POST",
     body: JSON.stringify({ tmdbId, userEmail: email }),
   });
@@ -175,7 +142,7 @@ export async function updateList(
   if (data.slug && data.slug.trim()) payload.slug = slugify(data.slug);
   if (data.color && data.color.trim()) payload.color = normalizeListColor(data.color);
   payload.userEmail = email;
-  const result = await fetchFromRustApi<{ list: ApiList }>(`/lists/${listId}`, {
+  const result = await rustApiFetch<{ list: ApiList }>(`/lists/${listId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
@@ -190,7 +157,7 @@ export async function getListBySlug(slug: string, userEmail: string): Promise<Sa
     throw new Error("userEmail is required to load a list");
   }
   try {
-    const data = await fetchFromRustApi<{ list: ApiList }>(
+    const data = await rustApiFetch<{ list: ApiList }>(
       `/lists/by-slug/${encodeURIComponent(slug)}?userEmail=${encodeURIComponent(email)}`,
     );
     const mapped = mapApiList(data.list);
@@ -206,7 +173,7 @@ export async function deleteList(listId: string, userEmail: string): Promise<voi
   if (!email) {
     throw new Error("userEmail is required to delete a list");
   }
-  await fetchFromRustApi<{ ok: boolean }>(`/lists/${listId}`, {
+  await rustApiFetch<{ ok: boolean }>(`/lists/${listId}`, {
     method: "DELETE",
     body: JSON.stringify({ userEmail: email }),
   });
