@@ -19,3 +19,4 @@
 - 2025-12-13 18:31 UTC — Moved viewport config to Next viewport export and set hero icon images to eager priority/sizing to clear warnings.
 - 2025-12-13 19:11 UTC — Added /api/rust proxy, defaulted browser calls to the proxy to avoid mixed content, refactored list/rating stores to use the shared client, and updated docs/context.
 - 2025-12-13 19:16 UTC — Removed unused demo components, sample data, and diagrams to trim the codebase; cleaned README/CONTEXT to match.
+- 2025-12-13 19:40 UTC — Pinned jose dependency to 4.15.9 to align with next-auth/openid-client expectations.
