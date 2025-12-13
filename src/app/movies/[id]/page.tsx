@@ -107,7 +107,7 @@ function renderCommunityRatings(movie: {
   rating?: number;
   imdbRating?: number;
   letterboxdRating?: number;
-  imdbId?: string;
+  imdbId?: string | null;
   tmdbId?: number;
 }) {
   const items: { key: string; href?: string; value: string; label: string; icon?: string }[] = [];

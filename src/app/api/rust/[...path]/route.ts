@@ -1,3 +1,4 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 const API_ORIGIN =
@@ -14,8 +15,11 @@ function buildUpstreamUrl(path: string[] | undefined, search: string) {
   return `${cleanedOrigin}${suffix}${search}`;
 }
 
-async function proxy(request: Request, context: { params: { path?: string[] } }) {
-  const upstreamUrl = buildUpstreamUrl(context.params.path, new URL(request.url).search);
+type RouteParams = { path?: string[] } | Promise<{ path: string[] }>;
+
+async function proxy(request: NextRequest, context: { params: RouteParams }) {
+  const params = await context.params;
+  const upstreamUrl = buildUpstreamUrl(params?.path, new URL(request.url).search);
   const headers = new Headers(request.headers);
   headers.delete("host");
   headers.delete("connection");

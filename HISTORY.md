@@ -22,3 +22,6 @@
 - 2025-12-13 19:40 UTC — Pinned jose dependency to 4.15.9 to align with next-auth/openid-client expectations.
 - 2025-12-13 19:52 UTC — Cleaned env files to use a single RUST_API_ORIGIN and removed NEXT_PUBLIC overrides to stop search from hitting the wrong origin.
 - 2025-12-13 20:17 UTC — Added a Next.js rewrite so /api/tmdb routes reuse the Rust proxy for TMDB search and detail calls.
+- 2025-12-13 20:33 UTC — Fixed /api/rust route handler typing to satisfy Next 16 params shape.
+- 2025-12-13 20:37 UTC — Allowed null imdbId in movie detail community ratings to fix Next build type error.
+- 2025-12-13 20:35 UTC — Updated NextAuth type import to AuthOptions to satisfy Next 16/next-auth build typings.
