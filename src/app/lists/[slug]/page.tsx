@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getListBySlug } from "@/lib/list-store";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getRatingsForUser } from "@/lib/ratings-store";
 import { ListSortControls } from "@/components/list-sort-controls";
@@ -18,7 +19,7 @@ export default async function ListDetail({
   searchParams?: Promise<Record<string, string | string[] | undefined> | URLSearchParams>;
 }) {
   const [{ slug }, resolvedSearchParams] = await Promise.all([params, searchParams]);
-  const session = await getServerSession(authOptions);
+  const session = (await getServerSession(authOptions)) as Session | null;
   const viewerEmail = session?.user?.email?.toLowerCase() ?? null;
   const sort =
     resolvedSearchParams instanceof URLSearchParams

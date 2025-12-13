@@ -3,13 +3,14 @@ import { SignInButton } from "@/components/sign-in-button";
 import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import { loadLists } from "@/lib/list-store";
 import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
 import Image from "next/image";
 import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const session = await getServerSession(authOptions);
+  const session = (await getServerSession(authOptions)) as Session | null;
   const userEmail = session?.user?.email?.toLowerCase() ?? "";
   const lists = userEmail ? await loadLists(userEmail) : [];
 

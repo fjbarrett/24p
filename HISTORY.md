@@ -14,3 +14,4 @@
 - 2025-12-13 — Externalized jose in Next config to stop NextAuth webcrypto bundling errors and synced CONTEXT.
 - 2025-12-13 — Ran `bun run dev` to repro Next build issues; blocked by port permissions in sandbox (no code changes).
 - 2025-12-13 — Updated NextAuth server session imports to use next-auth/next for production build typing.
+- 2025-12-13 — Added explicit Session typing around getServerSession usages to satisfy NextAuth types in prod build.
