@@ -51,6 +51,7 @@ export default async function ListDetail({
 
   const ratingsMap = viewerEmail ? await getRatingsForUser(viewerEmail) : {};
   const fromParam = encodeURIComponent(`/lists/${list.slug}`);
+  const headerGradient = pickGradient(list);
 
   return (
     <div className="text-black-100">
@@ -61,8 +62,15 @@ export default async function ListDetail({
             <span>Back</span>
           </Link>
         </div>
-        <div className="flex items-center justify-between" style={{ paddingLeft: 16 }}>
-          <h1 className="text-3xl font-semibold text-white">{list.title}</h1>
+        <div className="h-28 rounded-2xl border border-white/5 bg-gradient-to-br from-black-900 via-black-950 to-black-900 overflow-hidden relative">
+          <div
+            className="absolute inset-0 rounded-2xl opacity-90"
+            style={{ background: headerGradient, mixBlendMode: "lighten" }}
+            aria-hidden
+          />
+          <div className="relative z-10 flex h-full items-center px-5">
+            <h1 className="text-3xl font-semibold text-white">{list.title}</h1>
+          </div>
         </div>
         <ListSortControls sort={sort} dir={dir} />
         <ListDetailClient
@@ -110,4 +118,22 @@ function getLargePoster(url: string): string {
     : url.includes("/w342/")
       ? url.replace("/w342/", "/w185/")
       : url;
+}
+
+const rainbowStops = [
+  "#ff7be0",
+  "#b37cff",
+  "#4d9cff",
+  "#7bdcb5",
+  "#f6c343",
+  "#ff9f43",
+  "#ff6b6b",
+  "#ff7be0",
+];
+
+function pickGradient(list: { id: string; slug?: string; title?: string }) {
+  const key = list.slug || list.title || list.id;
+  const shift = Array.from(key).reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % rainbowStops.length, 0);
+  const rotated = [...rainbowStops.slice(shift), ...rainbowStops.slice(0, shift)];
+  return `linear-gradient(90deg, ${rotated.join(", ")})`;
 }

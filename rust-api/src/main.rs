@@ -9,7 +9,10 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use sqlx::{postgres::PgPoolOptions, FromRow, PgPool};
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
+    FromRow, PgPool,
+};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
@@ -327,12 +330,20 @@ async fn main() -> anyhow::Result<()> {
         .filter(|value| !value.is_empty())
         .context("STRAWBERRY_BASE_URL must be set to route TMDB lookups through Strawberry")?;
 
+    let mut db_options: PgConnectOptions = db_url
+        .parse()
+        .context("DATABASE_URL must be a valid Postgres URL")?;
+    db_options = db_options.ssl_mode(PgSslMode::Require);
+
     let max_conns: u32 = env::var("DB_MAX_CONNECTIONS")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(8);
+        .unwrap_or(5);
 
-    info!("Connecting to Postgres with max_connections={}", max_conns);
+    info!(
+        "Connecting to Postgres with sslmode=require and max_connections={}",
+        max_conns
+    );
 
     let pool = PgPoolOptions::new()
         .max_connections(max_conns)
@@ -340,7 +351,7 @@ async fn main() -> anyhow::Result<()> {
         .acquire_timeout(Duration::from_secs(5))
         .idle_timeout(Some(Duration::from_secs(300)))
         .test_before_acquire(true)
-        .connect(&db_url)
+        .connect_with(db_options)
         .await?;
 
     ensure_schema(&pool).await?;

@@ -17,7 +17,7 @@ export default async function Home() {
     return (
       <div className="flex min-h-screen items-center justify-center px-4 py-10 text-black-100 sm:px-8 lg:px-16">
         <div className="w-full flex items-center justify-center">
-          <Header isSignedIn={false} centered />
+          <Header isSignedIn={false} centered lists={[]} userEmail="" />
         </div>
       </div>
     );
@@ -25,18 +25,32 @@ export default async function Home() {
 
   return (
     <div className="text-black-100">
-      <div className="mx-auto max-w-[1000px] space-y-8">
-        <Header isSignedIn />
+      <div className="mx-auto max-w-[1000px]">
+        <Header isSignedIn lists={lists} userEmail={userEmail} />
 
         <main className="space-y-10">
           <ListsSection lists={lists} userEmail={userEmail} />
         </main>
+
+        <footer className="flex justify-center mb-6">
+          <SignInButton className="px-5 py-2 text-sm" ariaLabel="Sign out" />
+        </footer>
       </div>
     </div>
   );
 }
 
-function Header({ isSignedIn, centered = false }: { isSignedIn: boolean; centered?: boolean }) {
+function Header({
+  isSignedIn,
+  centered = false,
+  lists,
+  userEmail,
+}: {
+  isSignedIn: boolean;
+  centered?: boolean;
+  lists: Awaited<ReturnType<typeof loadLists>>;
+  userEmail: string;
+}) {
   const layoutClass = centered
     ? "flex flex-col items-center gap-3 text-center"
     : "flex w-full flex-col items-center gap-4 text-center";
@@ -44,19 +58,14 @@ function Header({ isSignedIn, centered = false }: { isSignedIn: boolean; centere
     <header
       className={`${layoutClass} relative`}
     >
-      {isSignedIn && (
-        <div style={{ marginTop: 15 }}  className="flex w-full justify-center">
-          <SignInButton className="px-5 py-2 text-sm" ariaLabel="Sign out" />
-        </div>
-      )}
       <div className="flex items-center justify-center">
         {isSignedIn ? (
-          <Image src="/icon-new.png" alt="24p logo" width={192} height={192} className="rounded-[10px]" />
+          <Image src="/icon-new.png" alt="24p logo" width={192} height={192} className="mt-[40] rounded-[10px]" />
         ) : (
           <SignInButton
             variant="ghost"
             borderless
-            className="rounded-[12px] p-0 border-none hover:border-none focus-visible:outline-white active:translate-y-[1px] active:scale-[0.99] transition"
+            className="mt-[15px] rounded-[12px] p-0 border-none hover:border-none focus-visible:outline-white active:translate-y-[1px] active:scale-[0.99] transition"
             ariaLabel="Sign in with Google"
           >
             <Image
@@ -71,7 +80,7 @@ function Header({ isSignedIn, centered = false }: { isSignedIn: boolean; centere
       </div>
       {isSignedIn && (
         <div className="w-full max-w-[560px]">
-          <TmdbSearchBar />
+          <TmdbSearchBar lists={lists} userEmail={userEmail} />
         </div>
       )}
     </header>

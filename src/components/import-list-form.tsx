@@ -44,7 +44,7 @@ export function ImportListForm({ userEmail, onComplete }: ImportListFormProps) {
       <div>
         <p className="text-xs uppercase tracking-[0.4em] text-black-400">Import</p>
         <h2 className="mt-2 text-2xl font-semibold text-white">Bring in Letterboxd or IMDb lists</h2>
-        <p className="text-sm text-black-400">
+        <p className="text-sm text-black-400" id="import-help">
           Paste CSV text (including exports from this page) or newline titles; we will match them on TMDB.
         </p>
       </div>
@@ -65,9 +65,14 @@ export function ImportListForm({ userEmail, onComplete }: ImportListFormProps) {
             rows={6}
             className="mt-1 w-full rounded-2xl border border-black-700 bg-black-950 px-3 py-2 text-sm text-black-100"
             placeholder="Title,Year\nInception,2010"
+            aria-describedby={["import-help", message ? "import-status" : null].filter(Boolean).join(" ")}
           />
         </label>
-        {message && <p className="text-xs text-black-400">{message}</p>}
+        {message && (
+          <p className="text-xs text-black-400" id="import-status" role="status" aria-live="polite">
+            {message}
+          </p>
+        )}
         <button
           type="submit"
           disabled={isPending || !userEmail}

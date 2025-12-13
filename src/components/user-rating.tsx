@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ChangeEvent } from "react";
+import { useId, useMemo, useState, useTransition, type ChangeEvent } from "react";
 import { rustApiFetch } from "@/lib/rust-api-client";
 
 type UserRatingProps = {
@@ -14,6 +14,7 @@ export function UserRating({ tmdbId, initialRating, userEmail }: UserRatingProps
   const [rating, setRating] = useState(initialRating);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const statusId = useId();
 
   function submit(value: number) {
     if (!normalizedEmail) {
@@ -56,6 +57,9 @@ export function UserRating({ tmdbId, initialRating, userEmail }: UserRatingProps
           value={rating ?? ""}
           onChange={handleChange}
           disabled={isPending || !normalizedEmail}
+          aria-label="Your rating for this movie"
+          aria-describedby={message ? statusId : undefined}
+          aria-busy={isPending}
           style={{ fontSize: 24 }}
         >
           <option value="" disabled>
@@ -68,7 +72,11 @@ export function UserRating({ tmdbId, initialRating, userEmail }: UserRatingProps
           ))}
         </select>
       </div>
-      {message && <p className="text-xs text-black-500">{message}</p>}
+      {message && (
+        <p className="text-xs text-black-500" id={statusId} role="status" aria-live="polite">
+          {message}
+        </p>
+      )}
     </div>
   );
 }

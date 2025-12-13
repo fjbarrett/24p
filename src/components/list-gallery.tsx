@@ -1,18 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { Cog } from "lucide-react";
 import type { SavedList } from "@/lib/list-store";
-import type { SmartListDefinition } from "@/lib/smart-list-store";
-import { getListColorStyles } from "@/lib/list-colors";
+
+const rainbowStops = [
+  "#ff7be0",
+  "#b37cff",
+  "#4d9cff",
+  "#7bdcb5",
+  "#f6c343",
+  "#ff9f43",
+  "#ff6b6b",
+  "#ff7be0",
+];
+
+function pickGradient(list: { id: string; slug?: string; title?: string }) {
+  const key = list.slug || list.title || list.id;
+  const shift = Array.from(key).reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % rainbowStops.length, 0);
+  const rotated = [...rainbowStops.slice(shift), ...rainbowStops.slice(0, shift)];
+  return `linear-gradient(90deg, ${rotated.join(", ")})`;
+}
 
 type ListGalleryProps = {
-  lists: (SavedList | (SmartListDefinition & { isSmart: true }))[];
-  onSmartListSelect?: (id: string) => void;
-  onSmartListEdit?: (id: string) => void;
+  lists: SavedList[];
 };
 
-export function ListGallery({ lists, onSmartListSelect, onSmartListEdit }: ListGalleryProps) {
+export function ListGallery({ lists }: ListGalleryProps) {
   if (!lists.length) {
     return (
       <section id="lists" className="rounded-3xl border border-white/10 bg-black-900/40 p-6 text-center">
@@ -25,74 +38,22 @@ export function ListGallery({ lists, onSmartListSelect, onSmartListEdit }: ListG
   return (
     <section id="lists" className="space-y-4">
       {/* <p className="text-xs uppercase tracking-[0.4em] text-black-400">Your latest lists</p> */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {lists.map((list) => {
-          const isSmart = "isSmart" in list;
-          const content = (
-            <div className="group relative block h-52 overflow-hidden rounded-3xl border border-white/10 bg-black transition hover:border-black-400">
-              <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/10 bg-gradient-to-br from-black-900 via-black-950 to-black-900" />
-              <div
-                className="pointer-events-none absolute inset-[3px] rounded-3xl opacity-70"
-                style={getListColorStyles((list as SavedList).color).overlay}
-              />
-              <div className="pointer-events-none absolute inset-[6px] rounded-3xl border border-white/5" />
-              {isSmart && (
-                <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/70 px-2 py-1 text-xs uppercase tracking-[0.2em] text-black-200">
-                  <Cog size={16} />
-                  Smart
+      <div className="grid gap-6 sm:grid-cols-2">
+        {lists.map((list) => (
+          <Link key={list.id} href={`/lists/${list.slug}`}>
+            <div
+              className="group relative block h-48 overflow-hidden rounded-2xl border border-black p-[4px]"
+              style={{ background: pickGradient(list) }}
+            >
+              <div className="relative h-full w-full overflow-hidden rounded-2xl bg-gradient-to-br from-black-900 via-black-950 to-black-900">
+                <div className="pointer-events-none absolute inset-[6px] rounded-2xl bg-gradient-to-br from-transparent via-black/10 to-black/30 blur-sm" />
+                <div className="relative z-10 flex h-full flex-col justify-end p-5">
+                  <h3 className="text-2xl font-bold text-white">{list.title}</h3>
                 </div>
-              )}
-          {isSmart && (
-            <div className="absolute right-3 top-3">
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onSmartListEdit?.(list.id);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onSmartListEdit?.(list.id);
-                  }
-                }}
-                className="inline-flex rounded-full border border-black-700 bg-black/70 p-2 text-black-200 transition hover:border-black-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-black-400"
-                aria-label={`Edit rules for ${"title" in list ? list.title : "Smart list"}`}
-              >
-                <Cog size={18} />
-              </span>
-            </div>
-          )}
-              <div className="relative z-10 flex h-full flex-col justify-end space-y-1 p-5">
-                <h3 className="text-xl font-semibold text-white group-hover:text-black-200">
-                  {"title" in list ? list.title : "Untitled"}
-                </h3>
               </div>
             </div>
-          );
-
-          if (isSmart) {
-            return (
-              <button
-                key={list.id}
-                onClick={() => onSmartListSelect?.(list.id)}
-                className="text-left"
-                aria-label={`Open smart list ${"title" in list ? list.title : "Smart list"}`}
-              >
-                {content}
-              </button>
-            );
-          }
-
-          return (
-            <Link key={list.id} href={`/lists/${(list as SavedList).slug}`}>
-              {content}
-            </Link>
-          );
-        })}
+          </Link>
+        ))}
       </div>
     </section>
   );

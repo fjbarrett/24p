@@ -1,13 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { fetchTmdbMovie } from "@/lib/tmdb-server";
-import { loadLists } from "@/lib/list-store";
-import type { SavedList } from "@/lib/list-store";
-import { MovieListActions } from "@/components/movie-list-actions";
-import { UserRating } from "@/components/user-rating";
-import { getRating } from "@/lib/ratings-store";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { fetchAppleTvLink } from "@/lib/apple-links";
 
 type PageProps = {
@@ -22,67 +15,61 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
     throw new Error("Invalid TMDB id");
   }
 
-  const [movie, session] = await Promise.all([fetchTmdbMovie(tmdbId), getServerSession(authOptions)]);
-  const userEmail = session?.user?.email?.toLowerCase() ?? null;
+  const movie = await fetchTmdbMovie(tmdbId);
   const appleLink = movie.imdbId ? await fetchAppleTvLink(movie.imdbId, movie.title) : { url: null, price: null };
-  const lists = userEmail ? await loadLists(userEmail) : [];
-  const listsContaining = lists.filter((list) => list.movies.includes(tmdbId));
-  const userRating = userEmail ? await getRating(userEmail, tmdbId) : null;
   const backHref = getFromParam(resolvedSearchParams) ?? "/";
+  const communityRatings = renderCommunityRatings(movie);
 
   return (
-    <div className="text-black-100">
-      <article className="mx-auto max-w-[1000px] space-y-6 rounded-3xl bg-black-900/70 p-6 shadow-2xl backdrop-blur">
-        <div className="flex justify-left">
+    <div className="min-h-screen bg-black-950 px-4 py-6 text-black-100 sm:px-6">
+      <article className="mx-auto max-w-[1100px] space-y-3 rounded-3xl bg-black-900/70 p-3 shadow-2xl backdrop-blur sm:p-4">
+        <div className="flex items-center justify-between">
           <Link
             href={backHref}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm text-black-200 transition hover:border-black-300"
+            className="inline-flex items-center gap-2 rounded-full bg-black-950/70 px-4 py-2 text-xs font-medium text-black-200 transition hover:-translate-y-0.5 hover:text-white hover:shadow-lg"
             aria-label="Close"
           >
-            {/* <span aria-hidden>⟵</span> */}
+            <span aria-hidden>←</span>
             <span>Back</span>
           </Link>
         </div>
-        <header className="flex flex-col items-start gap-4 text-left sm:flex-row sm:items-start">
-          {movie.posterUrl ? (
-            <Image
-              src={getLargePoster(movie.posterUrl)}
-              alt={`${movie.title} poster`}
-              width={200}
-              height={300}
-              className="h-[300px] w-[200px] rounded-2xl object-cover shadow-lg"
-            />
-          ) : (
-            <div className="flex h-[300px] w-[200px] items-center justify-center rounded-2xl bg-black-800 text-sm text-black-500">
-              No art yet
+
+        <header className="flex flex-col gap-4 text-left sm:gap-5">
+          <div className="flex flex-col items-start gap-2 sm:gap-3">
+            {movie.posterUrl ? (
+              <Image
+                src={getLargePoster(movie.posterUrl)}
+                alt={`${movie.title} poster`}
+                width={220}
+                height={330}
+                className="h-auto w-full rounded-3xl object-cover shadow-2xl"
+                priority
+              />
+            ) : (
+              <div className="flex aspect-[2/3] w-full items-center justify-center rounded-3xl bg-black-800 text-sm text-black-500">
+                No art yet
+              </div>
+            )}
+            {communityRatings ? <div className="mt-[10px] sm:mt-[10px]">{communityRatings}</div> : null}
+          </div>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <h1 className="text-4xl font-semibold text-white sm:text-5xl">{movie.title}</h1>
+              {typeof movie.releaseYear === "number" ? (
+                <p className="text-sm text-black-500">{movie.releaseYear}</p>
+              ) : null}
             </div>
-          )}
-          <div className="flex-1 space-y-3">
-            <h1 className="text-4xl font-semibold text-white sm:text-5xl">{movie.title}</h1>
-            <p className="text-sm text-black-400">
-              {movie.releaseYear ?? "—"} · {movie.runtime ? `${movie.runtime}m` : "Runtime TBD"}
-            </p>
-            {movie.genres?.length ? (
-              <p className="text-sm text-black-400">{movie.genres.join(" • ")}</p>
+
+            {movie.overview && <p className="text-base leading-relaxed text-black-200">{movie.overview}</p>}
+
+            {appleLink.url ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <WatchOnAppleTv url={appleLink.url} price={appleLink.price} />
+              </div>
             ) : null}
-            {renderCommunityRatings(movie)}
-            <WatchOnAppleTv url={appleLink.url} price={appleLink.price} />
-            {movie.tagline && <p className="text-base italic text-black-300">“{movie.tagline}”</p>}
-            {movie.overview && <p className="text-base text-black-300">{movie.overview}</p>}
-            <div className="h-1" />
           </div>
         </header>
-
-        <section className="grid gap-4 lg:grid-cols-2">
-          <MovieRatingCard
-            movie={movie}
-            userRating={userRating}
-            lists={listsContaining}
-            tmdbId={tmdbId}
-            userEmail={userEmail ?? null}
-          />
-          <MovieListActions lists={lists} tmdbId={tmdbId} userEmail={userEmail} />
-        </section>
       </article>
     </div>
   );
@@ -123,30 +110,53 @@ function renderCommunityRatings(movie: {
   imdbId?: string;
   tmdbId?: number;
 }) {
-  const items: { key: string; href: string; value: string }[] = [];
+  const items: { key: string; href?: string; value: string; label: string; icon?: string }[] = [];
   if (typeof movie.imdbRating === "number" && movie.imdbId) {
     const href = `https://www.imdb.com/title/${movie.imdbId}/`;
-    items.push({ key: "imdb", href, value: movie.imdbRating.toFixed(1) });
+    items.push({
+      key: "imdb",
+      href,
+      value: movie.imdbRating.toFixed(1),
+      label: "IMDb",
+      icon: "/imdb_logo.svg",
+    });
   }
   if (typeof movie.letterboxdRating === "number" && movie.tmdbId != null) {
     const href = `https://letterboxd.com/tmdb/${movie.tmdbId}/`;
-    items.push({ key: "lb", href, value: movie.letterboxdRating.toFixed(2) });
+    items.push({
+      key: "lb",
+      href,
+      value: movie.letterboxdRating.toFixed(2),
+      label: "Letterboxd",
+      icon: "/letterboxd_logo.svg",
+    });
   }
   if (!items.length) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 text-sm text-black-200">
+    <div className="flex flex-wrap items-center gap-2 text-sm text-black-200">
       {items.map((item) => (
-        <a
-          key={item.key}
-          href={item.href}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 underline-offset-4 hover:underline"
-        >
-          <span className="text-black-400 uppercase text-[10px] tracking-[0.15em]">{item.key.toUpperCase()}</span>
-          <span className="text-black-100">{item.value}</span>
-        </a>
+        item.href ? (
+          <a
+            key={item.key}
+            href={item.href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 underline-offset-4"
+          >
+            {item.icon ? (
+              <Image src={item.icon} alt={`${item.label} logo`} width={18} height={18} className="h-4 w-auto" />
+            ) : null}
+            <span className="text-black-200">{item.value}</span>
+          </a>
+        ) : (
+          <span key={item.key} className="inline-flex items-center gap-1 text-black-200">
+            {item.icon ? (
+              <Image src={item.icon} alt={`${item.label} logo`} width={18} height={18} className="h-4 w-auto" />
+            ) : null}
+            <span>{item.value}</span>
+          </span>
+        )
       ))}
     </div>
   );
@@ -164,39 +174,5 @@ function WatchOnAppleTv({ url, price }: { url: string | null; price: string | nu
       <span>Watch on Apple TV</span>
       {price ? <span className="text-black-500">({price})</span> : null}
     </a>
-  );
-}
-
-function MovieRatingCard({
-  userRating,
-  lists,
-  tmdbId,
-  userEmail,
-}: {
-  userRating: number | null;
-  lists: SavedList[];
-  tmdbId: number;
-  userEmail: string | null;
-}) {
-  return (
-    <div className="space-y-5 rounded-3xl bg-black-950/60 p-5">
-      <UserRating tmdbId={tmdbId} initialRating={userRating} userEmail={userEmail} />
-      <div className="mt-4 pt-4">
-        <p className="text-xs uppercase tracking-[0.3em] text-black-400">Lists featuring this film</p>
-        {lists.length === 0 ? (
-          <p className="mt-2 text-xs text-black-500">Not in any list yet.</p>
-        ) : (
-          <ul className="mt-2 space-y-1 text-sm">
-            {lists.map((list) => (
-              <li key={list.id}>
-                <Link href={`/lists/${list.slug}`} className="text-black-200 hover:text-white">
-                  {list.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
   );
 }
