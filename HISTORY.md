@@ -11,3 +11,4 @@
 - 2025-12-12 — Switched to Bun for package management; enforced Neon Postgres TLS (sslmode=require, rustls sqlx build) with a smaller default pool.
 - 2025-12-12 — Added a plus button on search results to pick a list and save the movie inline.
 - 2025-12-12 — Pruned HISTORY/CONTEXT for brevity while keeping key milestones and current behavior notes.
+- 2025-12-13 — Externalized jose in Next config to stop NextAuth webcrypto bundling errors and synced CONTEXT.

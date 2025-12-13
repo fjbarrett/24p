@@ -5,4 +5,4 @@
 - TMDB/External: All TMDB calls flow through the Strawberry proxy; IMDb/Letterboxd ratings and Apple TV links (via Strawberry CheapCharts) surface when an IMDb id exists.
 - UI: Sticky centered search bar for signed-in users; search results show posters/title/year and include a plus button to choose a list and add the movie inline. Home shows logo and list actions (Create/Import); lists render with rainbow-framed cards. Movie detail is mobile-first with full-width poster and community rating chips; rating/add-to-list sections below are currently absent.
 - Accessibility: Modals/dialogs labeled, search uses ARIA combobox/listbox with live updates, and form/rating interactions announce status messages.
-- Tooling: Bun is the package manager; use `bun install`, `bun run dev`, `bun run build`, `bun run lint`, `bun run test` (once present).
+- Tooling: Bun is the package manager; use `bun install`, `bun run dev`, `bun run build`, `bun run lint`, `bun run test` (once present). Next.js treats `jose` as a server external to avoid Turbopack/NextAuth `webcrypto.js` resolution errors.
