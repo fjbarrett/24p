@@ -20,3 +20,5 @@
 - 2025-12-13 19:11 UTC — Added /api/rust proxy, defaulted browser calls to the proxy to avoid mixed content, refactored list/rating stores to use the shared client, and updated docs/context.
 - 2025-12-13 19:16 UTC — Removed unused demo components, sample data, and diagrams to trim the codebase; cleaned README/CONTEXT to match.
 - 2025-12-13 19:40 UTC — Pinned jose dependency to 4.15.9 to align with next-auth/openid-client expectations.
+- 2025-12-13 19:52 UTC — Cleaned env files to use a single RUST_API_ORIGIN and removed NEXT_PUBLIC overrides to stop search from hitting the wrong origin.
+- 2025-12-13 20:17 UTC — Added a Next.js rewrite so /api/tmdb routes reuse the Rust proxy for TMDB search and detail calls.
