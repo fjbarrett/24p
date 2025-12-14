@@ -80,11 +80,11 @@ function Header({
             <Image
               src="/icon-new.png"
               alt="24p logo"
-              width={128}
-              height={128}
+              width={219}
+              height={192}
               priority
               loading="eager"
-              className="h-[128px] w-[128px] rounded-[10px] transition hover:opacity-90"
+              className="h-[192px] w-[219px] rounded-[10px] transition hover:opacity-90"
             />
           </SignInButton>
         )}

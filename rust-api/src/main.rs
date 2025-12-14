@@ -324,6 +324,7 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let ssl_mode = parse_ssl_mode(env::var("DB_SSLMODE").unwrap_or_default());
     let strawberry_base_url = env::var("STRAWBERRY_BASE_URL")
         .map(|value| value.trim().to_string())
         .ok()
@@ -333,7 +334,7 @@ async fn main() -> anyhow::Result<()> {
     let mut db_options: PgConnectOptions = db_url
         .parse()
         .context("DATABASE_URL must be a valid Postgres URL")?;
-    db_options = db_options.ssl_mode(PgSslMode::Require);
+    db_options = db_options.ssl_mode(ssl_mode);
 
     let max_conns: u32 = env::var("DB_MAX_CONNECTIONS")
         .ok()
@@ -341,8 +342,8 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or(5);
 
     info!(
-        "Connecting to Postgres with sslmode=require and max_connections={}",
-        max_conns
+        "Connecting to Postgres with sslmode={:?} and max_connections={}",
+        ssl_mode, max_conns
     );
 
     let pool = PgPoolOptions::new()
@@ -1425,4 +1426,15 @@ fn internal_error(error: impl std::fmt::Display) -> (StatusCode, Json<ErrorRespo
             error: "Internal server error".into(),
         }),
     )
+}
+
+fn parse_ssl_mode(raw: String) -> PgSslMode {
+    match raw.to_lowercase().as_str() {
+        "disable" => PgSslMode::Disable,
+        "prefer" => PgSslMode::Prefer,
+        "require" => PgSslMode::Require,
+        "verify-ca" => PgSslMode::VerifyCa,
+        "verify-full" => PgSslMode::VerifyFull,
+        _ => PgSslMode::Require,
+    }
 }

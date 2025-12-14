@@ -10,6 +10,7 @@ export type TmdbMovieSearchResult = {
   poster_path?: string | null;
   imdb_rating?: number | null;
   letterboxd_rating?: number | null;
+  imdb_id?: string | null;
 };
 
 export type SimplifiedMovie = {
@@ -49,7 +50,6 @@ function baseMovieMapping(result: TmdbMovieSearchResult): SimplifiedMovie {
   const imdbRating = typeof result.imdb_rating === "number" ? Number(result.imdb_rating.toFixed(1)) : undefined;
   const letterboxdRating =
     typeof result.letterboxd_rating === "number" ? Number(result.letterboxd_rating.toFixed(2)) : undefined;
-  const imdbId = (result as { imdb_id?: string | null }).imdb_id ?? null;
   const imdbId = result.imdb_id ?? null;
 
   return {
@@ -60,7 +60,6 @@ function baseMovieMapping(result: TmdbMovieSearchResult): SimplifiedMovie {
     rating,
     imdbRating,
     letterboxdRating,
-    imdbId,
     imdbId,
     posterUrl,
   };

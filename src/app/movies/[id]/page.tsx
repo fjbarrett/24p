@@ -40,9 +40,9 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
               <Image
                 src={getLargePoster(movie.posterUrl)}
                 alt={`${movie.title} poster`}
-                width={220}
-                height={330}
-                className="h-auto w-full rounded-3xl object-cover shadow-2xl"
+                width={200}
+                height={300}
+                className="h-auto w-[200px] max-w-full rounded-3xl object-cover shadow-2xl"
                 priority
               />
             ) : (

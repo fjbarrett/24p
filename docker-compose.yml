@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-24p}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-24p}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rust-api:
+    build:
+      context: .
+      dockerfile: rust-api/Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: ${APP_PORT:-8080}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/24p}
+      DB_MAX_CONNECTIONS: ${DB_MAX_CONNECTIONS:-5}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      STRAWBERRY_BASE_URL: ${STRAWBERRY_BASE_URL:-https://strawberry.fjbarrett.workers.dev}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      RUST_API_ORIGIN: http://rust-api:8080
+      RUST_API_BASE_URL: http://rust-api:8080
+      RUST_API_URL: http://rust-api:8080
+      STRAWBERRY_BASE_URL: ${STRAWBERRY_BASE_URL:-https://strawberry.fjbarrett.workers.dev}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/24p}
+    depends_on:
+      rust-api:
+        condition: service_started
+    ports:
+      - "3000:3000"
+
+volumes:
+  db-data:

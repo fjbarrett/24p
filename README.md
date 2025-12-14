@@ -28,6 +28,18 @@ A Next.js 14 + App Router experience for 24p, the collaborative movie-listing ap
    ```
 5. Visit http://localhost:3000 to interact with the mocked rating/list builders.
 
+## Docker
+- Copy `.env.docker.example` to `.env` and fill in Google OAuth + NextAuth secrets. The defaults point the Rust API at the `rust-api` service and Postgres at the bundled `db`.
+  ```bash
+  cp .env.docker.example .env
+  ```
+- Build and start the stack (Next.js on port 3000, Rust API on 8080, Postgres on 5432):
+  ```bash
+  docker compose up --build
+  ```
+- The web service injects `RUST_API_ORIGIN=http://rust-api:8080` so browser calls flow through the proxy; tweak ports or database credentials via `.env` if needed.
+- TLS is disabled for the local Postgres service (`DB_SSLMODE=disable` in `.env`); set `DB_SSLMODE=require` when pointing at a TLS-enabled database.
+
 ## Auth configuration
 - Create a Google Cloud OAuth client (Web application) and add `http://localhost:3000/api/auth/callback/google` to the authorized redirect URIs.
 - Update `.env.local` with your client ID/secret and restart `bun run dev`.

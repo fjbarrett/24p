@@ -1,17 +1,11 @@
-import NextAuth, { type AuthOptions } from "next-auth";
+import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
 
-if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-  console.warn(
-    "Google OAuth credentials are missing. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your environment to enable sign in.",
-  );
-}
-
-export const authOptions: AuthOptions = {
+export const authOptions: NextAuthOptions = {
   secret: NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
@@ -28,12 +22,13 @@ export const authOptions: AuthOptions = {
   ],
   callbacks: {
     async session({ session, token }) {
-      if (session?.user && token?.sub) {
-        session.user.id = token.sub;
+      if (session.user && token.sub) {
+        // you'll want TS augmentation for this (below)
+        (session.user as any).id = token.sub;
       }
       return session;
     },
   },
 };
 
-export const authHandler = NextAuth(authOptions);
+export default NextAuth(authOptions);

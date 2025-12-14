@@ -7,3 +7,4 @@
 - Cleanup: Removed unused demo components (feature grid, stats bar, share card, rating widgets) and obsolete sample data/diagrams to keep the footprint lean.
 - Accessibility: Modals/dialogs labeled, search uses ARIA combobox/listbox with live updates, and form/rating interactions announce status messages.
 - Tooling: Bun is the package manager; use `bun install`, `bun run dev`, `bun run build`, `bun run lint`, `bun run test` (once present). Next.js treats `jose` as a server external to avoid Turbopack/NextAuth `webcrypto.js` resolution errors.
+- Deployment: Dockerfiles exist for the Next.js app (multi-stage Bun build, Node runtime) and Rust API, plus `docker-compose.yml` that boots Postgres, the API, and the web app; `.env.docker.example` seeds required env vars and defaults to ports 3000/8080/5432. Local compose uses `DB_SSLMODE=disable`; set to `require` when targeting a TLS-enabled Postgres.

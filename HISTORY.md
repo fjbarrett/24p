@@ -25,3 +25,16 @@
 - 2025-12-13 20:33 UTC — Fixed /api/rust route handler typing to satisfy Next 16 params shape.
 - 2025-12-13 20:37 UTC — Allowed null imdbId in movie detail community ratings to fix Next build type error.
 - 2025-12-13 20:35 UTC — Updated NextAuth type import to AuthOptions to satisfy Next 16/next-auth build typings.
+- 2025-12-14 20:21 UTC — Added Dockerfiles for the Next app and Rust API, docker-compose stack with Postgres, env example, and refreshed README/CONTEXT.
+- 2025-12-14 20:23 UTC — Swapped auth options type to NextAuthOptions to fix NextAuth type export during Docker build.
+- 2025-12-14 20:27 UTC — Pointed auth options type import at next-auth/core/types to resolve bundler export lookup for Docker build.
+- 2025-12-14 20:28 UTC — Typed auth options via Parameters<typeof NextAuth>[0] to avoid NextAuth named type import issues in Docker build.
+- 2025-12-14 20:30 UTC — Added explicit session callback typing to satisfy TypeScript during Docker build.
+- 2025-12-14 20:31 UTC — Switched to standard AuthOptions/Session imports from next-auth to fix type resolution during container builds.
+- 2025-12-14 20:35 UTC — Fixed duplicate imdbId declaration in tmdb.ts blocking Docker TypeScript build.
+- 2025-12-14 20:36 UTC — Added imdb_id optional field to TMDB search result type and simplified mapping to clear container build type error.
+- 2025-12-14 20:37 UTC — Removed duplicate imdbId property in TMDB mapping return object to unblock Docker TS build.
+- 2025-12-14 20:37 UTC — Enabled Next standalone output in next.config.ts to fix Docker copy of .next/standalone.
+- 2025-12-14 20:39 UTC — Switched Rust API Docker builder image to rustlang/rust:nightly-slim to satisfy edition 2024 crate requirements.
+- 2025-12-14 20:44 UTC — Added DB_SSLMODE env support (default disable for local Postgres), documented in README/CONTEXT, to fix TLS errors in docker-compose.
+- 2025-12-14 20:49 UTC — Adjusted splash logo sizing to match dashboard and reduced movie detail poster size.
