@@ -5,7 +5,7 @@ const DEFAULT_SERVER_BASE_URL =
   process.env.RUST_API_URL ??
   process.env.NEXT_PUBLIC_RUST_API_BASE_URL ??
   process.env.NEXT_PUBLIC_RUST_API_URL ??
-  (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8080" : "");
+  (process.env.NODE_ENV === "development" ? "https://127.0.0.1:8080" : "");
 
 const clientBaseUrl =
   process.env.NEXT_PUBLIC_RUST_API_BASE_URL ??

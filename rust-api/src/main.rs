@@ -401,7 +401,7 @@ async fn main() -> anyhow::Result<()> {
             .parse()
             .context("APP_HOST/APP_PORT did not form a valid socket address")?
     };
-    info!("Listening on http://{}", addr);
+    info!("Listening on https://{}", addr);
 
     axum::serve(tokio::net::TcpListener::bind(addr).await?, app)
         .with_graceful_shutdown(shutdown_signal())

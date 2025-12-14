@@ -21,12 +21,12 @@ A Next.js 14 + App Router experience for 24p, the collaborative movie-listing ap
    ```bash
    cp .env.example .env.local
    ```
-3. Populate `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`, `TMDB_API_KEY`, `DATABASE_URL` (any Postgres connection string), and `RUST_API_ORIGIN=http://localhost:8080` so the server knows where to proxy. Browsers default to calling `/api/rust/*` (same origin), but you can override with `NEXT_PUBLIC_RUST_API_BASE_URL` if you need a direct absolute origin. `NEXTAUTH_URL` should match the dev server URL. Request the TMDB key from https://www.themoviedb.org/settings/api (use the “API Read Access Token (v4 auth)” or v3 key). The TMDB key is consumed by the Rust API now, so export it in the shell that runs `cargo run -p rust-api` (or add it to a `.env` file in `rust-api/`).
+3. Populate `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`, `TMDB_API_KEY`, `DATABASE_URL` (any Postgres connection string), and `RUST_API_ORIGIN=http://rust-api:8080` so the server knows where to proxy. Browsers default to calling `/api/rust/*` (same origin), but you can override with `NEXT_PUBLIC_RUST_API_BASE_URL` if you need a direct absolute origin. `NEXTAUTH_URL` should match the dev server URL. Request the TMDB key from https://www.themoviedb.org/settings/api (use the “API Read Access Token (v4 auth)” or v3 key). The TMDB key is consumed by the Rust API now, so export it in the shell that runs `cargo run -p rust-api` (or add it to a `.env` file in `rust-api/`).
 4. Start the Rust API (`cargo run -p rust-api` from the `rust-api/` directory) and then run the dev server:
    ```bash
    bun run dev
    ```
-5. Visit http://localhost:3000 to interact with the mocked rating/list builders.
+5. Visit https://literal.company to interact with the mocked rating/list builders.
 
 ## Docker
 - Copy `.env.docker.example` to `.env` and fill in Google OAuth + NextAuth secrets. The defaults point the Rust API at the `rust-api` service and Postgres at the bundled `db`.
@@ -41,13 +41,13 @@ A Next.js 14 + App Router experience for 24p, the collaborative movie-listing ap
 - TLS is disabled for the local Postgres service (`DB_SSLMODE=disable` in `.env`); set `DB_SSLMODE=require` when pointing at a TLS-enabled database.
 
 ## Auth configuration
-- Create a Google Cloud OAuth client (Web application) and add `http://localhost:3000/api/auth/callback/google` to the authorized redirect URIs.
+- Create a Google Cloud OAuth client (Web application) and add `https://literal.company/api/auth/callback/google` to the authorized redirect URIs.
 - Update `.env.local` with your client ID/secret and restart `bun run dev`.
 - The route `src/app/api/auth/[...nextauth]/route.ts` already exports the configured handler, so `signIn("google")` from the UI works immediately once credentials exist.
 - Wrap additional routes in `getServerSession(authOptions)` to protect dashboards once you connect storage.
 
 ## Lists, ratings, and sharing
-- All list and rating reads/writes now go through the Rust API (`http://localhost:8080` by default) via the `/api/rust/*` proxy; there is no Next.js/Postgres fallback, so keep the Rust service running and the origin env var set.
+- All list and rating reads/writes now go through the Rust API (`https://literal.company:8080` by default) via the `/api/rust/*` proxy; there is no Next.js/Postgres fallback, so keep the Rust service running and the origin env var set.
 - `CreateListButton` (`src/components/create-list-button.tsx`) posts directly to the Rust API `/lists` endpoint. `ImportListForm` (`src/components/import-list-form.tsx`) now sends CSV/text imports to the Rust API `/lists/import` route (sign-in required) and forwards your email so imported ratings are persisted in `user_ratings`. The saved lists render under the hero via `ListGallery` (`src/components/list-gallery.tsx`). List detail pages (`/lists/[slug]`) let you rename or delete a list via `ListEditor`.
 - `TmdbSearchBar` (`src/components/tmdb-search-bar.tsx`) powers the prominent home search so users can jump straight into finding films and click through to detail pages using the Rust TMDB proxy.
 - Movie detail pages live under `/movies/[id]`, pulling TMDB data server-side through the Rust API; the page now lets you add the film to an existing list or create a new one on the fly.

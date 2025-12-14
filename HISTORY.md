@@ -38,3 +38,10 @@
 - 2025-12-14 20:39 UTC — Switched Rust API Docker builder image to rustlang/rust:nightly-slim to satisfy edition 2024 crate requirements.
 - 2025-12-14 20:44 UTC — Added DB_SSLMODE env support (default disable for local Postgres), documented in README/CONTEXT, to fix TLS errors in docker-compose.
 - 2025-12-14 20:49 UTC — Adjusted splash logo sizing to match dashboard and reduced movie detail poster size.
+- 2025-12-14 22:26 UTC — Set Google sign-in callback to redirect to https://literal.company:3000 and refreshed CONTEXT.
+- 2025-12-14 22:32 UTC — Updated env/docker/README defaults to use literal.company instead of loopback defaults and refreshed CONTEXT.
+- 2025-12-14 22:34 UTC — Switched literal.company defaults to http scheme (no https) across env/docker/README, callback, and CONTEXT.
+- 2025-12-14 23:03 UTC — Switched all default URLs to https across env templates, docker config, docs, client fallbacks, and SVG metadata.
+- 2025-12-14 23:12 UTC — Pointed Google callback/default NEXTAUTH_URL at https://literal.company (no port) and refreshed docs/config to match the production host.
+- 2025-12-14 23:24 UTC — Reset Rust API defaults back to the docker service host (http://rust-api:8080) in env templates/docs to avoid TLS mismatches.
+- 2025-12-14 23:25 UTC — Reverted imdb/letterboxd SVG metadata to original http namespaces so icons load correctly again.

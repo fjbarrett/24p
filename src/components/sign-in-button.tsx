@@ -43,7 +43,7 @@ export function SignInButton({
     }
 
     setPending(true);
-    await signIn("google");
+    await signIn("google", { callbackUrl: "https://literal.company" });
     setPending(false);
   }
 

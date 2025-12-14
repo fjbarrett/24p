@@ -7,7 +7,7 @@ const API_ORIGIN =
   process.env.RUST_API_URL ??
   process.env.NEXT_PUBLIC_RUST_API_BASE_URL ??
   process.env.NEXT_PUBLIC_RUST_API_URL ??
-  "http://127.0.0.1:8080";
+  "https://127.0.0.1:8080";
 
 function buildUpstreamUrl(path: string[] | undefined, search: string) {
   const cleanedOrigin = API_ORIGIN.replace(/\/$/, "");
