@@ -62,7 +62,7 @@ function Header({
     >
       <div className="flex items-center justify-center">
         {isSignedIn ? (
-          <PressableLogo src="/icon-new.png" alt="24p logo" width={219} height={192} />
+          <PressableLogo src="/icon-24p.png" alt="24p logo" width={219} height={192} />
         ) : (
           <SignInButton
             variant="ghost"
@@ -71,7 +71,7 @@ function Header({
             ariaLabel="Sign in with Google"
           >
             <Image
-              src="/icon-new.png"
+              src="/icon-24p.png"
               alt="24p logo"
               width={219}
               height={192}
