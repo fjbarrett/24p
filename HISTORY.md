@@ -45,3 +45,5 @@
 - 2025-12-14 23:12 UTC — Pointed Google callback/default NEXTAUTH_URL at https://literal.company (no port) and refreshed docs/config to match the production host.
 - 2025-12-14 23:24 UTC — Reset Rust API defaults back to the docker service host (http://rust-api:8080) in env templates/docs to avoid TLS mismatches.
 - 2025-12-14 23:25 UTC — Reverted imdb/letterboxd SVG metadata to original http namespaces so icons load correctly again.
+- 2025-12-14 23:46 UTC — Darkened list cover gradient colors and refreshed CONTEXT UI note.
+- 2025-12-14 23:50 UTC — Added press-responsive dashboard logo (press depth scales with hold time) and updated CONTEXT.

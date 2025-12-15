@@ -4,14 +4,14 @@ import Link from "next/link";
 import type { SavedList } from "@/lib/list-store";
 
 const rainbowStops = [
-  "#ff7be0",
-  "#b37cff",
-  "#4d9cff",
-  "#7bdcb5",
-  "#f6c343",
-  "#ff9f43",
-  "#ff6b6b",
-  "#ff7be0",
+  "#e864c6",
+  "#8c63e0",
+  "#3d7fcf",
+  "#54c295",
+  "#d8a534",
+  "#e68630",
+  "#e05555",
+  "#e864c6",
 ];
 
 function pickGradient(list: { id: string; slug?: string; title?: string }) {

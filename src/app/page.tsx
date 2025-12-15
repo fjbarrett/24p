@@ -1,4 +1,5 @@
 import { ListsSection } from "@/components/lists-section";
+import { PressableLogo } from "@/components/pressable-logo";
 import { SignInButton } from "@/components/sign-in-button";
 import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import { loadLists } from "@/lib/list-store";
@@ -61,15 +62,7 @@ function Header({
     >
       <div className="flex items-center justify-center">
         {isSignedIn ? (
-          <Image
-            src="/icon-new.png"
-            alt="24p logo"
-            width={219}
-            height={192}
-            priority
-            loading="eager"
-            className="mt-10 h-[192px] w-[219px] rounded-[10px]"
-          />
+          <PressableLogo src="/icon-new.png" alt="24p logo" width={219} height={192} />
         ) : (
           <SignInButton
             variant="ghost"
