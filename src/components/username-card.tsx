@@ -23,6 +23,7 @@ export function UsernameCard({ userEmail, profile }: UsernameCardProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const baseUrl = typeof window === "undefined" ? "" : window.location.origin;
+  const isPublic = profile?.isPublic ?? false;
   const normalized = normalizeUsernameInput(username);
   const isValid = isValidUsername(normalized);
 
@@ -52,9 +53,13 @@ export function UsernameCard({ userEmail, profile }: UsernameCardProps) {
           <p className="text-xs uppercase tracking-[0.4em] text-black-400">Profile URL</p>
           <div className="text-sm text-black-200">
             {profile?.username ? (
-              <span>
-                {baseUrl ? `${baseUrl}/${profile.username}` : `/${profile.username}`}
-              </span>
+              isPublic ? (
+                <span>
+                  {baseUrl ? `${baseUrl}/${profile.username}` : `/${profile.username}`}
+                </span>
+              ) : (
+                <span>Profile is private. Make it public to share a URL.</span>
+              )
             ) : (
               <span>Claim a username to unlock shareable URLs.</span>
             )}

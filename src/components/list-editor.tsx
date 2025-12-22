@@ -1,33 +1,128 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import type { SavedList } from "@/lib/list-store";
+import { useEffect, useState, useTransition } from "react";
+import type { ListShare, SavedList } from "@/lib/list-store";
+import { addListShare, loadListShares, removeListShare, updateListSharePermission } from "@/lib/list-store";
 import { DEFAULT_LIST_COLOR_ID, normalizeListColor } from "@/lib/list-colors";
 import { rustApiFetch } from "@/lib/rust-api-client";
 
 export function ListEditor({
   list,
   viewerEmail,
+  canEdit,
   onEditingChange,
 }: {
   list: SavedList;
   viewerEmail?: string | null;
+  canEdit?: boolean;
   onEditingChange?: (isEditing: boolean) => void;
 }) {
   const normalizedViewerEmail = viewerEmail?.trim().toLowerCase() ?? "";
   const isOwner = Boolean(normalizedViewerEmail && normalizedViewerEmail === list.userEmail);
+  const canEditList = isOwner || Boolean(canEdit);
   const [title, setTitle] = useState(list.title);
   const [slug, setSlug] = useState(list.slug);
   const [color, setColor] = useState(normalizeListColor(list.color ?? DEFAULT_LIST_COLOR_ID));
   const [visibility, setVisibility] = useState<SavedList["visibility"]>(list.visibility);
   const [message, setMessage] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [shareUsername, setShareUsername] = useState("");
+  const [shares, setShares] = useState<ListShare[]>([]);
+  const [isLoadingShares, setIsLoadingShares] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
   const listPath = list.username ? `/${list.username}/${slug}` : `/${slug}`;
+  const canShare = Boolean(list.username);
 
-  if (!isOwner) {
+  useEffect(() => {
+    if (!isOwner || !isEditing) return;
+    let isActive = true;
+    setIsLoadingShares(true);
+    setShareMessage(null);
+    loadListShares(list.id, list.userEmail)
+      .then((entries) => {
+        if (isActive) {
+          setShares(entries);
+        }
+      })
+      .catch((error) => {
+        if (isActive) {
+          setShareMessage(error instanceof Error ? error.message : "Unable to load shares");
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingShares(false);
+        }
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [isEditing, isOwner, list.id, list.userEmail]);
+
+  function formatShareLabel(share: ListShare) {
+    if (share.username) return `@${share.username}`;
+    return share.userEmail;
+  }
+
+  async function handleAddShare() {
+    const trimmed = shareUsername.trim();
+    if (!trimmed) {
+      setShareMessage("Enter a username to share this list.");
+      return;
+    }
+    setIsSharing(true);
+    setShareMessage(null);
+    try {
+      const nextShares = await addListShare(list.id, list.userEmail, trimmed);
+      setShares(nextShares);
+      setShareUsername("");
+    } catch (error) {
+      setShareMessage(error instanceof Error ? error.message : "Unable to share list");
+    } finally {
+      setIsSharing(false);
+    }
+  }
+
+  async function handleRemoveShare(username: string) {
+    setIsSharing(true);
+    setShareMessage(null);
+    try {
+      const nextShares = await removeListShare(list.id, list.userEmail, username);
+      setShares(nextShares);
+    } catch (error) {
+      setShareMessage(error instanceof Error ? error.message : "Unable to remove share");
+    } finally {
+      setIsSharing(false);
+    }
+  }
+
+  async function handleToggleShareEdit(share: ListShare) {
+    if (!share.username) {
+      setShareMessage("User must have a username to update sharing.");
+      return;
+    }
+    setIsSharing(true);
+    setShareMessage(null);
+    try {
+      const nextShares = await updateListSharePermission(
+        list.id,
+        list.userEmail,
+        share.username,
+        !share.canEdit,
+      );
+      setShares(nextShares);
+    } catch (error) {
+      setShareMessage(error instanceof Error ? error.message : "Unable to update share");
+    } finally {
+      setIsSharing(false);
+    }
+  }
+
+  if (!isOwner && !canEditList) {
     return (
       <div className="space-y-2">
         <p className="text-sm text-black-300" style={{ paddingLeft: 16 }}>
@@ -40,19 +135,53 @@ export function ListEditor({
     );
   }
 
+  if (!isOwner && canEditList) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-black-300" style={{ paddingLeft: 16 }}>
+          {listPath}
+        </p>
+        <p className="text-xs text-black-500" style={{ paddingLeft: 16 }}>
+          Shared with you for collaboration.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            const next = !isEditing;
+            setIsEditing(next);
+            onEditingChange?.(next);
+          }}
+          className="rounded-full px-4 py-2 text-sm text-black-100 transition hover:bg-black-800"
+        >
+          {isEditing ? "Stop editing" : "Edit movies"}
+        </button>
+      </div>
+    );
+  }
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     startTransition(async () => {
       try {
         setMessage(null);
-        await rustApiFetch(`/lists/${list.id}`, {
+        const data = await rustApiFetch<{ list: SavedList }>(`/lists/${list.id}`, {
           method: "PATCH",
           body: JSON.stringify({ title, slug, color, visibility, userEmail: list.userEmail }),
         });
+        setTitle(data.list.title);
+        setSlug(data.list.slug);
+        setColor(normalizeListColor(data.list.color ?? DEFAULT_LIST_COLOR_ID));
+        setVisibility(data.list.visibility);
         setMessage("Saved changes");
         setIsEditing(false);
         onEditingChange?.(false);
-        router.refresh();
+        const currentPath = list.username ? `/${list.username}/${list.slug}` : `/${list.slug}`;
+        const nextPath = data.list.username ? `/${data.list.username}/${data.list.slug}` : `/${data.list.slug}`;
+        if (nextPath !== currentPath) {
+          router.replace(nextPath);
+        } else {
+          router.refresh();
+        }
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Unable to save");
       }
@@ -108,6 +237,74 @@ export function ListEditor({
           <p className="mt-2 text-[11px] text-slate-400">
             Set a username first so your list can go public.
           </p>
+        )}
+      </div>
+      <div className="rounded-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-slate-200 space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-xs uppercase tracking-[0.3em] text-slate-400">Shared access</span>
+          <span className="text-[11px] text-slate-400">Private lists stay off the public directory.</span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            value={shareUsername}
+            onChange={(event) => setShareUsername(event.target.value)}
+            placeholder="Share with username"
+            disabled={!canShare}
+            className="w-full rounded-full border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-100 disabled:opacity-60"
+            aria-label="Share with username"
+          />
+          <button
+            type="button"
+            onClick={handleAddShare}
+            disabled={isSharing || !canShare}
+            className="rounded-full border border-slate-600 px-3 py-2 text-xs text-slate-200 disabled:opacity-50"
+          >
+            {isSharing ? "Sharing..." : "Share"}
+          </button>
+        </div>
+        {!canShare && (
+          <p className="text-[11px] text-slate-400">
+            Set a username on your profile to share private lists.
+          </p>
+        )}
+        {shareMessage && <p className="text-[11px] text-slate-400">{shareMessage}</p>}
+        {isLoadingShares ? (
+          <p className="text-[11px] text-slate-400">Loading shared users...</p>
+        ) : shares.length === 0 ? (
+          <p className="text-[11px] text-slate-500">No shared users yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {shares.map((share) => (
+              <div key={share.userEmail} className="flex items-center justify-between text-xs text-slate-200">
+                <div>
+                  <p>{formatShareLabel(share)}</p>
+                  <p className="text-[10px] text-slate-500">{share.canEdit ? "Can edit" : "Read only"}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isSharing}
+                    onClick={() => handleToggleShareEdit(share)}
+                    className="rounded-full border border-slate-700 px-2 py-1 text-[10px] text-slate-300 disabled:opacity-50"
+                  >
+                    {share.canEdit ? "Revoke edits" : "Allow edits"}
+                  </button>
+                  {share.username ? (
+                    <button
+                      type="button"
+                      disabled={isSharing}
+                      onClick={() => handleRemoveShare(share.username ?? "")}
+                      className="rounded-full border border-slate-700 px-2 py-1 text-[10px] text-slate-300 disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-slate-500">No username</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
       {message && <p className="text-xs text-slate-400">{message}</p>}

@@ -3,6 +3,7 @@ import { rustApiFetch } from "@/lib/rust-api-client";
 export type UserProfile = {
   userEmail: string;
   username: string;
+  isPublic: boolean;
   createdAt: string;
 };
 
@@ -36,4 +37,32 @@ export async function setUsername(userEmail: string, username: string): Promise<
     body: JSON.stringify({ userEmail: email, username }),
   });
   return data.profile;
+}
+
+export async function setProfileVisibility(userEmail: string, isPublic: boolean): Promise<UserProfile> {
+  const email = normalizeEmail(userEmail);
+  if (!email) {
+    throw new Error("userEmail is required to update profile visibility");
+  }
+  const data = await rustApiFetch<{ profile: UserProfile }>(`/profiles/visibility`, {
+    method: "PATCH",
+    body: JSON.stringify({ userEmail: email, isPublic }),
+  });
+  return data.profile;
+}
+
+export async function getPublicProfile(username: string): Promise<UserProfile | null> {
+  const normalized = username.trim().toLowerCase();
+  if (!normalized) {
+    throw new Error("username is required to load a public profile");
+  }
+  try {
+    const data = await rustApiFetch<{ profile: UserProfile }>(
+      `/profiles/public/${encodeURIComponent(normalized)}`,
+    );
+    return data.profile ?? null;
+  } catch (error) {
+    console.error("Failed to load public profile", error);
+    return null;
+  }
 }

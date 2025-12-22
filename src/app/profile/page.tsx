@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { UsernameCard } from "@/components/username-card";
+import { ProfileVisibilityCard } from "@/components/profile-visibility-card";
 import { authOptions } from "@/lib/auth";
 import { getProfile } from "@/lib/profile-store";
 
@@ -31,6 +32,7 @@ export default async function ProfilePage() {
           </Link>
         </header>
         <UsernameCard userEmail={userEmail} profile={profile} />
+        <ProfileVisibilityCard userEmail={userEmail} profile={profile} />
       </div>
     </div>
   );

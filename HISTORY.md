@@ -65,3 +65,51 @@
 - 2025-12-21 23:37 UTC — Added a profile link above sign out on the signed-in home view.
 - 2025-12-21 23:38 UTC — Moved the import list modal out of the lists section into a new settings page.
 - 2025-12-21 23:38 UTC — Added a settings link next to profile on the signed-in home footer.
+- 2025-12-22 13:11 UTC — Added list-share models and routes scaffolding in the Rust API for private sharing.
+- 2025-12-22 13:11 UTC — Added list_shares table and index to the Rust API schema for private list sharing.
+- 2025-12-22 13:12 UTC — Added list share CRUD endpoints and shared-access checks for private lists in the Rust API.
+- 2025-12-22 13:12 UTC — Added list share helpers for fetching shares and checking shared access in the Rust API.
+- 2025-12-22 13:12 UTC — Added list share type to the frontend list store for sharing data.
+- 2025-12-22 13:13 UTC — Added list share fetch/add/remove helpers to the frontend list store.
+- 2025-12-22 13:14 UTC — Added list sharing controls to the list editor UI for managing shared usernames.
+- 2025-12-22 13:14 UTC — Required owners to have usernames before sharing private lists in the Rust API.
+- 2025-12-22 13:15 UTC — Disabled list sharing controls until owners have usernames set in the list editor.
+- 2025-12-22 13:15 UTC — Normalized shared user emails during share add/remove in the Rust API.
+- 2025-12-22 13:16 UTC — Simplified the Rust API self-share check for shared list emails.
+- 2025-12-22 13:27 UTC — Added PATCH routing support in the Rust API for share permission updates.
+- 2025-12-22 13:27 UTC — Added editable list response fields and helpers for collaborative access in the Rust API.
+- 2025-12-22 13:27 UTC — Added canEdit metadata to list share responses in the Rust API.
+- 2025-12-22 13:27 UTC — Added share permission payloads and includeShared list query support in the Rust API.
+- 2025-12-22 13:28 UTC — Added can_edit column to list_shares schema for collaborator permissions.
+- 2025-12-22 13:28 UTC — Registered list share permission update route in the Rust API.
+- 2025-12-22 13:29 UTC — Added shared-list loading and collaborative edit enforcement for list updates in the Rust API.
+- 2025-12-22 13:30 UTC — Added share edit permissions to public list access, share CRUD, and favorites responses in the Rust API.
+- 2025-12-22 13:30 UTC — Extended list share helpers to include can_edit state checks in the Rust API.
+- 2025-12-22 13:31 UTC — Added canEdit metadata and shared list loading to the frontend list store.
+- 2025-12-22 13:31 UTC — Added frontend helper to toggle collaborator edit permissions on shared lists.
+- 2025-12-22 14:18 UTC — Added list editor props and imports to support collaborator edit permissions.
+- 2025-12-22 14:18 UTC — Added collaborator edit-mode toggle in the list editor UI.
+- 2025-12-22 14:19 UTC — Added list editor handler to toggle collaborator edit permissions.
+- 2025-12-22 14:37 UTC — Added share permission status and toggle controls to the list editor UI.
+- 2025-12-22 14:37 UTC — Passed collaborator edit permissions into the list detail editor.
+- 2025-12-22 14:38 UTC — Marked new lists as editable for owners in Rust API responses.
+- 2025-12-22 14:41 UTC — Updated app metadata for SEO branding as Literal Company.
+- 2025-12-22 16:22 UTC — Added profile isPublic field to Rust API profile models and payloads.
+- 2025-12-22 16:22 UTC — Added profile visibility request body to Rust API.
+- 2025-12-22 16:22 UTC — Registered profile visibility and public profile routes in Rust API.
+- 2025-12-22 16:22 UTC — Added profile visibility column to Rust API schema.
+- 2025-12-22 16:22 UTC — Added username filtering for public list queries in Rust API.
+- 2025-12-22 16:22 UTC — Implemented profile visibility update and public profile endpoints in Rust API.
+- 2025-12-22 16:22 UTC — Added profile visibility methods and public profile fetch in the frontend profile store.
+- 2025-12-22 16:22 UTC — Added public list fetch helper for username profiles in the frontend list store.
+- 2025-12-22 16:22 UTC — Updated username card to reflect profile visibility status.
+- 2025-12-22 16:22 UTC — Added profile visibility toggle card component.
+- 2025-12-22 16:22 UTC — Added profile visibility card to the profile page.
+- 2025-12-22 16:22 UTC — Added public profile page route for username URLs.
+- 2025-12-22 16:22 UTC — Synced profile visibility card state with server profile changes.
+- 2025-12-22 16:27 UTC — Redirected list editor to the updated list URL after saving a rename.
+- 2025-12-22 16:27 UTC — Reduced list card size and swapped rainbow gradients for single-color accents.
+- 2025-12-22 16:27 UTC — Added TMDB person search and person filmography endpoints in the Rust API.
+- 2025-12-22 16:27 UTC — Added artist search results and a filmography page for artist links.
+- 2025-12-22 16:27 UTC — Added TMDB credits lookup for movie detail and linked director/DP/cast to IMDb.
+- 2025-12-22 16:39 UTC — Increased list detail poster grid density and reduced poster sizes on mobile.

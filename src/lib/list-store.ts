@@ -11,6 +11,15 @@ export type SavedList = {
   color?: string;
   userEmail: string;
   username?: string | null;
+  canEdit?: boolean;
+};
+
+export type ListShare = {
+  listId: string;
+  userEmail: string;
+  username?: string | null;
+  createdAt: string;
+  canEdit: boolean;
 };
 
 type ApiList = {
@@ -23,6 +32,7 @@ type ApiList = {
   color?: string | null;
   userEmail: string;
   username?: string | null;
+  canEdit?: boolean;
 };
 
 function normalizeEmail(email: string) {
@@ -50,6 +60,7 @@ function mapApiList(entry: ApiList): SavedList {
     color: normalizeListColor(entry.color),
     userEmail: normalizeEmail(entry.userEmail || ""),
     username: entry.username ?? null,
+    canEdit: entry.canEdit,
   };
 }
 
@@ -72,7 +83,9 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
     }
   }
   try {
-    const data = await rustApiFetch<{ lists: ApiList[] }>(`/lists?userEmail=${encodeURIComponent(email)}`);
+    const data = await rustApiFetch<{ lists: ApiList[] }>(
+      `/lists?userEmail=${encodeURIComponent(email)}&includeShared=true`,
+    );
     const mapped = data.lists.map(mapApiList);
     if (typeof window !== "undefined") {
       try {
@@ -221,6 +234,22 @@ export async function loadPublicLists(limit = 24): Promise<SavedList[]> {
   }
 }
 
+export async function loadPublicListsForUsername(username: string, limit = 24): Promise<SavedList[]> {
+  const normalized = username.trim().toLowerCase();
+  if (!normalized) {
+    return [];
+  }
+  try {
+    const data = await rustApiFetch<{ lists: ApiList[] }>(
+      `/lists/public?limit=${limit}&username=${encodeURIComponent(normalized)}`,
+    );
+    return data.lists.map(mapApiList);
+  } catch (error) {
+    console.error("Failed to load public lists for username", error);
+    return [];
+  }
+}
+
 export async function loadFavorites(userEmail: string): Promise<SavedList[]> {
   const email = normalizeEmail(userEmail);
   if (!email) {
@@ -255,4 +284,74 @@ export async function removeFavorite(listId: string, userEmail: string): Promise
     method: "DELETE",
     body: JSON.stringify({ listId, userEmail: email }),
   });
+}
+
+export async function loadListShares(listId: string, userEmail: string): Promise<ListShare[]> {
+  const email = normalizeEmail(userEmail);
+  if (!email) {
+    throw new Error("userEmail is required to load list shares");
+  }
+  const data = await rustApiFetch<{ shares: ListShare[] }>(
+    `/lists/${listId}/shares?userEmail=${encodeURIComponent(email)}`,
+  );
+  return data.shares;
+}
+
+export async function addListShare(listId: string, userEmail: string, username: string): Promise<ListShare[]> {
+  const email = normalizeEmail(userEmail);
+  const trimmed = username.trim();
+  if (!email) {
+    throw new Error("userEmail is required to share a list");
+  }
+  if (!trimmed) {
+    throw new Error("username is required to share a list");
+  }
+  const data = await rustApiFetch<{ shares: ListShare[] }>(`/lists/${listId}/shares`, {
+    method: "POST",
+    body: JSON.stringify({ userEmail: email, username: trimmed }),
+  });
+  return data.shares;
+}
+
+export async function updateListSharePermission(
+  listId: string,
+  userEmail: string,
+  username: string,
+  canEdit: boolean,
+): Promise<ListShare[]> {
+  const email = normalizeEmail(userEmail);
+  const trimmed = username.trim();
+  if (!email) {
+    throw new Error("userEmail is required to update list shares");
+  }
+  if (!trimmed) {
+    throw new Error("username is required to update list shares");
+  }
+  const data = await rustApiFetch<{ shares: ListShare[] }>(
+    `/lists/${listId}/shares/${encodeURIComponent(trimmed)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ userEmail: email, canEdit }),
+    },
+  );
+  return data.shares;
+}
+
+export async function removeListShare(listId: string, userEmail: string, username: string): Promise<ListShare[]> {
+  const email = normalizeEmail(userEmail);
+  const trimmed = username.trim();
+  if (!email) {
+    throw new Error("userEmail is required to remove list shares");
+  }
+  if (!trimmed) {
+    throw new Error("username is required to remove list shares");
+  }
+  const data = await rustApiFetch<{ shares: ListShare[] }>(
+    `/lists/${listId}/shares/${encodeURIComponent(trimmed)}`,
+    {
+      method: "DELETE",
+      body: JSON.stringify({ userEmail: email }),
+    },
+  );
+  return data.shares;
 }

@@ -1,10 +1,10 @@
-use std::{env, net::SocketAddr, time::Duration};
+use std::{collections::HashMap, env, net::SocketAddr, time::Duration};
 
 use anyhow::Context;
 use axum::{
     extract::{Path, Query, State},
     http::{Method, StatusCode},
-    routing::{delete, get, post},
+    routing::{delete, get, patch, post},
     Json, Router,
 };
 use chrono::{DateTime, Utc};
@@ -52,6 +52,20 @@ struct ListRow {
     username: Option<String>,
 }
 
+#[derive(FromRow)]
+struct ListRowWithEdit {
+    id: Uuid,
+    title: String,
+    slug: String,
+    visibility: String,
+    movies: Vec<i32>,
+    created_at: DateTime<Utc>,
+    color: Option<String>,
+    user_email: String,
+    username: Option<String>,
+    can_edit: bool,
+}
+
 #[derive(Serialize)]
 struct ListResponse {
     id: Uuid,
@@ -65,10 +79,18 @@ struct ListResponse {
     #[serde(rename = "userEmail")]
     user_email: String,
     username: Option<String>,
+    #[serde(rename = "canEdit")]
+    can_edit: bool,
 }
 
 impl From<ListRow> for ListResponse {
     fn from(row: ListRow) -> Self {
+        ListResponse::from_row_with_can_edit(row, false)
+    }
+}
+
+impl From<ListRowWithEdit> for ListResponse {
+    fn from(row: ListRowWithEdit) -> Self {
         Self {
             id: row.id,
             title: row.title,
@@ -79,6 +101,58 @@ impl From<ListRow> for ListResponse {
             color: row.color,
             user_email: normalize_email(&row.user_email),
             username: row.username,
+            can_edit: row.can_edit,
+        }
+    }
+}
+
+impl ListResponse {
+    fn from_row_with_can_edit(row: ListRow, can_edit: bool) -> Self {
+        Self {
+            id: row.id,
+            title: row.title,
+            slug: row.slug,
+            visibility: row.visibility,
+            movies: row.movies,
+            created_at: row.created_at.to_rfc3339(),
+            color: row.color,
+            user_email: normalize_email(&row.user_email),
+            username: row.username,
+            can_edit,
+        }
+    }
+}
+
+#[derive(FromRow)]
+struct ListShareRow {
+    list_id: Uuid,
+    shared_with_email: String,
+    created_at: DateTime<Utc>,
+    username: Option<String>,
+    can_edit: bool,
+}
+
+#[derive(Serialize)]
+struct ListShareResponse {
+    #[serde(rename = "listId")]
+    list_id: Uuid,
+    #[serde(rename = "userEmail")]
+    user_email: String,
+    username: Option<String>,
+    #[serde(rename = "createdAt")]
+    created_at: String,
+    #[serde(rename = "canEdit")]
+    can_edit: bool,
+}
+
+impl From<ListShareRow> for ListShareResponse {
+    fn from(row: ListShareRow) -> Self {
+        Self {
+            list_id: row.list_id,
+            user_email: normalize_email(&row.shared_with_email),
+            username: row.username,
+            created_at: row.created_at.to_rfc3339(),
+            can_edit: row.can_edit,
         }
     }
 }
@@ -91,6 +165,11 @@ struct ListEnvelope {
 #[derive(Serialize)]
 struct ListsEnvelope {
     lists: Vec<ListResponse>,
+}
+
+#[derive(Serialize)]
+struct ListSharesEnvelope {
+    shares: Vec<ListShareResponse>,
 }
 
 #[derive(FromRow)]
@@ -137,6 +216,7 @@ struct RatingValueEnvelope {
 struct ProfileRow {
     user_email: String,
     username: String,
+    is_public: bool,
     created_at: DateTime<Utc>,
 }
 
@@ -145,6 +225,8 @@ struct ProfileResponse {
     #[serde(rename = "userEmail")]
     user_email: String,
     username: String,
+    #[serde(rename = "isPublic")]
+    is_public: bool,
     #[serde(rename = "createdAt")]
     created_at: String,
 }
@@ -154,6 +236,7 @@ impl From<ProfileRow> for ProfileResponse {
         Self {
             user_email: normalize_email(&row.user_email),
             username: row.username,
+            is_public: row.is_public,
             created_at: row.created_at.to_rfc3339(),
         }
     }
@@ -184,17 +267,61 @@ struct SimplifiedMovieDto {
     runtime: Option<i32>,
     genres: Option<Vec<String>>,
     tagline: Option<String>,
+    director: Option<PersonLinkDto>,
+    #[serde(rename = "cinematographer")]
+    cinematographer: Option<PersonLinkDto>,
+    cast: Vec<PersonLinkDto>,
+}
+
+#[derive(Serialize, Clone)]
+struct PersonLinkDto {
+    #[serde(rename = "tmdbId")]
+    tmdb_id: i32,
+    name: String,
+    #[serde(rename = "imdbId")]
+    imdb_id: Option<String>,
+    role: Option<String>,
+}
+
+#[derive(Serialize, Clone)]
+struct SimplifiedPersonDto {
+    #[serde(rename = "tmdbId")]
+    tmdb_id: i32,
+    name: String,
+    #[serde(rename = "profileUrl")]
+    profile_url: Option<String>,
+    #[serde(rename = "knownFor")]
+    known_for: Vec<String>,
+}
+
+#[derive(Serialize, Clone)]
+struct FilmographyEntryDto {
+    #[serde(rename = "tmdbId")]
+    tmdb_id: i32,
+    title: String,
+    #[serde(rename = "releaseYear")]
+    release_year: Option<i32>,
+    #[serde(rename = "posterUrl")]
+    poster_url: Option<String>,
+    role: Option<String>,
 }
 
 #[derive(Serialize)]
 struct TmdbSearchEnvelope {
     query: String,
     results: Vec<SimplifiedMovieDto>,
+    artists: Vec<SimplifiedPersonDto>,
 }
 
 #[derive(Serialize)]
 struct TmdbMovieEnvelope {
     detail: SimplifiedMovieDto,
+}
+
+#[derive(Serialize)]
+struct TmdbPersonEnvelope {
+    person: SimplifiedPersonDto,
+    filmography: Vec<FilmographyEntryDto>,
 }
 
 #[derive(Deserialize)]
@@ -219,6 +346,16 @@ struct TmdbMovieResult {
     imdb_rating: Option<f32>,
     #[serde(rename = "letterboxd_rating")]
     letterboxd_rating: Option<f32>,
+}
+
+#[derive(Deserialize, Clone)]
+struct TmdbPersonResult {
+    id: i32,
+    name: Option<String>,
+    #[serde(rename = "profile_path")]
+    profile_path: Option<String>,
+    #[serde(rename = "known_for")]
+    known_for: Option<Vec<TmdbMovieResult>>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -248,6 +385,7 @@ struct TmdbMovieDetailsResult {
     letterboxd_rating: Option<f32>,
     #[serde(rename = "imdb_id")]
     imdb_id: Option<String>,
+    credits: Option<TmdbCredits>,
 }
 
 #[derive(Deserialize)]
@@ -255,6 +393,66 @@ struct TmdbSearchResponse {
     results: Vec<TmdbMovieResult>,
 }
 
+#[derive(Deserialize)]
+struct TmdbPersonSearchResponse {
+    results: Vec<TmdbPersonResult>,
+}
+
+#[derive(Deserialize, Clone)]
+struct TmdbPersonDetails {
+    id: i32,
+    name: Option<String>,
+    #[serde(rename = "profile_path")]
+    profile_path: Option<String>,
+}
+
+#[derive(Deserialize, Clone)]
+struct TmdbPersonCredits {
+    cast: Option<Vec<TmdbPersonCredit>>,
+    crew: Option<Vec<TmdbPersonCredit>>,
+}
+
+#[derive(Deserialize, Clone)]
+struct TmdbPersonCredit {
+    id: i32,
+    title: Option<String>,
+    name: Option<String>,
+    #[serde(rename = "release_date")]
+    release_date: Option<String>,
+    #[serde(rename = "poster_path")]
+    poster_path: Option<String>,
+    character: Option<String>,
+    job: Option<String>,
+    department: Option<String>,
+}
+
+#[derive(Deserialize, Clone)]
+struct TmdbCredits {
+    cast: Option<Vec<TmdbCastMember>>,
+    crew: Option<Vec<TmdbCrewMember>>,
+}
+
+#[derive(Deserialize, Clone)]
+struct TmdbCastMember {
+    id: i32,
+    name: Option<String>,
+    character: Option<String>,
+    order: Option<i32>,
+}
+
+#[derive(Deserialize, Clone)]
+struct TmdbCrewMember {
+    id: i32,
+    name: Option<String>,
+    job: Option<String>,
+    department: Option<String>,
+}
+
+#[derive(Deserialize, Clone)]
+struct TmdbPersonExternalIds {
+    #[serde(rename = "imdb_id")]
+    imdb_id: Option<String>,
+}
 #[derive(Deserialize)]
 struct CreateListBody {
     title: Option<String>,
@@ -282,6 +480,15 @@ struct UpdateListBody {
     visibility: Option<String>,
     #[serde(rename = "userEmail")]
     user_email: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ShareListBody {
+    #[serde(rename = "userEmail")]
+    user_email: Option<String>,
+    username: Option<String>,
+    #[serde(rename = "canEdit")]
+    can_edit: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -320,6 +527,14 @@ struct SetUsernameBody {
 }
 
 #[derive(Deserialize)]
+struct SetProfileVisibilityBody {
+    #[serde(rename = "userEmail")]
+    user_email: Option<String>,
+    #[serde(rename = "isPublic")]
+    is_public: Option<bool>,
+}
+
+#[derive(Deserialize)]
 struct RatingEntry {
     #[serde(rename = "tmdbId")]
     tmdb_id: Option<i32>,
@@ -354,6 +569,8 @@ struct RatingInput {
 struct ListsQuery {
     #[serde(rename = "userEmail")]
     user_email: Option<String>,
+    #[serde(rename = "includeShared")]
+    include_shared: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -371,6 +588,7 @@ struct PublicListQuery {
 #[derive(Deserialize)]
 struct PublicListsQuery {
     limit: Option<i64>,
+    username: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -442,11 +660,18 @@ async fn main() -> anyhow::Result<()> {
         .route("/health/ready", get(ready))
         .route("/profiles", get(get_profile))
         .route("/profiles/username", post(set_username))
+        .route("/profiles/visibility", patch(set_profile_visibility))
+        .route("/profiles/public/:username", get(get_public_profile))
         .route("/lists", get(list_lists).post(create_list))
         .route("/lists/:id", get(get_list).patch(update_list).delete(delete_list))
         .route("/lists/by-slug/:slug", get(get_list_by_slug))
         .route("/lists/public", get(list_public_lists))
         .route("/lists/public/:username/:slug", get(get_public_list))
+        .route("/lists/:id/shares", get(list_list_shares).post(add_list_share))
+        .route(
+            "/lists/:id/shares/:username",
+            delete(remove_list_share).patch(update_list_share),
+        )
         .route("/lists/:id/items", post(add_movie_to_list))
         .route("/lists/:id/items/:tmdb_id", delete(remove_movie_from_list))
         .route("/lists/import", post(import_list))
@@ -457,6 +682,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/ratings/:user_email", get(list_ratings_for_user))
         .route("/tmdb/search", get(tmdb_search))
         .route("/tmdb/movie/:tmdb_id", get(tmdb_movie))
+        .route("/tmdb/person/:person_id", get(tmdb_person))
         .layer(cors)
         .with_state(state);
 
@@ -535,12 +761,35 @@ async fn ensure_schema(pool: &PgPool) -> anyhow::Result<()> {
         CREATE TABLE IF NOT EXISTS profiles (
             user_email text PRIMARY KEY,
             username text NOT NULL UNIQUE,
+            is_public boolean NOT NULL DEFAULT false,
             created_at timestamptz NOT NULL DEFAULT NOW()
         )
         "#,
     )
     .execute(pool)
     .await?;
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS list_shares (
+            list_id uuid NOT NULL REFERENCES lists(id) ON DELETE CASCADE,
+            shared_with_email text NOT NULL,
+            can_edit boolean NOT NULL DEFAULT false,
+            created_at timestamptz NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (list_id, shared_with_email)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_public boolean NOT NULL DEFAULT false")
+        .execute(pool)
+        .await?;
+    sqlx::query("ALTER TABLE list_shares ADD COLUMN IF NOT EXISTS can_edit boolean NOT NULL DEFAULT false")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_list_shares_shared_with ON list_shares(shared_with_email)")
+        .execute(pool)
+        .await?;
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS user_favorites (
@@ -609,8 +858,15 @@ async fn tmdb_search(
         return Err(bad_request("Missing query parameter"));
     }
 
-    let results = fetch_tmdb_search(&state, &query, params.year.as_deref()).await?;
-    Ok(Json(TmdbSearchEnvelope { query, results }))
+    let (results, artists) = tokio::try_join!(
+        fetch_tmdb_search_movies(&state, &query, params.year.as_deref()),
+        fetch_tmdb_search_people(&state, &query),
+    )?;
+    Ok(Json(TmdbSearchEnvelope {
+        query,
+        results,
+        artists,
+    }))
 }
 
 async fn tmdb_movie(
@@ -621,6 +877,14 @@ async fn tmdb_movie(
     Ok(Json(TmdbMovieEnvelope { detail }))
 }
 
+async fn tmdb_person(
+    Path(person_id): Path<i32>,
+    State(state): State<AppState>,
+) -> ApiResult<TmdbPersonEnvelope> {
+    let (person, filmography) = fetch_tmdb_person(&state, person_id).await?;
+    Ok(Json(TmdbPersonEnvelope { person, filmography }))
+}
+
 async fn list_lists(State(state): State<AppState>, Query(params): Query<ListsQuery>) -> ApiResult<ListsEnvelope> {
     let user_email = params
         .user_email
@@ -628,6 +892,33 @@ async fn list_lists(State(state): State<AppState>, Query(params): Query<ListsQue
         .map(|value| normalize_email(value))
         .filter(|value| !value.is_empty())
         .ok_or_else(|| bad_request("userEmail is required"))?;
+    let include_shared = params.include_shared.unwrap_or(false);
+
+    if include_shared {
+        let rows = sqlx::query_as::<_, ListRowWithEdit>(
+            r#"
+            SELECT
+                lists.*,
+                profiles.username,
+                CASE
+                    WHEN lists.user_email = $1 THEN true
+                    ELSE COALESCE(list_shares.can_edit, false)
+                END AS can_edit
+            FROM lists
+            LEFT JOIN profiles ON lists.user_email = profiles.user_email
+            LEFT JOIN list_shares ON list_shares.list_id = lists.id AND list_shares.shared_with_email = $1
+            WHERE lists.user_email = $1
+               OR (list_shares.shared_with_email = $1 AND list_shares.can_edit = true)
+            ORDER BY lists.created_at DESC
+            "#,
+        )
+        .bind(&user_email)
+        .fetch_all(&state.db)
+        .await
+        .map_err(internal_error)?;
+        let lists = rows.into_iter().map(ListResponse::from).collect();
+        return Ok(Json(ListsEnvelope { lists }));
+    }
 
     let rows = sqlx::query_as::<_, ListRow>(
         r#"
@@ -642,7 +933,10 @@ async fn list_lists(State(state): State<AppState>, Query(params): Query<ListsQue
     .fetch_all(&state.db)
     .await
     .map_err(internal_error)?;
-    let lists = rows.into_iter().map(ListResponse::from).collect();
+    let lists = rows
+        .into_iter()
+        .map(|row| ListResponse::from_row_with_can_edit(row, true))
+        .collect();
     Ok(Json(ListsEnvelope { lists }))
 }
 
@@ -668,7 +962,9 @@ async fn create_list(
     }
     let row = insert_list(&state, &title, &movies, payload.color, &email).await?;
 
-    Ok(Json(ListEnvelope { list: row.into() }))
+    Ok(Json(ListEnvelope {
+        list: ListResponse::from_row_with_can_edit(row, true),
+    }))
 }
 
 async fn import_list(
@@ -724,7 +1020,9 @@ async fn import_list(
         upsert_ratings(&state.db, &user_email, &ratings).await?;
     }
 
-    Ok(Json(ListEnvelope { list: row.into() }))
+    Ok(Json(ListEnvelope {
+        list: ListResponse::from_row_with_can_edit(row, true),
+    }))
 }
 
 async fn get_list(
@@ -746,7 +1044,9 @@ async fn get_list(
     if list.user_email != user_email {
         return Err(not_found("List not found"));
     }
-    Ok(Json(ListEnvelope { list: list.into() }))
+    Ok(Json(ListEnvelope {
+        list: ListResponse::from_row_with_can_edit(list, true),
+    }))
 }
 
 async fn get_list_by_slug(
@@ -777,7 +1077,9 @@ async fn get_list_by_slug(
     let Some(list) = row else {
         return Err(not_found("List not found"));
     };
-    Ok(Json(ListEnvelope { list: list.into() }))
+    Ok(Json(ListEnvelope {
+        list: ListResponse::from_row_with_can_edit(list, true),
+    }))
 }
 
 async fn update_list(
@@ -845,7 +1147,9 @@ async fn update_list(
     .map_err(internal_error)?;
 
     let row = fetch_list_by_id(id, &state.db).await?.ok_or_else(|| not_found("List not found"))?;
-    Ok(Json(ListEnvelope { list: row.into() }))
+    Ok(Json(ListEnvelope {
+        list: ListResponse::from_row_with_can_edit(row, true),
+    }))
 }
 
 async fn add_movie_to_list(
@@ -865,7 +1169,9 @@ async fn add_movie_to_list(
     let Some(mut list) = current else {
         return Err(not_found("List not found"));
     };
-    if list.user_email != user_email {
+    let can_edit = list.user_email == user_email
+        || is_list_shared_with_edit(list.id, &user_email, &state.db).await?;
+    if !can_edit {
         return Err(not_found("List not found"));
     }
 
@@ -881,7 +1187,9 @@ async fn add_movie_to_list(
         .map_err(internal_error)?;
 
     let row = fetch_list_by_id(id, &state.db).await?.ok_or_else(|| not_found("List not found"))?;
-    Ok(Json(ListEnvelope { list: row.into() }))
+    Ok(Json(ListEnvelope {
+        list: ListResponse::from_row_with_can_edit(row, can_edit),
+    }))
 }
 
 async fn remove_movie_from_list(
@@ -900,7 +1208,9 @@ async fn remove_movie_from_list(
     let Some(mut list) = current else {
         return Err(not_found("List not found"));
     };
-    if list.user_email != user_email {
+    let can_edit = list.user_email == user_email
+        || is_list_shared_with_edit(list.id, &user_email, &state.db).await?;
+    if !can_edit {
         return Err(not_found("List not found"));
     }
 
@@ -914,7 +1224,9 @@ async fn remove_movie_from_list(
         .map_err(internal_error)?;
 
     let row = fetch_list_by_id(id, &state.db).await?.ok_or_else(|| not_found("List not found"))?;
-    Ok(Json(ListEnvelope { list: row.into() }))
+    Ok(Json(ListEnvelope {
+        list: ListResponse::from_row_with_can_edit(row, can_edit),
+    }))
 }
 
 async fn delete_list(
@@ -1019,25 +1331,109 @@ async fn set_username(
     }))
 }
 
+async fn set_profile_visibility(
+    State(state): State<AppState>,
+    Json(payload): Json<SetProfileVisibilityBody>,
+) -> ApiResult<ProfileEnvelope> {
+    let user_email = payload
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+    let is_public = payload.is_public.ok_or_else(|| bad_request("isPublic is required"))?;
+
+    let profile = sqlx::query_as::<_, ProfileRow>(
+        r#"
+        UPDATE profiles
+        SET is_public = $1
+        WHERE user_email = $2
+        RETURNING *
+        "#,
+    )
+    .bind(is_public)
+    .bind(&user_email)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(internal_error)?;
+
+    let Some(profile) = profile else {
+        return Err(not_found("Profile not found"));
+    };
+
+    Ok(Json(ProfileEnvelope {
+        profile: Some(profile.into()),
+    }))
+}
+
+async fn get_public_profile(
+    Path(username): Path<String>,
+    State(state): State<AppState>,
+) -> ApiResult<ProfileEnvelope> {
+    let normalized = normalize_username(&username)?;
+    let row = sqlx::query_as::<_, ProfileRow>(
+        "SELECT * FROM profiles WHERE username = $1 AND is_public = true",
+    )
+    .bind(&normalized)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(internal_error)?;
+
+    let Some(profile) = row else {
+        return Err(not_found("Profile not found"));
+    };
+
+    Ok(Json(ProfileEnvelope {
+        profile: Some(profile.into()),
+    }))
+}
+
 async fn list_public_lists(
     State(state): State<AppState>,
     Query(params): Query<PublicListsQuery>,
 ) -> ApiResult<ListsEnvelope> {
     let limit = params.limit.unwrap_or(24).clamp(1, 100);
-    let rows = sqlx::query_as::<_, ListRow>(
-        r#"
-        SELECT lists.*, profiles.username
-        FROM lists
-        JOIN profiles ON lists.user_email = profiles.user_email
-        WHERE lists.visibility = 'public'
-        ORDER BY lists.created_at DESC
-        LIMIT $1
-        "#,
-    )
-    .bind(limit)
-    .fetch_all(&state.db)
-    .await
-    .map_err(internal_error)?;
+    let rows = if let Some(username) = params.username {
+        let normalized = normalize_username(&username)?;
+        let owner_email = sqlx::query_scalar::<_, String>("SELECT user_email FROM profiles WHERE username = $1")
+            .bind(&normalized)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(internal_error)?;
+        let Some(owner_email) = owner_email else {
+            return Ok(Json(ListsEnvelope { lists: Vec::new() }));
+        };
+        sqlx::query_as::<_, ListRow>(
+            r#"
+            SELECT lists.*, profiles.username
+            FROM lists
+            JOIN profiles ON lists.user_email = profiles.user_email
+            WHERE lists.visibility = 'public' AND lists.user_email = $1
+            ORDER BY lists.created_at DESC
+            LIMIT $2
+            "#,
+        )
+        .bind(&owner_email)
+        .bind(limit)
+        .fetch_all(&state.db)
+        .await
+        .map_err(internal_error)?
+    } else {
+        sqlx::query_as::<_, ListRow>(
+            r#"
+            SELECT lists.*, profiles.username
+            FROM lists
+            JOIN profiles ON lists.user_email = profiles.user_email
+            WHERE lists.visibility = 'public'
+            ORDER BY lists.created_at DESC
+            LIMIT $1
+            "#,
+        )
+        .bind(limit)
+        .fetch_all(&state.db)
+        .await
+        .map_err(internal_error)?
+    };
     let lists = rows.into_iter().map(ListResponse::from).collect();
     Ok(Json(ListsEnvelope { lists }))
 }
@@ -1082,11 +1478,187 @@ async fn get_public_list(
         .as_ref()
         .map(|email| email == &normalize_email(&list.user_email))
         .unwrap_or(false);
-    if list.visibility != "public" && !is_owner {
+    let is_shared = if let Some(email) = viewer_email.as_deref() {
+        is_list_shared_with(list.id, email, &state.db).await?
+    } else {
+        false
+    };
+    let can_edit = if is_owner {
+        true
+    } else if let Some(email) = viewer_email.as_deref() {
+        is_list_shared_with_edit(list.id, email, &state.db).await?
+    } else {
+        false
+    };
+    if list.visibility != "public" && !is_owner && !is_shared {
         return Err(not_found("List not found"));
     }
 
-    Ok(Json(ListEnvelope { list: list.into() }))
+    Ok(Json(ListEnvelope {
+        list: ListResponse::from_row_with_can_edit(list, can_edit),
+    }))
+}
+
+async fn list_list_shares(
+    Path(id): Path<Uuid>,
+    State(state): State<AppState>,
+    Query(params): Query<OwnerQuery>,
+) -> ApiResult<ListSharesEnvelope> {
+    let user_email = params
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+
+    let list = fetch_list_by_id(id, &state.db).await?.ok_or_else(|| not_found("List not found"))?;
+    if list.user_email != user_email {
+        return Err(not_found("List not found"));
+    }
+    ensure_user_has_username(&state.db, &list.user_email).await?;
+
+    let shares = fetch_list_shares(id, &state.db).await?;
+    Ok(Json(ListSharesEnvelope {
+        shares: shares.into_iter().map(ListShareResponse::from).collect(),
+    }))
+}
+
+async fn add_list_share(
+    Path(id): Path<Uuid>,
+    State(state): State<AppState>,
+    Json(payload): Json<ShareListBody>,
+) -> ApiResult<ListSharesEnvelope> {
+    let user_email = payload
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+    let raw_username = payload
+        .username
+        .as_ref()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("username is required"))?;
+    let username = normalize_username(raw_username)?;
+
+    let list = fetch_list_by_id(id, &state.db).await?.ok_or_else(|| not_found("List not found"))?;
+    if list.user_email != user_email {
+        return Err(not_found("List not found"));
+    }
+    ensure_user_has_username(&state.db, &list.user_email).await?;
+
+    let share_email = sqlx::query_scalar::<_, String>("SELECT user_email FROM profiles WHERE username = $1")
+        .bind(&username)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(internal_error)?
+        .ok_or_else(|| bad_request("username not found"))?;
+    let share_email = normalize_email(&share_email);
+    let can_edit = payload.can_edit.unwrap_or(false);
+
+    if share_email == user_email {
+        return Err(bad_request("cannot share with yourself"));
+    }
+
+    sqlx::query(
+        r#"
+        INSERT INTO list_shares (list_id, shared_with_email, can_edit)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (list_id, shared_with_email) DO UPDATE SET can_edit = EXCLUDED.can_edit
+        "#,
+    )
+    .bind(id)
+    .bind(&share_email)
+    .bind(can_edit)
+    .execute(&state.db)
+    .await
+    .map_err(internal_error)?;
+
+    let shares = fetch_list_shares(id, &state.db).await?;
+    Ok(Json(ListSharesEnvelope {
+        shares: shares.into_iter().map(ListShareResponse::from).collect(),
+    }))
+}
+
+async fn remove_list_share(
+    Path((id, username)): Path<(Uuid, String)>,
+    State(state): State<AppState>,
+    Json(payload): Json<ShareListBody>,
+) -> ApiResult<ListSharesEnvelope> {
+    let user_email = payload
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+    let normalized_username = normalize_username(&username)?;
+
+    let list = fetch_list_by_id(id, &state.db).await?.ok_or_else(|| not_found("List not found"))?;
+    if list.user_email != user_email {
+        return Err(not_found("List not found"));
+    }
+
+    let share_email = sqlx::query_scalar::<_, String>("SELECT user_email FROM profiles WHERE username = $1")
+        .bind(&normalized_username)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(internal_error)?
+        .ok_or_else(|| bad_request("username not found"))?;
+    let share_email = normalize_email(&share_email);
+
+    sqlx::query("DELETE FROM list_shares WHERE list_id = $1 AND shared_with_email = $2")
+        .bind(id)
+        .bind(&share_email)
+        .execute(&state.db)
+        .await
+        .map_err(internal_error)?;
+
+    let shares = fetch_list_shares(id, &state.db).await?;
+    Ok(Json(ListSharesEnvelope {
+        shares: shares.into_iter().map(ListShareResponse::from).collect(),
+    }))
+}
+
+async fn update_list_share(
+    Path((id, username)): Path<(Uuid, String)>,
+    State(state): State<AppState>,
+    Json(payload): Json<ShareListBody>,
+) -> ApiResult<ListSharesEnvelope> {
+    let user_email = payload
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+    let can_edit = payload.can_edit.ok_or_else(|| bad_request("canEdit is required"))?;
+    let normalized_username = normalize_username(&username)?;
+
+    let list = fetch_list_by_id(id, &state.db).await?.ok_or_else(|| not_found("List not found"))?;
+    if list.user_email != user_email {
+        return Err(not_found("List not found"));
+    }
+
+    let share_email = sqlx::query_scalar::<_, String>("SELECT user_email FROM profiles WHERE username = $1")
+        .bind(&normalized_username)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(internal_error)?
+        .ok_or_else(|| bad_request("username not found"))?;
+    let share_email = normalize_email(&share_email);
+
+    sqlx::query("UPDATE list_shares SET can_edit = $3 WHERE list_id = $1 AND shared_with_email = $2")
+        .bind(id)
+        .bind(&share_email)
+        .bind(can_edit)
+        .execute(&state.db)
+        .await
+        .map_err(internal_error)?;
+
+    let shares = fetch_list_shares(id, &state.db).await?;
+    Ok(Json(ListSharesEnvelope {
+        shares: shares.into_iter().map(ListShareResponse::from).collect(),
+    }))
 }
 
 async fn list_favorites(
@@ -1115,7 +1687,12 @@ async fn list_favorites(
     .fetch_all(&state.db)
     .await
     .map_err(internal_error)?;
-    let lists = rows.into_iter().map(ListResponse::from).collect();
+    let mut lists = Vec::with_capacity(rows.len());
+    for row in rows {
+        let can_edit = row.user_email == user_email
+            || is_list_shared_with_edit(row.id, &user_email, &state.db).await?;
+        lists.push(ListResponse::from_row_with_can_edit(row, can_edit));
+    }
     Ok(Json(ListsEnvelope { lists }))
 }
 
@@ -1206,7 +1783,7 @@ async fn insert_list(
         .ok_or_else(|| internal_error("List not found"))
 }
 
-async fn fetch_tmdb_search(
+async fn fetch_tmdb_search_movies(
     state: &AppState,
     query: &str,
     year: Option<&str>,
@@ -1231,11 +1808,32 @@ async fn fetch_tmdb_search(
     Ok(results)
 }
 
+async fn fetch_tmdb_search_people(
+    state: &AppState,
+    query: &str,
+) -> Result<Vec<SimplifiedPersonDto>, (StatusCode, Json<ErrorResponse>)> {
+    let params: Vec<(&str, &str)> = vec![
+        ("query", query),
+        ("include_adult", "false"),
+        ("language", "en-US"),
+        ("page", "1"),
+    ];
+
+    let payload = fetch_from_strawberry::<TmdbPersonSearchResponse>(state, "/search/person", &params).await?;
+    let results = payload
+        .results
+        .into_iter()
+        .filter_map(map_tmdb_person)
+        .take(6)
+        .collect();
+    Ok(results)
+}
+
 async fn fetch_tmdb_movie(
     state: &AppState,
     tmdb_id: i32,
 ) -> Result<SimplifiedMovieDto, (StatusCode, Json<ErrorResponse>)> {
-    let params = [("language", "en-US"), ("append_to_response", "external_ids")];
+    let params = [("language", "en-US"), ("append_to_response", "external_ids,credits")];
 
     let payload =
         fetch_from_strawberry::<TmdbMovieDetailsResult>(state, &format!("/movie/{tmdb_id}"), &params).await?;
@@ -1253,7 +1851,36 @@ async fn fetch_tmdb_movie(
         }
     }
 
+    let mut people = build_movie_people(payload.credits.as_ref());
+    if people.has_entries() {
+        let ids = people.person_ids();
+        let imdb_ids = fetch_person_imdb_ids(state, &ids).await?;
+        people.apply_imdb_ids(&imdb_ids);
+        movie.director = people.director;
+        movie.cinematographer = people.cinematographer;
+        movie.cast = people.cast;
+    }
+
     Ok(movie)
+}
+
+async fn fetch_tmdb_person(
+    state: &AppState,
+    person_id: i32,
+) -> Result<(SimplifiedPersonDto, Vec<FilmographyEntryDto>), (StatusCode, Json<ErrorResponse>)> {
+    let params = [("language", "en-US")];
+    let details =
+        fetch_from_strawberry::<TmdbPersonDetails>(state, &format!("/person/{person_id}"), &params).await?;
+    let credits = fetch_from_strawberry::<TmdbPersonCredits>(
+        state,
+        &format!("/person/{person_id}/movie_credits"),
+        &params,
+    )
+    .await?;
+
+    let person = map_tmdb_person_details(details).ok_or_else(|| not_found("Person not found"))?;
+    let filmography = map_tmdb_person_credits(&credits);
+    Ok((person, filmography))
 }
 
 async fn search_tmdb_id(
@@ -1261,7 +1888,7 @@ async fn search_tmdb_id(
     title: &str,
     year: Option<&str>,
 ) -> Result<Option<i32>, (StatusCode, Json<ErrorResponse>)> {
-    let results = fetch_tmdb_search(state, title, year).await?;
+    let results = fetch_tmdb_search_movies(state, title, year).await?;
     Ok(results.first().map(|movie| movie.tmdb_id))
 }
 
@@ -1349,6 +1976,9 @@ fn map_tmdb_movie(result: TmdbMovieResult) -> Option<SimplifiedMovieDto> {
         runtime: None,
         genres: None,
         tagline: None,
+        director: None,
+        cinematographer: None,
+        cast: Vec::new(),
     })
 }
 
@@ -1382,7 +2012,235 @@ fn map_tmdb_movie_details(result: TmdbMovieDetailsResult) -> SimplifiedMovieDto 
         runtime: result.runtime,
         genres,
         tagline: result.tagline,
+        director: None,
+        cinematographer: None,
+        cast: Vec::new(),
     }
+}
+
+fn map_tmdb_person(result: TmdbPersonResult) -> Option<SimplifiedPersonDto> {
+    let name = result.name?.trim().to_string();
+    if name.is_empty() {
+        return None;
+    }
+    let profile_url = result
+        .profile_path
+        .map(|path| format!("{TMDB_IMAGE_BASE}{path}"));
+    let known_for = result
+        .known_for
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|entry| entry.title.or(entry.name))
+        .collect::<Vec<_>>();
+
+    Some(SimplifiedPersonDto {
+        tmdb_id: result.id,
+        name,
+        profile_url,
+        known_for,
+    })
+}
+
+fn map_tmdb_person_details(details: TmdbPersonDetails) -> Option<SimplifiedPersonDto> {
+    let name = details.name?.trim().to_string();
+    if name.is_empty() {
+        return None;
+    }
+    let profile_url = details
+        .profile_path
+        .map(|path| format!("{TMDB_IMAGE_BASE}{path}"));
+    Some(SimplifiedPersonDto {
+        tmdb_id: details.id,
+        name,
+        profile_url,
+        known_for: Vec::new(),
+    })
+}
+
+fn map_tmdb_person_credits(credits: &TmdbPersonCredits) -> Vec<FilmographyEntryDto> {
+    let mut entries: HashMap<i32, FilmographyEntryDto> = HashMap::new();
+
+    for credit in credits.cast.as_ref().into_iter().flatten() {
+        if let Some(entry) = map_tmdb_person_credit(credit, credit.character.clone()) {
+            entries.entry(entry.tmdb_id).or_insert(entry);
+        }
+    }
+
+    for credit in credits.crew.as_ref().into_iter().flatten() {
+        let role = credit.job.clone().or(credit.department.clone());
+        if let Some(entry) = map_tmdb_person_credit(credit, role) {
+            entries.entry(entry.tmdb_id).or_insert(entry);
+        }
+    }
+
+    let mut list = entries.into_values().collect::<Vec<_>>();
+    list.sort_by(|a, b| b.release_year.unwrap_or(0).cmp(&a.release_year.unwrap_or(0)));
+    list
+}
+
+fn map_tmdb_person_credit(credit: &TmdbPersonCredit, role: Option<String>) -> Option<FilmographyEntryDto> {
+    let title = credit
+        .title
+        .clone()
+        .or_else(|| credit.name.clone())
+        .unwrap_or_else(|| "Untitled film".to_string());
+    let trimmed = title.trim().to_string();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let release_year = parse_release_year(&credit.release_date);
+    let poster_url = credit
+        .poster_path
+        .clone()
+        .map(|path| format!("{TMDB_IMAGE_BASE}{path}"));
+    let role = role.and_then(|value| {
+        let trimmed = value.trim().to_string();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    });
+
+    Some(FilmographyEntryDto {
+        tmdb_id: credit.id,
+        title: trimmed,
+        release_year,
+        poster_url,
+        role,
+    })
+}
+
+struct MoviePeople {
+    director: Option<PersonLinkDto>,
+    cinematographer: Option<PersonLinkDto>,
+    cast: Vec<PersonLinkDto>,
+}
+
+impl MoviePeople {
+    fn has_entries(&self) -> bool {
+        self.director.is_some() || self.cinematographer.is_some() || !self.cast.is_empty()
+    }
+
+    fn person_ids(&self) -> Vec<i32> {
+        let mut ids = Vec::new();
+        if let Some(person) = &self.director {
+            ids.push(person.tmdb_id);
+        }
+        if let Some(person) = &self.cinematographer {
+            ids.push(person.tmdb_id);
+        }
+        for person in &self.cast {
+            ids.push(person.tmdb_id);
+        }
+        ids.sort_unstable();
+        ids.dedup();
+        ids
+    }
+
+    fn apply_imdb_ids(&mut self, imdb_ids: &HashMap<i32, Option<String>>) {
+        if let Some(person) = &mut self.director {
+            person.imdb_id = imdb_ids.get(&person.tmdb_id).cloned().unwrap_or(None);
+        }
+        if let Some(person) = &mut self.cinematographer {
+            person.imdb_id = imdb_ids.get(&person.tmdb_id).cloned().unwrap_or(None);
+        }
+        for person in &mut self.cast {
+            person.imdb_id = imdb_ids.get(&person.tmdb_id).cloned().unwrap_or(None);
+        }
+    }
+}
+
+fn build_movie_people(credits: Option<&TmdbCredits>) -> MoviePeople {
+    let mut director: Option<PersonLinkDto> = None;
+    let mut cinematographer: Option<PersonLinkDto> = None;
+    let mut cast_entries: Vec<(i32, PersonLinkDto)> = Vec::new();
+
+    if let Some(credits) = credits {
+        if let Some(crew) = credits.crew.as_ref() {
+            for member in crew {
+                let name = member.name.as_ref().map(|value| value.trim()).unwrap_or("");
+                if name.is_empty() {
+                    continue;
+                }
+                let job = member.job.as_ref().map(|value| value.trim().to_string());
+                if director.is_none() && member.job.as_deref() == Some("Director") {
+                    director = Some(PersonLinkDto {
+                        tmdb_id: member.id,
+                        name: name.to_string(),
+                        imdb_id: None,
+                        role: job.clone(),
+                    });
+                }
+                if cinematographer.is_none()
+                    && matches!(
+                        member.job.as_deref(),
+                        Some("Director of Photography") | Some("Cinematography")
+                    )
+                {
+                    cinematographer = Some(PersonLinkDto {
+                        tmdb_id: member.id,
+                        name: name.to_string(),
+                        imdb_id: None,
+                        role: job.clone().or_else(|| member.department.clone()),
+                    });
+                }
+                if director.is_some() && cinematographer.is_some() {
+                    break;
+                }
+            }
+        }
+
+        if let Some(cast) = credits.cast.as_ref() {
+            for member in cast {
+                let name = member.name.as_ref().map(|value| value.trim()).unwrap_or("");
+                if name.is_empty() {
+                    continue;
+                }
+                let order = member.order.unwrap_or(i32::MAX);
+                cast_entries.push((
+                    order,
+                    PersonLinkDto {
+                        tmdb_id: member.id,
+                        name: name.to_string(),
+                        imdb_id: None,
+                        role: member.character.clone(),
+                    },
+                ));
+            }
+        }
+    }
+
+    cast_entries.sort_by_key(|(order, _)| *order);
+    let cast = cast_entries
+        .into_iter()
+        .take(6)
+        .map(|(_, person)| person)
+        .collect();
+
+    MoviePeople {
+        director,
+        cinematographer,
+        cast,
+    }
+}
+
+async fn fetch_person_imdb_ids(
+    state: &AppState,
+    person_ids: &[i32],
+) -> Result<HashMap<i32, Option<String>>, (StatusCode, Json<ErrorResponse>)> {
+    let mut imdb_ids: HashMap<i32, Option<String>> = HashMap::new();
+    for person_id in person_ids {
+        let params = [("language", "en-US")];
+        let external = fetch_from_strawberry::<TmdbPersonExternalIds>(
+            state,
+            &format!("/person/{person_id}/external_ids"),
+            &params,
+        )
+        .await?;
+        imdb_ids.insert(*person_id, external.imdb_id);
+    }
+    Ok(imdb_ids)
 }
 
 fn parse_release_year(date: &Option<String>) -> Option<i32> {
@@ -1662,6 +2520,61 @@ async fn fetch_list_by_id(
     .fetch_optional(pool)
     .await
     .map_err(internal_error)
+}
+
+async fn fetch_list_shares(
+    list_id: Uuid,
+    pool: &PgPool,
+) -> Result<Vec<ListShareRow>, (StatusCode, Json<ErrorResponse>)> {
+    sqlx::query_as::<_, ListShareRow>(
+        r#"
+        SELECT list_shares.list_id,
+               list_shares.shared_with_email,
+               list_shares.created_at,
+               profiles.username,
+               list_shares.can_edit
+        FROM list_shares
+        LEFT JOIN profiles ON list_shares.shared_with_email = profiles.user_email
+        WHERE list_shares.list_id = $1
+        ORDER BY list_shares.created_at DESC
+        "#,
+    )
+    .bind(list_id)
+    .fetch_all(pool)
+    .await
+    .map_err(internal_error)
+}
+
+async fn is_list_shared_with(
+    list_id: Uuid,
+    user_email: &str,
+    pool: &PgPool,
+) -> Result<bool, (StatusCode, Json<ErrorResponse>)> {
+    let exists = sqlx::query_scalar::<_, i32>(
+        "SELECT 1 FROM list_shares WHERE list_id = $1 AND shared_with_email = $2",
+    )
+    .bind(list_id)
+    .bind(user_email)
+    .fetch_optional(pool)
+    .await
+    .map_err(internal_error)?;
+    Ok(exists.is_some())
+}
+
+async fn is_list_shared_with_edit(
+    list_id: Uuid,
+    user_email: &str,
+    pool: &PgPool,
+) -> Result<bool, (StatusCode, Json<ErrorResponse>)> {
+    let exists = sqlx::query_scalar::<_, i32>(
+        "SELECT 1 FROM list_shares WHERE list_id = $1 AND shared_with_email = $2 AND can_edit = true",
+    )
+    .bind(list_id)
+    .bind(user_email)
+    .fetch_optional(pool)
+    .await
+    .map_err(internal_error)?;
+    Ok(exists.is_some())
 }
 
 async fn ensure_user_has_username(

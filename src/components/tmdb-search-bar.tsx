@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import type { SimplifiedMovie } from "@/lib/tmdb";
+import type { SimplifiedArtist, SimplifiedMovie } from "@/lib/tmdb";
 import { rustApiFetch } from "@/lib/rust-api-client";
 import { addMovieToList, type SavedList } from "@/lib/list-store";
 import { Plus, Search } from "lucide-react";
@@ -16,6 +16,7 @@ type TmdbSearchBarProps = {
 export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SimplifiedMovie[]>([]);
+  const [artists, setArtists] = useState<SimplifiedArtist[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeMovieId, setActiveMovieId] = useState<number | null>(null);
@@ -39,6 +40,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
       setResults([]);
+      setArtists([]);
       setError(null);
       setIsSearching(false);
       return;
@@ -52,17 +54,19 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
       }, networkTimeoutMs);
       try {
         setIsSearching(true);
-        const payload = await rustApiFetch<{ results: SimplifiedMovie[] }>(
+        const payload = await rustApiFetch<{ results: SimplifiedMovie[]; artists?: SimplifiedArtist[] }>(
           `/tmdb/search?query=${encodeURIComponent(trimmed)}`,
           { signal: controller.signal },
         );
         if (!controller.signal.aborted) {
           setResults(payload.results ?? []);
+          setArtists(payload.artists ?? []);
           setError(null);
         }
       } catch (err) {
         if (controller.signal.aborted) return;
         setResults([]);
+        setArtists([]);
         setError(err instanceof Error ? err.message : "Unexpected TMDB error.");
       } finally {
         clearTimeout(networkTimeout);
@@ -97,6 +101,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
       if (ratingDelta !== 0) return ratingDelta;
       return a.title.localeCompare(b.title);
     });
+  const displayArtists = artists.filter((artist) => artist.name);
 
   const showResultsPanel = query.trim().length >= 2 || isSearching || !!error;
 
@@ -164,6 +169,42 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
             aria-busy={isSearching}
             aria-label="Search results"
           >
+            {displayArtists.length > 0 && (
+              <li>
+                <p className="text-[11px] uppercase tracking-[0.4em] text-black-500">Artists</p>
+                <div className="mt-2 space-y-2">
+                  {displayArtists.map((artist) => (
+                    <Link
+                      key={artist.tmdbId}
+                      href={`/artists/${artist.tmdbId}`}
+                      className="flex items-center gap-3 rounded-2xl bg-black-900/70 px-3 py-2 transition hover:bg-black-800/70"
+                    >
+                      {artist.profileUrl ? (
+                        <Image
+                          src={artist.profileUrl}
+                          alt={artist.name}
+                          width={48}
+                          height={48}
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black-800 text-[10px] text-black-500">
+                          No art
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <p className="text-sm text-white">{artist.name}</p>
+                        {artist.knownFor.length ? (
+                          <p className="text-xs text-black-500">
+                            {artist.knownFor.slice(0, 2).join(" • ")}
+                          </p>
+                        ) : null}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </li>
+            )}
             {displayResults.map((movie) => (
               <li key={movie.tmdbId}>
                 <div className="flex items-center gap-3 rounded-3xl bg-black-900/70 p-4 transition hover:bg-black-800/70">

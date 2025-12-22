@@ -26,6 +26,36 @@ export type SimplifiedMovie = {
   runtime?: number;
   genres?: string[];
   tagline?: string | null;
+  director?: PersonLink | null;
+  cinematographer?: PersonLink | null;
+  cast?: PersonLink[];
+};
+
+export type PersonLink = {
+  tmdbId: number;
+  name: string;
+  imdbId?: string | null;
+  role?: string | null;
+};
+
+export type SimplifiedArtist = {
+  tmdbId: number;
+  name: string;
+  profileUrl?: string | null;
+  knownFor: string[];
+};
+
+export type FilmographyEntry = {
+  tmdbId: number;
+  title: string;
+  releaseYear?: number;
+  posterUrl?: string | null;
+  role?: string | null;
+};
+
+export type TmdbPersonDetail = {
+  person: SimplifiedArtist;
+  filmography: FilmographyEntry[];
 };
 
 export type TmdbSearchResponse = {

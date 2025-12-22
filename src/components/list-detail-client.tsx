@@ -26,7 +26,7 @@ export function ListDetailClient({
 
   return (
     <>
-      <ListEditor list={list} viewerEmail={viewerEmail} onEditingChange={setIsEditing} />
+      <ListEditor list={list} viewerEmail={viewerEmail} canEdit={list.canEdit} onEditingChange={setIsEditing} />
 
       <section className="space-y-3">
         <ListMoviesGrid

@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { fetchTmdbMovie } from "@/lib/tmdb-server";
 import { fetchAppleTvLink } from "@/lib/apple-links";
+import type { PersonLink } from "@/lib/tmdb";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -19,6 +20,7 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
   const appleLink = movie.imdbId ? await fetchAppleTvLink(movie.imdbId, movie.title) : { url: null, price: null };
   const backHref = getFromParam(resolvedSearchParams) ?? "/";
   const communityRatings = renderCommunityRatings(movie);
+  const credits = renderCredits(movie);
 
   return (
     <div className="min-h-screen bg-black-950 px-4 py-6 text-black-100 sm:px-6">
@@ -62,6 +64,8 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
             </div>
 
             {movie.overview && <p className="text-base leading-relaxed text-black-200">{movie.overview}</p>}
+
+            {credits ? <div className="space-y-2">{credits}</div> : null}
 
             {appleLink.url ? (
               <div className="flex flex-wrap items-center gap-3">
@@ -173,6 +177,65 @@ function WatchOnAppleTv({ url, price }: { url: string | null; price: string | nu
     >
       <span>Watch on Apple TV</span>
       {price ? <span className="text-black-500">({price})</span> : null}
+    </a>
+  );
+}
+
+function renderCredits(movie: {
+  director?: PersonLink | null;
+  cinematographer?: PersonLink | null;
+  cast?: PersonLink[];
+}) {
+  const director = movie.director ?? null;
+  const cinematographer = movie.cinematographer ?? null;
+  const cast = movie.cast?.slice(0, 6) ?? [];
+  if (!director && !cinematographer && !cast.length) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-2xl border border-black-800 bg-black-950/60 p-3">
+      <p className="text-xs uppercase tracking-[0.3em] text-black-500">Credits</p>
+      <div className="mt-2 space-y-2 text-sm text-black-200">
+        {director ? (
+          <div className="flex flex-wrap gap-x-2">
+            <span className="text-black-500">Director</span>
+            <PersonLinkRow person={director} />
+          </div>
+        ) : null}
+        {cinematographer ? (
+          <div className="flex flex-wrap gap-x-2">
+            <span className="text-black-500">Director of Photography</span>
+            <PersonLinkRow person={cinematographer} />
+          </div>
+        ) : null}
+        {cast.length ? (
+          <div className="flex flex-wrap gap-x-2">
+            <span className="text-black-500">Cast</span>
+            <span className="flex flex-wrap gap-x-2">
+              {cast.map((person, index) => (
+                <span key={`${person.tmdbId}-${person.name}`} className="inline-flex items-center gap-2">
+                  <PersonLinkRow person={person} />
+                  {index < cast.length - 1 ? <span className="text-black-600">•</span> : null}
+                </span>
+              ))}
+            </span>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function PersonLinkRow({ person }: { person: PersonLink }) {
+  const imdbUrl = person.imdbId ? `https://www.imdb.com/name/${person.imdbId}/` : null;
+  const label = person.role ? `${person.name} (${person.role})` : person.name;
+  if (!imdbUrl) {
+    return <span>{label}</span>;
+  }
+  return (
+    <a href={imdbUrl} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">
+      {label}
     </a>
   );
 }

@@ -247,13 +247,15 @@ export function ListMoviesGrid({
       {sorted.length === 0 && !loading ? (
         <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>
       ) : (
-        <ul className="grid justify-center gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" style={{ paddingLeft: 16 }}>
+        <ul
+          className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
+          style={{ paddingLeft: 16 }}
+        >
           {sorted.map((movie) => (
-            <li key={movie.tmdbId} className="mx-auto">
+            <li key={movie.tmdbId}>
               <Link
                 href={`/movies/${movie.tmdbId}?from=${fromParam}`}
-                className="group relative block overflow-hidden rounded-lg border border-white/10 bg-black-900/40 transition hover:border-black-400"
-                style={{ width: 130, height: 195 }}
+                className="group relative block aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-black-900/40 transition hover:border-black-400"
               >
                 {isEditing && (
                   <button
@@ -273,9 +275,9 @@ export function ListMoviesGrid({
                   <Image
                     src={toSmallPoster(movie.posterUrl)}
                     alt={`${movie.title} poster`}
-                    width={130}
-                    height={195}
-                    sizes="130px"
+                    width={200}
+                    height={300}
+                    sizes="(max-width: 640px) 30vw, (max-width: 768px) 22vw, 160px"
                     className="h-full w-full rounded-md object-cover"
                   />
                 ) : (
