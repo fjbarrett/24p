@@ -194,7 +194,7 @@ function renderCredits(movie: {
   }
 
   return (
-    <div className="rounded-2xl border border-black-800 bg-black-950/60 p-3">
+    <div className="rounded-2xl bg-black-950/60 p-3">
       <p className="text-xs uppercase tracking-[0.3em] text-black-500">Credits</p>
       <div className="mt-2 space-y-2 text-sm text-black-200">
         {director ? (

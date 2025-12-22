@@ -113,3 +113,6 @@
 - 2025-12-22 16:27 UTC — Added artist search results and a filmography page for artist links.
 - 2025-12-22 16:27 UTC — Added TMDB credits lookup for movie detail and linked director/DP/cast to IMDb.
 - 2025-12-22 16:39 UTC — Increased list detail poster grid density and reduced poster sizes on mobile.
+- 2025-12-22 16:39 UTC — Updated site metadata branding to 24p.
+- 2025-12-22 16:39 UTC — Removed default favicon asset.
+- 2025-12-22 16:53 UTC — Removed the credits card border on the movie detail page.

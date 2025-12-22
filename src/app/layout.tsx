@@ -12,21 +12,21 @@ const description =
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: {
-    default: "Literal Company",
-    template: "%s | Literal Company",
+    default: "24p",
+    template: "%s | 24p",
   },
   description,
-  applicationName: "Literal Company",
-  keywords: ["Literal Company", "film tracker", "movie lists", "movie ratings", "collaborative lists"],
+  applicationName: "24p",
+  keywords: ["24p", "film tracker", "movie lists", "movie ratings", "collaborative lists"],
   openGraph: {
-    title: "Literal Company",
+    title: "24p",
     description,
     type: "website",
-    siteName: "Literal Company",
+    siteName: "24p",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Literal Company",
+    title: "24p",
     description,
   },
 };
