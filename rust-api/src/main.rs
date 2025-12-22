@@ -49,6 +49,7 @@ struct ListRow {
     created_at: DateTime<Utc>,
     color: Option<String>,
     user_email: String,
+    username: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -63,6 +64,7 @@ struct ListResponse {
     color: Option<String>,
     #[serde(rename = "userEmail")]
     user_email: String,
+    username: Option<String>,
 }
 
 impl From<ListRow> for ListResponse {
@@ -76,6 +78,7 @@ impl From<ListRow> for ListResponse {
             created_at: row.created_at.to_rfc3339(),
             color: row.color,
             user_email: normalize_email(&row.user_email),
+            username: row.username,
         }
     }
 }
@@ -128,6 +131,37 @@ struct RatingsEnvelope {
 #[derive(Serialize)]
 struct RatingValueEnvelope {
     rating: Option<i32>,
+}
+
+#[derive(FromRow)]
+struct ProfileRow {
+    user_email: String,
+    username: String,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Serialize)]
+struct ProfileResponse {
+    #[serde(rename = "userEmail")]
+    user_email: String,
+    username: String,
+    #[serde(rename = "createdAt")]
+    created_at: String,
+}
+
+impl From<ProfileRow> for ProfileResponse {
+    fn from(row: ProfileRow) -> Self {
+        Self {
+            user_email: normalize_email(&row.user_email),
+            username: row.username,
+            created_at: row.created_at.to_rfc3339(),
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct ProfileEnvelope {
+    profile: Option<ProfileResponse>,
 }
 
 #[derive(Serialize)]
@@ -245,6 +279,7 @@ struct UpdateListBody {
     title: Option<String>,
     slug: Option<String>,
     color: Option<String>,
+    visibility: Option<String>,
     #[serde(rename = "userEmail")]
     user_email: Option<String>,
 }
@@ -267,6 +302,21 @@ struct RemoveMovieBody {
 struct DeleteListBody {
     #[serde(rename = "userEmail")]
     user_email: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct FavoriteBody {
+    #[serde(rename = "listId")]
+    list_id: Option<Uuid>,
+    #[serde(rename = "userEmail")]
+    user_email: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct SetUsernameBody {
+    #[serde(rename = "userEmail")]
+    user_email: Option<String>,
+    username: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -308,6 +358,23 @@ struct ListsQuery {
 
 #[derive(Deserialize)]
 struct OwnerQuery {
+    #[serde(rename = "userEmail")]
+    user_email: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct PublicListQuery {
+    #[serde(rename = "userEmail")]
+    user_email: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct PublicListsQuery {
+    limit: Option<i64>,
+}
+
+#[derive(Deserialize)]
+struct ProfileQuery {
     #[serde(rename = "userEmail")]
     user_email: Option<String>,
 }
@@ -373,12 +440,18 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/health/live", get(live))
         .route("/health/ready", get(ready))
+        .route("/profiles", get(get_profile))
+        .route("/profiles/username", post(set_username))
         .route("/lists", get(list_lists).post(create_list))
         .route("/lists/:id", get(get_list).patch(update_list).delete(delete_list))
         .route("/lists/by-slug/:slug", get(get_list_by_slug))
+        .route("/lists/public", get(list_public_lists))
+        .route("/lists/public/:username/:slug", get(get_public_list))
         .route("/lists/:id/items", post(add_movie_to_list))
         .route("/lists/:id/items/:tmdb_id", delete(remove_movie_from_list))
         .route("/lists/import", post(import_list))
+        .route("/favorites", get(list_favorites).post(add_favorite))
+        .route("/favorites/:list_id", delete(remove_favorite))
         .route("/ratings", post(save_ratings))
         .route("/ratings/:user_email/:tmdb_id", get(get_rating))
         .route("/ratings/:user_email", get(list_ratings_for_user))
@@ -416,7 +489,7 @@ async fn ensure_schema(pool: &PgPool) -> anyhow::Result<()> {
         CREATE TABLE IF NOT EXISTS lists (
             id uuid PRIMARY KEY,
             title text NOT NULL,
-            slug text NOT NULL UNIQUE,
+            slug text NOT NULL,
             visibility text NOT NULL DEFAULT 'private',
             movies integer[] NOT NULL DEFAULT '{}',
             created_at timestamptz NOT NULL DEFAULT NOW(),
@@ -427,6 +500,9 @@ async fn ensure_schema(pool: &PgPool) -> anyhow::Result<()> {
     )
     .execute(pool)
     .await?;
+    sqlx::query("ALTER TABLE lists DROP CONSTRAINT IF EXISTS lists_slug_key")
+        .execute(pool)
+        .await?;
     sqlx::query("ALTER TABLE lists ADD COLUMN IF NOT EXISTS color text")
         .execute(pool)
         .await?;
@@ -448,6 +524,35 @@ async fn ensure_schema(pool: &PgPool) -> anyhow::Result<()> {
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_lists_user_email ON lists(user_email)")
         .execute(pool)
         .await?;
+    sqlx::query("CREATE UNIQUE INDEX IF NOT EXISTS idx_lists_user_slug ON lists(user_email, slug)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_lists_visibility ON lists(visibility)")
+        .execute(pool)
+        .await?;
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS profiles (
+            user_email text PRIMARY KEY,
+            username text NOT NULL UNIQUE,
+            created_at timestamptz NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS user_favorites (
+            user_email text NOT NULL,
+            list_id uuid NOT NULL,
+            created_at timestamptz NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (user_email, list_id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS user_ratings (
@@ -524,11 +629,19 @@ async fn list_lists(State(state): State<AppState>, Query(params): Query<ListsQue
         .filter(|value| !value.is_empty())
         .ok_or_else(|| bad_request("userEmail is required"))?;
 
-    let rows = sqlx::query_as::<_, ListRow>("SELECT * FROM lists WHERE user_email = $1 ORDER BY created_at DESC")
-        .bind(&user_email)
-        .fetch_all(&state.db)
-        .await
-        .map_err(internal_error)?;
+    let rows = sqlx::query_as::<_, ListRow>(
+        r#"
+        SELECT lists.*, profiles.username
+        FROM lists
+        LEFT JOIN profiles ON lists.user_email = profiles.user_email
+        WHERE lists.user_email = $1
+        ORDER BY lists.created_at DESC
+        "#,
+    )
+    .bind(&user_email)
+    .fetch_all(&state.db)
+    .await
+    .map_err(internal_error)?;
     let lists = rows.into_iter().map(ListResponse::from).collect();
     Ok(Json(ListsEnvelope { lists }))
 }
@@ -626,11 +739,7 @@ async fn get_list(
         .filter(|value| !value.is_empty())
         .ok_or_else(|| bad_request("userEmail is required"))?;
 
-    let row = sqlx::query_as::<_, ListRow>("SELECT * FROM lists WHERE id = $1")
-        .bind(id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(internal_error)?;
+    let row = fetch_list_by_id(id, &state.db).await?;
     let Some(list) = row else {
         return Err(not_found("List not found"));
     };
@@ -652,17 +761,22 @@ async fn get_list_by_slug(
         .filter(|value| !value.is_empty())
         .ok_or_else(|| bad_request("userEmail is required"))?;
 
-    let row = sqlx::query_as::<_, ListRow>("SELECT * FROM lists WHERE slug = $1")
-        .bind(&slug)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(internal_error)?;
+    let row = sqlx::query_as::<_, ListRow>(
+        r#"
+        SELECT lists.*, profiles.username
+        FROM lists
+        LEFT JOIN profiles ON lists.user_email = profiles.user_email
+        WHERE lists.slug = $1 AND lists.user_email = $2
+        "#,
+    )
+    .bind(&slug)
+    .bind(&user_email)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(internal_error)?;
     let Some(list) = row else {
         return Err(not_found("List not found"));
     };
-    if list.user_email != user_email {
-        return Err(not_found("List not found"));
-    }
     Ok(Json(ListEnvelope { list: list.into() }))
 }
 
@@ -678,11 +792,7 @@ async fn update_list(
         .filter(|value| !value.is_empty())
         .ok_or_else(|| bad_request("userEmail is required"))?;
 
-    let current = sqlx::query_as::<_, ListRow>("SELECT * FROM lists WHERE id = $1")
-        .bind(id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(internal_error)?;
+    let current = fetch_list_by_id(id, &state.db).await?;
     let Some(existing) = current else {
         return Err(not_found("List not found"));
     };
@@ -702,30 +812,39 @@ async fn update_list(
     if let Some(slug) = payload.slug {
         let candidate = slugify(&slug);
         if candidate != existing.slug {
-            next_slug = ensure_slug_available(&candidate, id, &state.db)
+            next_slug = ensure_slug_available(&candidate, id, &state.db, &existing.user_email)
                 .await
                 .map_err(internal_error)?;
         }
     }
 
     let next_color = normalize_color(payload.color.or(existing.color.clone()));
+    let next_visibility = match payload.visibility {
+        Some(value) => normalize_visibility(&value)?,
+        None => existing.visibility.clone(),
+    };
 
-    let row = sqlx::query_as::<_, ListRow>(
+    if next_visibility == "public" {
+        ensure_user_has_username(&state.db, &existing.user_email).await?;
+    }
+
+    sqlx::query(
         r#"
         UPDATE lists
-        SET title = $2, slug = $3, color = $4
+        SET title = $2, slug = $3, color = $4, visibility = $5
         WHERE id = $1
-        RETURNING *
         "#,
     )
     .bind(id)
     .bind(&next_title)
     .bind(&next_slug)
     .bind(&next_color)
-    .fetch_one(&state.db)
+    .bind(&next_visibility)
+    .execute(&state.db)
     .await
     .map_err(internal_error)?;
 
+    let row = fetch_list_by_id(id, &state.db).await?.ok_or_else(|| not_found("List not found"))?;
     Ok(Json(ListEnvelope { list: row.into() }))
 }
 
@@ -742,11 +861,7 @@ async fn add_movie_to_list(
         .filter(|value| !value.is_empty())
         .ok_or_else(|| bad_request("userEmail is required"))?;
 
-    let current = sqlx::query_as::<_, ListRow>("SELECT * FROM lists WHERE id = $1")
-        .bind(id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(internal_error)?;
+    let current = fetch_list_by_id(id, &state.db).await?;
     let Some(mut list) = current else {
         return Err(not_found("List not found"));
     };
@@ -758,15 +873,14 @@ async fn add_movie_to_list(
         list.movies.insert(0, tmdb_id);
     }
 
-    let row = sqlx::query_as::<_, ListRow>(
-        "UPDATE lists SET movies = $2 WHERE id = $1 RETURNING *",
-    )
-    .bind(id)
-    .bind(&list.movies)
-    .fetch_one(&state.db)
-    .await
-    .map_err(internal_error)?;
+    sqlx::query("UPDATE lists SET movies = $2 WHERE id = $1")
+        .bind(id)
+        .bind(&list.movies)
+        .execute(&state.db)
+        .await
+        .map_err(internal_error)?;
 
+    let row = fetch_list_by_id(id, &state.db).await?.ok_or_else(|| not_found("List not found"))?;
     Ok(Json(ListEnvelope { list: row.into() }))
 }
 
@@ -782,11 +896,7 @@ async fn remove_movie_from_list(
         .filter(|value| !value.is_empty())
         .ok_or_else(|| bad_request("userEmail is required"))?;
 
-    let current = sqlx::query_as::<_, ListRow>("SELECT * FROM lists WHERE id = $1")
-        .bind(id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(internal_error)?;
+    let current = fetch_list_by_id(id, &state.db).await?;
     let Some(mut list) = current else {
         return Err(not_found("List not found"));
     };
@@ -796,15 +906,14 @@ async fn remove_movie_from_list(
 
     list.movies.retain(|movie_id| *movie_id != tmdb_id);
 
-    let row = sqlx::query_as::<_, ListRow>(
-        "UPDATE lists SET movies = $2 WHERE id = $1 RETURNING *",
-    )
-    .bind(id)
-    .bind(&list.movies)
-    .fetch_one(&state.db)
-    .await
-    .map_err(internal_error)?;
+    sqlx::query("UPDATE lists SET movies = $2 WHERE id = $1")
+        .bind(id)
+        .bind(&list.movies)
+        .execute(&state.db)
+        .await
+        .map_err(internal_error)?;
 
+    let row = fetch_list_by_id(id, &state.db).await?.ok_or_else(|| not_found("List not found"))?;
     Ok(Json(ListEnvelope { list: row.into() }))
 }
 
@@ -820,11 +929,7 @@ async fn delete_list(
         .filter(|value| !value.is_empty())
         .ok_or_else(|| bad_request("userEmail is required"))?;
 
-    let existing = sqlx::query_as::<_, ListRow>("SELECT * FROM lists WHERE id = $1")
-        .bind(id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(internal_error)?;
+    let existing = fetch_list_by_id(id, &state.db).await?;
     let Some(list) = existing else {
         return Err(not_found("List not found"));
     };
@@ -843,6 +948,232 @@ async fn delete_list(
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 
+async fn get_profile(
+    State(state): State<AppState>,
+    Query(params): Query<ProfileQuery>,
+) -> ApiResult<ProfileEnvelope> {
+    let user_email = params
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+
+    let row = sqlx::query_as::<_, ProfileRow>("SELECT * FROM profiles WHERE user_email = $1")
+        .bind(&user_email)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(internal_error)?;
+
+    Ok(Json(ProfileEnvelope {
+        profile: row.map(ProfileResponse::from),
+    }))
+}
+
+async fn set_username(
+    State(state): State<AppState>,
+    Json(payload): Json<SetUsernameBody>,
+) -> ApiResult<ProfileEnvelope> {
+    let user_email = payload
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+    let raw_username = payload
+        .username
+        .as_ref()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("username is required"))?;
+    let username = normalize_username(raw_username)?;
+
+    let existing_owner = sqlx::query_scalar::<_, String>("SELECT user_email FROM profiles WHERE username = $1")
+        .bind(&username)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(internal_error)?;
+    if let Some(owner_email) = existing_owner {
+        if normalize_email(&owner_email) != user_email {
+            return Err(conflict("Username is already taken"));
+        }
+    }
+
+    let profile = sqlx::query_as::<_, ProfileRow>(
+        r#"
+        INSERT INTO profiles (user_email, username)
+        VALUES ($1, $2)
+        ON CONFLICT (user_email)
+        DO UPDATE SET username = EXCLUDED.username
+        RETURNING *
+        "#,
+    )
+    .bind(&user_email)
+    .bind(&username)
+    .fetch_one(&state.db)
+    .await
+    .map_err(internal_error)?;
+
+    Ok(Json(ProfileEnvelope {
+        profile: Some(profile.into()),
+    }))
+}
+
+async fn list_public_lists(
+    State(state): State<AppState>,
+    Query(params): Query<PublicListsQuery>,
+) -> ApiResult<ListsEnvelope> {
+    let limit = params.limit.unwrap_or(24).clamp(1, 100);
+    let rows = sqlx::query_as::<_, ListRow>(
+        r#"
+        SELECT lists.*, profiles.username
+        FROM lists
+        JOIN profiles ON lists.user_email = profiles.user_email
+        WHERE lists.visibility = 'public'
+        ORDER BY lists.created_at DESC
+        LIMIT $1
+        "#,
+    )
+    .bind(limit)
+    .fetch_all(&state.db)
+    .await
+    .map_err(internal_error)?;
+    let lists = rows.into_iter().map(ListResponse::from).collect();
+    Ok(Json(ListsEnvelope { lists }))
+}
+
+async fn get_public_list(
+    Path((username, slug)): Path<(String, String)>,
+    State(state): State<AppState>,
+    Query(params): Query<PublicListQuery>,
+) -> ApiResult<ListEnvelope> {
+    let normalized_username = normalize_username(&username)?;
+    let viewer_email = params
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty());
+
+    let owner_email = sqlx::query_scalar::<_, String>("SELECT user_email FROM profiles WHERE username = $1")
+        .bind(&normalized_username)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(internal_error)?
+        .ok_or_else(|| not_found("List not found"))?;
+
+    let row = sqlx::query_as::<_, ListRow>(
+        r#"
+        SELECT lists.*, profiles.username
+        FROM lists
+        LEFT JOIN profiles ON lists.user_email = profiles.user_email
+        WHERE lists.user_email = $1 AND lists.slug = $2
+        "#,
+    )
+    .bind(&owner_email)
+    .bind(&slug)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(internal_error)?;
+    let Some(list) = row else {
+        return Err(not_found("List not found"));
+    };
+
+    let is_owner = viewer_email
+        .as_ref()
+        .map(|email| email == &normalize_email(&list.user_email))
+        .unwrap_or(false);
+    if list.visibility != "public" && !is_owner {
+        return Err(not_found("List not found"));
+    }
+
+    Ok(Json(ListEnvelope { list: list.into() }))
+}
+
+async fn list_favorites(
+    State(state): State<AppState>,
+    Query(params): Query<ListsQuery>,
+) -> ApiResult<ListsEnvelope> {
+    let user_email = params
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+
+    let rows = sqlx::query_as::<_, ListRow>(
+        r#"
+        SELECT lists.*, profiles.username
+        FROM user_favorites
+        JOIN lists ON lists.id = user_favorites.list_id
+        LEFT JOIN profiles ON lists.user_email = profiles.user_email
+        WHERE user_favorites.user_email = $1
+          AND (lists.visibility = 'public' OR lists.user_email = $1)
+        ORDER BY user_favorites.created_at DESC
+        "#,
+    )
+    .bind(&user_email)
+    .fetch_all(&state.db)
+    .await
+    .map_err(internal_error)?;
+    let lists = rows.into_iter().map(ListResponse::from).collect();
+    Ok(Json(ListsEnvelope { lists }))
+}
+
+async fn add_favorite(
+    State(state): State<AppState>,
+    Json(payload): Json<FavoriteBody>,
+) -> ApiResult<serde_json::Value> {
+    let user_email = payload
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+    let list_id = payload.list_id.ok_or_else(|| bad_request("listId is required"))?;
+
+    let list = fetch_list_by_id(list_id, &state.db).await?.ok_or_else(|| not_found("List not found"))?;
+    if list.visibility != "public" && list.user_email != user_email {
+        return Err(not_found("List not found"));
+    }
+
+    sqlx::query(
+        r#"
+        INSERT INTO user_favorites (user_email, list_id)
+        VALUES ($1, $2)
+        ON CONFLICT (user_email, list_id) DO NOTHING
+        "#,
+    )
+    .bind(&user_email)
+    .bind(list_id)
+    .execute(&state.db)
+    .await
+    .map_err(internal_error)?;
+
+    Ok(Json(serde_json::json!({ "ok": true })))
+}
+
+async fn remove_favorite(
+    Path(list_id): Path<Uuid>,
+    State(state): State<AppState>,
+    Json(payload): Json<FavoriteBody>,
+) -> ApiResult<serde_json::Value> {
+    let user_email = payload
+        .user_email
+        .as_ref()
+        .map(|value| normalize_email(value))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| bad_request("userEmail is required"))?;
+
+    sqlx::query("DELETE FROM user_favorites WHERE user_email = $1 AND list_id = $2")
+        .bind(&user_email)
+        .bind(list_id)
+        .execute(&state.db)
+        .await
+        .map_err(internal_error)?;
+
+    Ok(Json(serde_json::json!({ "ok": true })))
+}
+
 async fn insert_list(
     state: &AppState,
     title: &str,
@@ -850,27 +1181,29 @@ async fn insert_list(
     color: Option<String>,
     user_email: &str,
 ) -> Result<ListRow, (StatusCode, Json<ErrorResponse>)> {
-    let slug = generate_slug(title, &state.db).await.map_err(internal_error)?;
+    let slug = generate_slug(title, user_email, &state.db).await.map_err(internal_error)?;
     let normalized_color = normalize_color(color);
 
-    let row = sqlx::query_as::<_, ListRow>(
+    let created_id = Uuid::new_v4();
+    sqlx::query(
         r#"
         INSERT INTO lists (id, title, slug, visibility, movies, color, user_email)
         VALUES ($1, $2, $3, 'private', $4, $5, $6)
-        RETURNING *
         "#,
     )
-    .bind(Uuid::new_v4())
+    .bind(created_id)
     .bind(title)
     .bind(&slug)
     .bind(movies)
     .bind(&normalized_color)
     .bind(user_email)
-    .fetch_one(&state.db)
+    .execute(&state.db)
     .await
     .map_err(internal_error)?;
 
-    Ok(row)
+    fetch_list_by_id(created_id, &state.db)
+        .await?
+        .ok_or_else(|| internal_error("List not found"))
 }
 
 async fn fetch_tmdb_search(
@@ -1267,15 +1600,18 @@ mod tests {
     }
 }
 
-async fn generate_slug(title: &str, pool: &PgPool) -> Result<String, sqlx::Error> {
+async fn generate_slug(title: &str, user_email: &str, pool: &PgPool) -> Result<String, sqlx::Error> {
     let base = slugify(title);
     let mut slug = base.clone();
     let mut counter = 1;
     loop {
-        let existing = sqlx::query_scalar::<_, Uuid>("SELECT id FROM lists WHERE slug = $1 LIMIT 1")
-            .bind(&slug)
-            .fetch_optional(pool)
-            .await?;
+        let existing = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id FROM lists WHERE user_email = $1 AND slug = $2 LIMIT 1",
+        )
+        .bind(user_email)
+        .bind(&slug)
+        .fetch_optional(pool)
+        .await?;
         if existing.is_none() {
             return Ok(slug);
         }
@@ -1284,22 +1620,85 @@ async fn generate_slug(title: &str, pool: &PgPool) -> Result<String, sqlx::Error
     }
 }
 
-async fn ensure_slug_available(slug: &str, id: Uuid, pool: &PgPool) -> Result<String, sqlx::Error> {
+async fn ensure_slug_available(
+    slug: &str,
+    id: Uuid,
+    pool: &PgPool,
+    user_email: &str,
+) -> Result<String, sqlx::Error> {
     let base = slugify(slug);
     let mut candidate = base.clone();
     let mut counter = 1;
     loop {
-        let existing = sqlx::query_scalar::<_, Uuid>("SELECT id FROM lists WHERE slug = $1 AND id <> $2 LIMIT 1")
-            .bind(&candidate)
-            .bind(id)
-            .fetch_optional(pool)
-            .await?;
+        let existing = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id FROM lists WHERE user_email = $1 AND slug = $2 AND id <> $3 LIMIT 1",
+        )
+        .bind(user_email)
+        .bind(&candidate)
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
         if existing.is_none() {
             return Ok(candidate);
         }
         candidate = format!("{base}-{counter}");
         counter += 1;
     }
+}
+
+async fn fetch_list_by_id(
+    id: Uuid,
+    pool: &PgPool,
+) -> Result<Option<ListRow>, (StatusCode, Json<ErrorResponse>)> {
+    sqlx::query_as::<_, ListRow>(
+        r#"
+        SELECT lists.*, profiles.username
+        FROM lists
+        LEFT JOIN profiles ON lists.user_email = profiles.user_email
+        WHERE lists.id = $1
+        "#,
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+    .map_err(internal_error)
+}
+
+async fn ensure_user_has_username(
+    pool: &PgPool,
+    user_email: &str,
+) -> Result<(), (StatusCode, Json<ErrorResponse>)> {
+    let username = sqlx::query_scalar::<_, String>("SELECT username FROM profiles WHERE user_email = $1")
+        .bind(user_email)
+        .fetch_optional(pool)
+        .await
+        .map_err(internal_error)?;
+    if username.is_none() {
+        return Err(bad_request("Set a username before making lists public"));
+    }
+    Ok(())
+}
+
+fn normalize_visibility(raw: &str) -> Result<String, (StatusCode, Json<ErrorResponse>)> {
+    let trimmed = raw.trim().to_lowercase();
+    if trimmed.is_empty() {
+        return Ok("private".to_string());
+    }
+    match trimmed.as_str() {
+        "public" | "private" => Ok(trimmed),
+        _ => Err(bad_request("visibility must be public or private")),
+    }
+}
+
+fn normalize_username(raw: &str) -> Result<String, (StatusCode, Json<ErrorResponse>)> {
+    let trimmed = raw.trim().to_lowercase();
+    if trimmed.len() < 3 {
+        return Err(bad_request("username must be at least 3 characters"));
+    }
+    if !trimmed.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err(bad_request("username must be alphanumeric only"));
+    }
+    Ok(trimmed)
 }
 
 fn normalize_email(email: &str) -> String {
@@ -1412,6 +1811,10 @@ async fn list_ratings_for_user(
 
 fn bad_request(message: &str) -> (StatusCode, Json<ErrorResponse>) {
     (StatusCode::BAD_REQUEST, Json(ErrorResponse { error: message.into() }))
+}
+
+fn conflict(message: &str) -> (StatusCode, Json<ErrorResponse>) {
+    (StatusCode::CONFLICT, Json(ErrorResponse { error: message.into() }))
 }
 
 fn not_found(message: &str) -> (StatusCode, Json<ErrorResponse>) {

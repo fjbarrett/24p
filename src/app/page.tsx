@@ -2,11 +2,13 @@ import { ListsSection } from "@/components/lists-section";
 import { PressableLogo } from "@/components/pressable-logo";
 import { SignInButton } from "@/components/sign-in-button";
 import { TmdbSearchBar } from "@/components/tmdb-search-bar";
-import { loadLists } from "@/lib/list-store";
+import { ListGallery } from "@/components/list-gallery";
+import { loadFavorites, loadLists, loadPublicLists } from "@/lib/list-store";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import Image from "next/image";
 import { authOptions } from "@/lib/auth";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +16,23 @@ export default async function Home() {
   const session = (await getServerSession(authOptions)) as Session | null;
   const userEmail = session?.user?.email?.toLowerCase() ?? "";
   const lists = userEmail ? await loadLists(userEmail) : [];
+  const favorites = userEmail ? await loadFavorites(userEmail) : [];
+  const publicLists = !session ? await loadPublicLists() : [];
 
   if (!session) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4 py-10 text-black-100 sm:px-8 lg:px-16">
-        <div className="w-full flex items-center justify-center">
+        <div className="w-full flex flex-col items-center justify-center gap-10">
           <Header isSignedIn={false} centered lists={[]} userEmail="" />
+          <div className="w-full max-w-[1000px]">
+            <ListGallery
+              lists={publicLists}
+              title="Public Directory"
+              id="public-directory"
+              emptyMessage="No public lists yet. Be the first to share one."
+              showOwner
+            />
+          </div>
         </div>
       </div>
     );
@@ -32,9 +45,30 @@ export default async function Home() {
 
         <main className="space-y-10">
           <ListsSection lists={lists} userEmail={userEmail} />
+          <ListGallery
+            lists={favorites}
+            title="Favorites"
+            id="favorites"
+            emptyMessage="Favorite a public list to pin it here."
+            showOwner
+          />
         </main>
 
-        <footer className="flex justify-center mb-6">
+        <footer className="flex flex-col items-center gap-3 mb-6">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/profile"
+              className="rounded-full border border-black-700 px-5 py-2 text-sm text-black-100 transition hover:border-white/60"
+            >
+              Profile
+            </Link>
+            <Link
+              href="/settings"
+              className="rounded-full border border-black-700 px-5 py-2 text-sm text-black-100 transition hover:border-white/60"
+            >
+              Settings
+            </Link>
+          </div>
           <SignInButton className="px-5 py-2 text-sm" ariaLabel="Sign out" />
         </footer>
       </div>

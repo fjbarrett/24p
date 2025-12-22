@@ -23,24 +23,31 @@ function pickGradient(list: { id: string; slug?: string; title?: string }) {
 
 type ListGalleryProps = {
   lists: SavedList[];
+  title?: string;
+  emptyMessage?: string;
+  id?: string;
+  showOwner?: boolean;
 };
 
-export function ListGallery({ lists }: ListGalleryProps) {
+export function ListGallery({ lists, title = "Lists", emptyMessage, id = "lists", showOwner = false }: ListGalleryProps) {
   if (!lists.length) {
     return (
-      <section id="lists" className="rounded-3xl border border-white/10 bg-black-900/40 p-6 text-center">
-        <p className="text-xs uppercase tracking-[0.4em] text-black-400">Lists</p>
-        <p className="mt-2 text-sm text-black-500">No lists yet. Use the buttons below to create or import your first one.</p>
+      <section id={id} className="rounded-3xl border border-white/10 bg-black-900/40 p-6 text-center">
+        <p className="text-xs uppercase tracking-[0.4em] text-black-400">{title}</p>
+        <p className="mt-2 text-sm text-black-500">
+          {emptyMessage ?? "No lists yet. Use the buttons below to create or import your first one."}
+        </p>
       </section>
     );
   }
 
   return (
-    <section id="lists" className="space-y-4">
-      {/* <p className="text-xs uppercase tracking-[0.4em] text-black-400">Your latest lists</p> */}
+    <section id={id} className="space-y-4">
+      <p className="text-xs uppercase tracking-[0.4em] text-black-400">{title}</p>
       <div className="grid gap-6 sm:grid-cols-2">
-        {lists.map((list) => (
-          <Link key={list.id} href={`/lists/${list.slug}`}>
+        {lists.map((list) => {
+          const href = list.username ? `/${list.username}/${list.slug}` : null;
+          const card = (
             <div
               className="group relative block h-48 overflow-hidden rounded-2xl border border-black p-[4px]"
               style={{ background: pickGradient(list) }}
@@ -48,12 +55,28 @@ export function ListGallery({ lists }: ListGalleryProps) {
               <div className="relative h-full w-full overflow-hidden rounded-2xl bg-gradient-to-br from-black-900 via-black-950 to-black-900">
                 <div className="pointer-events-none absolute inset-[6px] rounded-2xl bg-gradient-to-br from-transparent via-black/10 to-black/30 blur-sm" />
                 <div className="relative z-10 flex h-full flex-col justify-end p-5">
+                  {showOwner && list.username && (
+                    <p className="text-[11px] uppercase tracking-[0.4em] text-black-400">@{list.username}</p>
+                  )}
                   <h3 className="text-2xl font-bold text-white">{list.title}</h3>
+                  {!href && <p className="text-xs text-black-500">Set a username to share this list.</p>}
                 </div>
               </div>
             </div>
-          </Link>
-        ))}
+          );
+          if (!href) {
+            return (
+              <div key={list.id} className="cursor-not-allowed">
+                {card}
+              </div>
+            );
+          }
+          return (
+            <Link key={list.id} href={href}>
+              {card}
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

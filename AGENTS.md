@@ -3,7 +3,7 @@
 # On boot
 - Read in HISTORY.md to give history of project
 - Read in CONTEXT.md to give project context
-- Read in all files to add them as context (exclude files that are generally ignored)
+- Read in all files to add them as context (exclude files that are usually ignored)
 
 ## On each command
 - Append any command that modifies a file or directory with a tiny explanation and date time to HISTORY.md (do not include basic directory commands like ls, sed and cat)

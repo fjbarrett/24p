@@ -21,6 +21,10 @@ export function SignInButton({
 }: SignInButtonProps) {
   const { data: session, status } = useSession();
   const [pending, setPending] = useState(false);
+  const callbackUrl =
+    process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (typeof window !== "undefined" ? window.location.origin : "");
   const label = useMemo(() => {
     if (pending) return "Connecting...";
     if (status === "loading") return "Checking session...";
@@ -43,7 +47,11 @@ export function SignInButton({
     }
 
     setPending(true);
-    await signIn("google", { callbackUrl: "https://literal.company" });
+    if (callbackUrl) {
+      await signIn("google", { callbackUrl });
+    } else {
+      await signIn("google");
+    }
     setPending(false);
   }
 

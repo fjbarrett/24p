@@ -38,12 +38,30 @@
 - 2025-12-14 20:39 UTC — Switched Rust API Docker builder image to rustlang/rust:nightly-slim to satisfy edition 2024 crate requirements.
 - 2025-12-14 20:44 UTC — Added DB_SSLMODE env support (default disable for local Postgres), documented in README/CONTEXT, to fix TLS errors in docker-compose.
 - 2025-12-14 20:49 UTC — Adjusted splash logo sizing to match dashboard and reduced movie detail poster size.
-- 2025-12-14 22:26 UTC — Set Google sign-in callback to redirect to https://literal.company:3000 and refreshed CONTEXT.
-- 2025-12-14 22:32 UTC — Updated env/docker/README defaults to use literal.company instead of loopback defaults and refreshed CONTEXT.
-- 2025-12-14 22:34 UTC — Switched literal.company defaults to http scheme (no https) across env/docker/README, callback, and CONTEXT.
+- 2025-12-14 22:26 UTC — Set Google sign-in callback to redirect to http://localhost:3000 and refreshed CONTEXT.
+- 2025-12-14 22:32 UTC — Updated env/docker/README defaults to use localhost instead of loopback defaults and refreshed CONTEXT.
+- 2025-12-14 22:34 UTC — Switched localhost defaults to http scheme (no https) across env/docker/README, callback, and CONTEXT.
 - 2025-12-14 23:03 UTC — Switched all default URLs to https across env templates, docker config, docs, client fallbacks, and SVG metadata.
-- 2025-12-14 23:12 UTC — Pointed Google callback/default NEXTAUTH_URL at https://literal.company (no port) and refreshed docs/config to match the production host.
+- 2025-12-14 23:12 UTC — Pointed Google callback/default NEXTAUTH_URL at http://localhost:3000 and refreshed docs/config to match the production host.
 - 2025-12-14 23:24 UTC — Reset Rust API defaults back to the docker service host (http://rust-api:8080) in env templates/docs to avoid TLS mismatches.
 - 2025-12-14 23:25 UTC — Reverted imdb/letterboxd SVG metadata to original http namespaces so icons load correctly again.
 - 2025-12-14 23:46 UTC — Darkened list cover gradient colors and refreshed CONTEXT UI note.
 - 2025-12-14 23:50 UTC — Added press-responsive dashboard logo (press depth scales with hold time) and updated CONTEXT.
+- 2025-12-20 16:00 UTC — Initialized the github-feature-flow Codex skill scaffold under ~/.codex/skills.
+- 2025-12-20 16:00 UTC — Installed GitHub CLI (gh) via Homebrew for PR automation.
+- 2025-12-20 16:00 UTC — Added a Keep a Changelog template reference to the github-feature-flow skill.
+- 2025-12-20 16:00 UTC — Removed the unused assets directory from the github-feature-flow skill.
+- 2025-12-20 16:00 UTC — Installed PyYAML to support skill packaging validation.
+- 2025-12-20 16:00 UTC — Packaged github-feature-flow.skill into ~/.codex/skills/dist.
+- 2025-12-21 23:34 UTC — Updated Google sign-in callback to use http://localhost:3000 in the sign-in button.
+- 2025-12-21 23:34 UTC — Set docker-compose NEXTAUTH_URL default to http://localhost:3000.
+- 2025-12-21 23:34 UTC — Swapped .env.docker.example NEXTAUTH_URL default to http://localhost:3000.
+- 2025-12-21 23:34 UTC — Updated README localhost URLs for app, OAuth callback, and Rust API.
+- 2025-12-21 23:36 UTC — Switched Google sign-in callback to use NEXT_PUBLIC_AUTH_CALLBACK_URL with a client fallback.
+- 2025-12-21 23:36 UTC — Added NEXT_PUBLIC_AUTH_CALLBACK_URL default to docker-compose for the web service.
+- 2025-12-21 23:36 UTC — Added NEXT_PUBLIC_AUTH_CALLBACK_URL to .env.docker.example for local auth redirects.
+- 2025-12-21 23:36 UTC — Documented NEXT_PUBLIC_AUTH_CALLBACK_URL in the README setup instructions.
+- 2025-12-21 23:37 UTC — Moved the username vanity URL setter into a dedicated profile page.
+- 2025-12-21 23:37 UTC — Added a profile link above sign out on the signed-in home view.
+- 2025-12-21 23:38 UTC — Moved the import list modal out of the lists section into a new settings page.
+- 2025-12-21 23:38 UTC — Added a settings link next to profile on the signed-in home footer.

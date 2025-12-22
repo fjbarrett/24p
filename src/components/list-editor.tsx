@@ -20,16 +20,18 @@ export function ListEditor({
   const [title, setTitle] = useState(list.title);
   const [slug, setSlug] = useState(list.slug);
   const [color, setColor] = useState(normalizeListColor(list.color ?? DEFAULT_LIST_COLOR_ID));
+  const [visibility, setVisibility] = useState<SavedList["visibility"]>(list.visibility);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
+  const listPath = list.username ? `/${list.username}/${slug}` : `/${slug}`;
 
   if (!isOwner) {
     return (
       <div className="space-y-2">
         <p className="text-sm text-black-300" style={{ paddingLeft: 16 }}>
-          /{slug}
+          {listPath}
         </p>
         <p className="text-xs text-black-500" style={{ paddingLeft: 16 }}>
           Only the creator can edit this list.
@@ -45,7 +47,7 @@ export function ListEditor({
         setMessage(null);
         await rustApiFetch(`/lists/${list.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ title, slug, color, userEmail: list.userEmail }),
+          body: JSON.stringify({ title, slug, color, visibility, userEmail: list.userEmail }),
         });
         setMessage("Saved changes");
         setIsEditing(false);
@@ -60,7 +62,7 @@ export function ListEditor({
   if (!isEditing) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-black-300" style={{ paddingLeft: 16 }}>/{slug}</p>
+        <p className="text-sm text-black-300" style={{ paddingLeft: 16 }}>{listPath}</p>
         {message && <p className="text-xs text-black-400" style={{ paddingLeft: 16 }}>{message}</p>}
         <button
           type="button"
@@ -90,6 +92,24 @@ export function ListEditor({
         className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
         aria-label="Slug"
       />
+      <div className="rounded-2xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200">
+        <label className="flex items-center justify-between gap-4">
+          <span className="text-xs uppercase tracking-[0.3em] text-slate-400">Visibility</span>
+          <select
+            value={visibility}
+            onChange={(event) => setVisibility(event.target.value as SavedList["visibility"])}
+            className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-100"
+          >
+            <option value="private">Private</option>
+            <option value="public">Public</option>
+          </select>
+        </label>
+        {!list.username && visibility === "public" && (
+          <p className="mt-2 text-[11px] text-slate-400">
+            Set a username first so your list can go public.
+          </p>
+        )}
+      </div>
       {message && <p className="text-xs text-slate-400">{message}</p>}
       <div className="flex gap-3">
         <button
@@ -106,6 +126,7 @@ export function ListEditor({
             setTitle(list.title);
             setSlug(list.slug);
             setColor(normalizeListColor(list.color ?? DEFAULT_LIST_COLOR_ID));
+            setVisibility(list.visibility);
             setIsEditing(false);
             onEditingChange?.(false);
           }}

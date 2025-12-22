@@ -10,6 +10,7 @@ export type SavedList = {
   movies: number[];
   color?: string;
   userEmail: string;
+  username?: string | null;
 };
 
 type ApiList = {
@@ -21,6 +22,7 @@ type ApiList = {
   createdAt: string;
   color?: string | null;
   userEmail: string;
+  username?: string | null;
 };
 
 function normalizeEmail(email: string) {
@@ -47,6 +49,7 @@ function mapApiList(entry: ApiList): SavedList {
     movies: Array.isArray(entry.movies) ? entry.movies : [],
     color: normalizeListColor(entry.color),
     userEmail: normalizeEmail(entry.userEmail || ""),
+    username: entry.username ?? null,
   };
 }
 
@@ -131,7 +134,7 @@ export async function addMovieToList(listId: string, tmdbId: number, userEmail: 
 
 export async function updateList(
   listId: string,
-  data: { title?: string; slug?: string; color?: string; userEmail: string },
+  data: { title?: string; slug?: string; color?: string; visibility?: "public" | "private"; userEmail: string },
 ): Promise<SavedList> {
   const email = normalizeEmail(data.userEmail);
   if (!email) {
@@ -141,6 +144,7 @@ export async function updateList(
   if (data.title && data.title.trim()) payload.title = data.title.trim();
   if (data.slug && data.slug.trim()) payload.slug = slugify(data.slug);
   if (data.color && data.color.trim()) payload.color = normalizeListColor(data.color);
+  if (data.visibility) payload.visibility = data.visibility;
   payload.userEmail = email;
   const result = await rustApiFetch<{ list: ApiList }>(`/lists/${listId}`, {
     method: "PATCH",
@@ -151,17 +155,21 @@ export async function updateList(
   return mapped;
 }
 
-export async function getListBySlug(slug: string, userEmail: string): Promise<SavedList | undefined> {
-  const email = normalizeEmail(userEmail);
-  if (!email) {
-    throw new Error("userEmail is required to load a list");
-  }
+export async function getListByUsernameSlug(
+  username: string,
+  slug: string,
+  userEmail?: string | null,
+): Promise<SavedList | undefined> {
+  const email = userEmail ? normalizeEmail(userEmail) : "";
+  const params = email ? `?userEmail=${encodeURIComponent(email)}` : "";
   try {
     const data = await rustApiFetch<{ list: ApiList }>(
-      `/lists/by-slug/${encodeURIComponent(slug)}?userEmail=${encodeURIComponent(email)}`,
+      `/lists/public/${encodeURIComponent(username)}/${encodeURIComponent(slug)}${params}`,
     );
     const mapped = mapApiList(data.list);
-    cacheSingleList(email, mapped);
+    if (email) {
+      cacheSingleList(email, mapped);
+    }
     return mapped;
   } catch {
     return undefined;
@@ -201,4 +209,50 @@ function cacheSingleList(email: string, updated: SavedList) {
   } catch {
     // ignore cache write errors
   }
+}
+
+export async function loadPublicLists(limit = 24): Promise<SavedList[]> {
+  try {
+    const data = await rustApiFetch<{ lists: ApiList[] }>(`/lists/public?limit=${limit}`);
+    return data.lists.map(mapApiList);
+  } catch (error) {
+    console.error("Failed to load public lists", error);
+    return [];
+  }
+}
+
+export async function loadFavorites(userEmail: string): Promise<SavedList[]> {
+  const email = normalizeEmail(userEmail);
+  if (!email) {
+    throw new Error("userEmail is required to load favorites");
+  }
+  try {
+    const data = await rustApiFetch<{ lists: ApiList[] }>(`/favorites?userEmail=${encodeURIComponent(email)}`);
+    return data.lists.map(mapApiList);
+  } catch (error) {
+    console.error("Failed to load favorites", error);
+    return [];
+  }
+}
+
+export async function addFavorite(listId: string, userEmail: string): Promise<void> {
+  const email = normalizeEmail(userEmail);
+  if (!email) {
+    throw new Error("userEmail is required to favorite a list");
+  }
+  await rustApiFetch<{ ok: boolean }>("/favorites", {
+    method: "POST",
+    body: JSON.stringify({ listId, userEmail: email }),
+  });
+}
+
+export async function removeFavorite(listId: string, userEmail: string): Promise<void> {
+  const email = normalizeEmail(userEmail);
+  if (!email) {
+    throw new Error("userEmail is required to remove a favorite");
+  }
+  await rustApiFetch<{ ok: boolean }>(`/favorites/${listId}`, {
+    method: "DELETE",
+    body: JSON.stringify({ listId, userEmail: email }),
+  });
 }
