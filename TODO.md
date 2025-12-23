@@ -1,1 +1,0 @@
-Add artists to the search results. Those links should go to a page that features that artist's filmography.

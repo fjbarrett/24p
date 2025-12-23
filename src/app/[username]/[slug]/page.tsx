@@ -47,6 +47,8 @@ export default async function ListDetail({
   const headerGradient = pickGradient(list);
   const fromParam = encodeURIComponent(`/${list.username ?? username}/${list.slug}`);
 
+  const canFavorite = !!viewerEmail && viewerEmail !== list.userEmail;
+
   return (
     <div className="text-black-100">
       <div className="mx-auto max-w-[1000px] space-y-6 rounded-3xl bg-black-900/70 p-6 shadow-2xl backdrop-blur">
@@ -54,7 +56,7 @@ export default async function ListDetail({
           <Link href="/" className="rounded-full px-4 py-2 text-sm text-black-200">
             <span>Back</span>
           </Link>
-          {viewerEmail && (
+          {canFavorite && (
             <FavoriteToggle listId={list.id} userEmail={viewerEmail} initialFavorite={isFavorite} />
           )}
         </div>

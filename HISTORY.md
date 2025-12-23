@@ -116,3 +116,6 @@
 - 2025-12-22 16:39 UTC — Updated site metadata branding to 24p.
 - 2025-12-22 16:39 UTC — Removed default favicon asset.
 - 2025-12-22 16:53 UTC — Removed the credits card border on the movie detail page.
+- 2025-12-23 03:04 UTC — Started docker-compose services in detached mode.
+- 2025-12-23 03:07 UTC — Rebuilt and restarted docker-compose services with --build.
+- 2025-12-23 03:04 UTC — Hid favorite toggle on list detail for list owners.
