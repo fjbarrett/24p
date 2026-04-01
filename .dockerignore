@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+dist
+tmp
+.turbo
+.cache
+*.log
+.env
+.env.*
+npm-debug.log*
+yarn-error.log*
+bun.lockb
+coverage
+rust-api/target
+**/.DS_Store

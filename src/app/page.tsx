@@ -1,0 +1,126 @@
+import { ListsSection } from "@/components/lists-section";
+import { PressableLogo } from "@/components/pressable-logo";
+import { SignInButton } from "@/components/sign-in-button";
+import { TmdbSearchBar } from "@/components/tmdb-search-bar";
+import { ListGallery } from "@/components/list-gallery";
+import { loadFavorites, loadLists, loadPublicLists } from "@/lib/list-store";
+import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
+import Image from "next/image";
+import { authOptions } from "@/lib/auth";
+import Link from "next/link";
+
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const session = (await getServerSession(authOptions)) as Session | null;
+  const userEmail = session?.user?.email?.toLowerCase() ?? "";
+  const lists = userEmail ? await loadLists(userEmail) : [];
+  const favorites = userEmail ? await loadFavorites(userEmail) : [];
+  const publicLists = !session ? await loadPublicLists() : [];
+
+  if (!session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 py-10 text-black-100 sm:px-8 lg:px-16">
+        <div className="w-full flex flex-col items-center justify-center gap-10">
+          <Header isSignedIn={false} centered lists={[]} userEmail="" />
+          <div className="w-full max-w-[1000px]">
+            <ListGallery
+              lists={publicLists}
+              title="Public Directory"
+              id="public-directory"
+              emptyMessage="No public lists yet. Be the first to share one."
+              showOwner
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-black-100">
+      <div className="mx-auto max-w-[1000px]">
+        <Header isSignedIn lists={lists} userEmail={userEmail} />
+
+        <main className="space-y-10">
+          <ListsSection lists={lists} userEmail={userEmail} />
+          <ListGallery
+            lists={favorites}
+            title="Favorites"
+            id="favorites"
+            emptyMessage="Favorite a public list to pin it here."
+            showOwner
+          />
+        </main>
+
+        <footer className="flex flex-col items-center gap-3 mb-6">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/profile"
+              className="rounded-full border border-black-700 px-5 py-2 text-sm text-black-100 transition hover:border-white/60"
+            >
+              Profile
+            </Link>
+            <Link
+              href="/settings"
+              className="rounded-full border border-black-700 px-5 py-2 text-sm text-black-100 transition hover:border-white/60"
+            >
+              Settings
+            </Link>
+          </div>
+          <SignInButton className="px-5 py-2 text-sm" ariaLabel="Sign out" />
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function Header({
+  isSignedIn,
+  centered = false,
+  lists,
+  userEmail,
+}: {
+  isSignedIn: boolean;
+  centered?: boolean;
+  lists: Awaited<ReturnType<typeof loadLists>>;
+  userEmail: string;
+}) {
+  const layoutClass = centered
+    ? "flex flex-col items-center gap-3 text-center"
+    : "flex w-full flex-col items-center gap-4 text-center";
+  return (
+    <header
+      className={`${layoutClass} relative`}
+    >
+      <div className="flex items-center justify-center">
+        {isSignedIn ? (
+          <PressableLogo src="/icon-24p.png" alt="24p logo" width={219} height={192} />
+        ) : (
+          <SignInButton
+            variant="ghost"
+            borderless
+            className="mt-[15px] rounded-[12px] p-0 border-none hover:border-none focus-visible:outline-white active:translate-y-[1px] active:scale-[0.99] transition"
+            ariaLabel="Sign in with Google"
+          >
+            <Image
+              src="/icon-24p.png"
+              alt="24p logo"
+              width={219}
+              height={192}
+              priority
+              loading="eager"
+              className="h-[192px] w-[219px] rounded-[10px] transition hover:opacity-90"
+            />
+          </SignInButton>
+        )}
+      </div>
+      {isSignedIn && (
+        <div className="w-full max-w-[560px]">
+          <TmdbSearchBar lists={lists} userEmail={userEmail} />
+        </div>
+      )}
+    </header>
+  );
+}
