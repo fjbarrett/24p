@@ -16,8 +16,6 @@ export function AddToListLoader({ tmdbId, userEmail }: AddToListLoaderProps) {
 
   useEffect(() => {
     let active = true;
-    setIsLoading(true);
-    setFailed(false);
 
     loadLists(userEmail)
       .then((data) => {

@@ -230,7 +230,7 @@ export default function PreviewPage() {
           <p className="text-xs uppercase tracking-[0.4em]" style={{ color: "#555" }}>ui preview — production unaffected</p>
           <h1 className="text-3xl font-semibold text-white">Proposed Changes</h1>
           <p className="text-sm" style={{ color: "#888" }}>
-            6 changes across 3 files. Hover the "after" cards to see the hover effect.
+            6 changes across 3 files. Hover the &quot;after&quot; cards to see the hover effect.
           </p>
         </header>
 
