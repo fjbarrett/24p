@@ -17,9 +17,7 @@ services:
       retries: 5
 
   rust-api:
-    build:
-      context: .
-      dockerfile: rust-api/Dockerfile
+    image: ghcr.io/fjbarrett/24p-api:latest
     restart: unless-stopped
     environment:
       APP_HOST: 0.0.0.0
@@ -28,6 +26,7 @@ services:
       DB_MAX_CONNECTIONS: ${DB_MAX_CONNECTIONS:-5}
       DB_SSLMODE: ${DB_SSLMODE:-disable}
       STRAWBERRY_BASE_URL: ${STRAWBERRY_BASE_URL:-https://strawberry.fjbarrett.workers.dev}
+      TMDB_API_KEY: ${TMDB_API_KEY}
     depends_on:
       db:
         condition: service_healthy
@@ -35,9 +34,7 @@ services:
       - "8080:8080"
 
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/fjbarrett/24p-web:latest
     restart: unless-stopped
     environment:
       NODE_ENV: production
