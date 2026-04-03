@@ -198,9 +198,7 @@ function buildMovieJsonLd(movie: {
 function renderCommunityRatings(movie: {
   rating?: number;
   imdbRating?: number;
-  letterboxdRating?: number;
   imdbId?: string | null;
-  tmdbId?: number;
 }) {
   const items: { key: string; href?: string; value: string; label: string; icon?: string }[] = [];
   if (typeof movie.imdbRating === "number" && movie.imdbId) {
@@ -211,16 +209,6 @@ function renderCommunityRatings(movie: {
       value: movie.imdbRating.toFixed(1),
       label: "IMDb",
       icon: "/imdb_logo.svg",
-    });
-  }
-  if (typeof movie.letterboxdRating === "number" && movie.tmdbId != null) {
-    const href = `https://letterboxd.com/tmdb/${movie.tmdbId}/`;
-    items.push({
-      key: "lb",
-      href,
-      value: movie.letterboxdRating.toFixed(2),
-      label: "Letterboxd",
-      icon: "/letterboxd_logo.svg",
     });
   }
   if (!items.length) return null;

@@ -261,8 +261,6 @@ struct SimplifiedMovieDto {
     vote_count: Option<i32>,
     #[serde(rename = "imdbRating")]
     imdb_rating: Option<f32>,
-    #[serde(rename = "letterboxdRating")]
-    letterboxd_rating: Option<f32>,
     #[serde(rename = "imdbId")]
     imdb_id: Option<String>,
     #[serde(rename = "posterUrl")]
@@ -314,8 +312,6 @@ struct FilmographyEntryDto {
     role: Option<String>,
     #[serde(rename = "imdbRating")]
     imdb_rating: Option<f32>,
-    #[serde(rename = "letterboxdRating")]
-    letterboxd_rating: Option<f32>,
     #[serde(rename = "imdbId")]
     imdb_id: Option<String>,
 }
@@ -366,8 +362,6 @@ struct TmdbMovieResult {
     poster_path: Option<String>,
     #[serde(rename = "imdb_rating")]
     imdb_rating: Option<f32>,
-    #[serde(rename = "letterboxd_rating")]
-    letterboxd_rating: Option<f32>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -407,8 +401,6 @@ struct TmdbMovieDetailsResult {
     tagline: Option<String>,
     #[serde(rename = "imdb_rating")]
     imdb_rating: Option<f32>,
-    #[serde(rename = "letterboxd_rating")]
-    letterboxd_rating: Option<f32>,
     #[serde(rename = "imdb_id")]
     imdb_id: Option<String>,
     credits: Option<TmdbCredits>,
@@ -457,8 +449,6 @@ struct TmdbPersonCredit {
     video: Option<bool>,
     #[serde(rename = "imdb_rating")]
     imdb_rating: Option<f32>,
-    #[serde(rename = "letterboxd_rating")]
-    letterboxd_rating: Option<f32>,
     #[serde(rename = "imdb_id")]
     imdb_id: Option<String>,
 }
@@ -2115,9 +2105,8 @@ async fn fetch_tmdb_movie(
         .map(|value| value.trim())
         .filter(|value| !value.is_empty())
     {
-        if let Some((imdb_rating, letterboxd_rating)) = fetch_external_ratings(state, imdb_id).await {
+        if let Some(imdb_rating) = fetch_external_ratings(state, imdb_id).await {
             movie.imdb_rating = imdb_rating;
-            movie.letterboxd_rating = letterboxd_rating;
         }
     }
 
@@ -2206,7 +2195,7 @@ where
 async fn fetch_external_ratings(
     state: &AppState,
     imdb_id: &str,
-) -> Option<(Option<f32>, Option<f32>)> {
+) -> Option<Option<f32>> {
     let url = format!("{}/ratings/{}", state.strawberry_base_url.trim_end_matches('/'), imdb_id);
     let response = state
         .client
@@ -2225,11 +2214,7 @@ async fn fetch_external_ratings(
         .get("imdbRating")
         .and_then(|value| value.as_f64())
         .map(|value| value as f32);
-    let letterboxd_rating = body
-        .get("letterboxdRating")
-        .and_then(|value| value.as_f64())
-        .map(|value| value as f32);
-    Some((imdb_rating, letterboxd_rating))
+    Some(imdb_rating)
 }
 
 fn map_tmdb_movie(result: TmdbMovieResult) -> Option<SimplifiedMovieDto> {
@@ -2252,7 +2237,6 @@ fn map_tmdb_movie(result: TmdbMovieResult) -> Option<SimplifiedMovieDto> {
         popularity: result.popularity,
         vote_count: result.vote_count,
         imdb_rating: result.imdb_rating,
-        letterboxd_rating: result.letterboxd_rating,
         imdb_id: None,
         poster_url,
         runtime: None,
@@ -2290,7 +2274,6 @@ fn map_tmdb_movie_details(result: TmdbMovieDetailsResult) -> SimplifiedMovieDto 
         popularity: result.popularity,
         vote_count: result.vote_count,
         imdb_rating: result.imdb_rating,
-        letterboxd_rating: result.letterboxd_rating,
         imdb_id: result.imdb_id,
         poster_url,
         runtime: result.runtime,
@@ -2559,7 +2542,6 @@ fn map_tmdb_person_credit(
         job,
         role,
         imdb_rating: credit.imdb_rating,
-        letterboxd_rating: credit.letterboxd_rating,
         imdb_id: credit.imdb_id.clone(),
     })
 }
