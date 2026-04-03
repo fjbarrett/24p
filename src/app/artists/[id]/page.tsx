@@ -98,7 +98,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ id: str
           </div>
           <Link
             href="/"
-            className="rounded-full border border-white/20 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/75 transition hover:bg-white/8 hover:border-white/35 hover:text-white"
+            className="rounded-full bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90"
           >
             Back
           </Link>

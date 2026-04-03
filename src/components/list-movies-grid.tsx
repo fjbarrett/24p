@@ -290,7 +290,7 @@ export function ListMoviesGrid({
                         handleRemove(movie.tmdbId);
                       }}
                       disabled={removingId === movie.tmdbId}
-                      className="absolute right-1 top-1 z-10 rounded-full border border-rose-300/70 bg-rose-600 px-2 py-1 text-[11px] font-bold text-white shadow hover:bg-rose-500 disabled:opacity-60"
+                      className="absolute right-1 top-1 z-10 rounded-full bg-white px-2 py-1 text-[11px] font-bold text-black shadow transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
                       aria-label="Remove from list"
                     >
                       ×
@@ -321,7 +321,7 @@ export function ListMoviesGrid({
           type="button"
           onClick={handleExport}
           disabled={loading || isExporting || !exportRows.length}
-          className="rounded-full border border-black-700 px-4 py-1 text-xs font-semibold text-black-100 transition hover:border-black-500 hover:text-white disabled:cursor-not-allowed disabled:border-black-800 disabled:text-black-500"
+          className="rounded-full bg-white px-4 py-1 text-xs font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isExporting ? "Exporting…" : "Export CSV"}
         </button>

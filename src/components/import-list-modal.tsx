@@ -13,7 +13,7 @@ export function ImportListModal() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex w-full items-center justify-center rounded-2xl bg-white px-4 py-3 text-base font-semibold text-black shadow-lg shadow-black-800/30 transition hover:brightness-95"
+        className="flex w-full items-center justify-center rounded-full bg-white px-4 py-3 text-base font-semibold text-black transition hover:brightness-95 active:brightness-90"
       >
         Import list
       </button>
@@ -32,7 +32,7 @@ export function ImportListModal() {
               </h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/75 transition hover:bg-white/8 hover:border-white/35 hover:text-white"
+                className="rounded-full bg-white px-3 py-1 text-xs font-medium text-black transition hover:brightness-95 active:brightness-90"
                 aria-label="Close import list modal"
               >
                 Close

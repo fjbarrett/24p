@@ -95,9 +95,9 @@ function ListEditorBefore() {
         </label>
       </div>
       <div className="flex flex-wrap gap-3">
-        <button className="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-900">Save changes</button>
-        <button className="rounded-full border border-slate-600 px-4 py-2 text-sm text-slate-200">Cancel</button>
-        <button className="rounded-full border border-rose-400 px-4 py-2 text-sm text-rose-300">Delete list</button>
+        <button className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black">Save changes</button>
+        <button className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black">Cancel</button>
+        <button className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black">Delete list</button>
       </div>
     </div>
   );
@@ -121,8 +121,8 @@ function ListEditorAfter() {
       </div>
       <div className="flex flex-wrap gap-3">
         <button className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black">Save changes</button>
-        <button className="rounded-full border border-black-600 px-4 py-2 text-sm text-black-200">Cancel</button>
-        <button className="rounded-full border border-rose-400 px-4 py-2 text-sm text-rose-300">Delete list</button>
+        <button className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black">Cancel</button>
+        <button className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black">Delete list</button>
       </div>
     </div>
   );
