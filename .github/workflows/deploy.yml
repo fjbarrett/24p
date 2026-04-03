@@ -36,8 +36,8 @@ jobs:
           dockerfile: Dockerfile
           push: true
           tags: ${{ env.IMAGE_WEB }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
 
       - name: Build and push API image
         uses: docker/build-push-action@v6
@@ -46,8 +46,8 @@ jobs:
           dockerfile: rust-api/Dockerfile
           push: true
           tags: ${{ env.IMAGE_API }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
 
   deploy:
     name: Deploy to production
@@ -62,7 +62,6 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd /opt/24p
-            git pull origin main
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
             docker compose up -d
