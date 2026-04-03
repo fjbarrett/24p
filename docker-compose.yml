@@ -47,7 +47,6 @@ services:
       RUST_API_ORIGIN: http://rust-api:8080
       RUST_API_BASE_URL: http://rust-api:8080
       RUST_API_URL: http://rust-api:8080
-      STRAWBERRY_BASE_URL: ${STRAWBERRY_BASE_URL:-https://strawberry.fjbarrett.workers.dev}
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/24p}
     depends_on:
       rust-api:

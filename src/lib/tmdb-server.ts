@@ -4,17 +4,6 @@ import type { SimplifiedMovie } from "@/lib/tmdb";
 import { buildRustApiUrl } from "@/lib/rust-api-client";
 
 export async function fetchTmdbMovie(tmdbId: number): Promise<SimplifiedMovie> {
-  if (typeof window !== "undefined") {
-    const cached = window.sessionStorage.getItem(`tmdb:${tmdbId}`);
-    if (cached) {
-      try {
-        return JSON.parse(cached) as SimplifiedMovie;
-      } catch {
-        // ignore parse errors
-      }
-    }
-  }
-
   const response = await fetch(buildRustApiUrl(`/tmdb/movie/${tmdbId}`), {
     cache: "no-store",
     headers: { Accept: "application/json" },
@@ -28,13 +17,6 @@ export async function fetchTmdbMovie(tmdbId: number): Promise<SimplifiedMovie> {
   const payload = (await response.json()) as { detail?: SimplifiedMovie };
   if (!payload.detail) {
     throw new Error(`Rust TMDB response missing detail for id ${tmdbId}`);
-  }
-  if (typeof window !== "undefined") {
-    try {
-      window.sessionStorage.setItem(`tmdb:${tmdbId}`, JSON.stringify(payload.detail));
-    } catch {
-      // ignore cache errors
-    }
   }
   return payload.detail;
 }

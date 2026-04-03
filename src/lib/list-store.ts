@@ -39,6 +39,13 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+type CacheEnvelope = {
+  ts: number;
+  lists: SavedList[];
+};
+
 function isCachedListEntry(value: unknown): value is SavedList {
   if (!value || typeof value !== "object") return false;
   const entry = value as SavedList;
@@ -85,9 +92,15 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
     const cached = window.localStorage.getItem(`lists:${email}`);
     if (cached) {
       try {
-        const parsed = JSON.parse(cached) as SavedList[];
-        if (Array.isArray(parsed) && parsed.every(isCachedListEntry)) {
-          return parsed;
+        const envelope = JSON.parse(cached) as CacheEnvelope;
+        if (
+          envelope &&
+          typeof envelope.ts === "number" &&
+          Date.now() - envelope.ts < CACHE_TTL_MS &&
+          Array.isArray(envelope.lists) &&
+          envelope.lists.every(isCachedListEntry)
+        ) {
+          return envelope.lists;
         }
       } catch {
         // ignore parse errors and fall through to network
@@ -101,7 +114,8 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
     const mapped = data.lists.map(mapApiList);
     if (typeof window !== "undefined") {
       try {
-        window.localStorage.setItem(`lists:${email}`, JSON.stringify(mapped));
+        const envelope: CacheEnvelope = { ts: Date.now(), lists: mapped };
+        window.localStorage.setItem(`lists:${email}`, JSON.stringify(envelope));
       } catch {
         // ignore write errors
       }
@@ -134,8 +148,9 @@ export async function addList(
     try {
       const email = normalizeEmail(userEmail);
       const existing = window.localStorage.getItem(`lists:${email}`);
-      const parsed = existing ? (JSON.parse(existing) as SavedList[]) : [];
-      window.localStorage.setItem(`lists:${email}`, JSON.stringify([mapped, ...parsed]));
+      const prev = existing ? (JSON.parse(existing) as CacheEnvelope).lists ?? [] : [];
+      const envelope: CacheEnvelope = { ts: Date.now(), lists: [mapped, ...prev] };
+      window.localStorage.setItem(`lists:${email}`, JSON.stringify(envelope));
     } catch {
       // ignore cache write errors
     }
@@ -214,9 +229,9 @@ export async function deleteList(listId: string, userEmail: string): Promise<voi
     try {
       const existing = window.localStorage.getItem(`lists:${email}`);
       if (existing) {
-        const parsed = JSON.parse(existing) as SavedList[];
-        const filtered = parsed.filter((list) => list.id !== listId);
-        window.localStorage.setItem(`lists:${email}`, JSON.stringify(filtered));
+        const prev = (JSON.parse(existing) as CacheEnvelope).lists ?? [];
+        const envelope: CacheEnvelope = { ts: Date.now(), lists: prev.filter((list) => list.id !== listId) };
+        window.localStorage.setItem(`lists:${email}`, JSON.stringify(envelope));
       }
     } catch {
       // ignore cache write errors
@@ -228,9 +243,12 @@ function cacheSingleList(email: string, updated: SavedList) {
   if (typeof window === "undefined") return;
   try {
     const existing = window.localStorage.getItem(`lists:${email}`);
-    const parsed = existing ? (JSON.parse(existing) as SavedList[]) : [];
-    const next = [updated, ...parsed.filter((list) => list.id !== updated.id)];
-    window.localStorage.setItem(`lists:${email}`, JSON.stringify(next));
+    const prev = existing ? (JSON.parse(existing) as CacheEnvelope).lists ?? [] : [];
+    const envelope: CacheEnvelope = {
+      ts: Date.now(),
+      lists: [updated, ...prev.filter((list) => list.id !== updated.id)],
+    };
+    window.localStorage.setItem(`lists:${email}`, JSON.stringify(envelope));
   } catch {
     // ignore cache write errors
   }
