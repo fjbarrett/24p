@@ -33,9 +33,9 @@ export function SignInButton({
   }, [pending, session?.user, status]);
 
   const styles = borderless
-    ? "text-white"
+    ? "text-white/70 hover:text-white"
     : variant === "primary"
-      ? "bg-black-200 text-black-900 hover:bg-black-300"
+      ? "bg-white text-black hover:brightness-95 active:brightness-90"
       : "border border-white/20 text-white/75 hover:bg-white/8 hover:border-white/35 hover:text-white";
 
   async function handleClick() {
@@ -58,7 +58,7 @@ export function SignInButton({
   return (
     <button
       onClick={handleClick}
-      className={`rounded-full px-5 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black-300 ${styles} ${className}`}
+      className={`rounded-full px-5 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${styles} ${className}`}
       disabled={pending}
       aria-label={ariaLabel ?? label}
     >

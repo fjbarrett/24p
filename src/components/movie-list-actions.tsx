@@ -71,7 +71,7 @@ export function MovieListActions({ lists, tmdbId, userEmail }: MovieListActionsP
         <button
           type="submit"
           disabled={isPending}
-          className="flex w-full items-center justify-center rounded-2xl bg-white px-4 py-3 text-base font-semibold text-black shadow-lg shadow-black-800/30 transition hover:brightness-95 disabled:opacity-50"
+          className="flex w-full items-center justify-center rounded-full bg-[#0085ff] px-4 py-3 text-base font-semibold text-white transition hover:bg-[#0070d9] active:bg-[#005db8] disabled:opacity-50"
           style={{ fontSize: 18 }}
         >
           <span>{isPending ? "Saving..." : "Add to list"}</span>
