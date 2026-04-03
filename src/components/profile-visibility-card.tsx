@@ -54,7 +54,7 @@ export function ProfileVisibilityCard({ userEmail, profile }: ProfileVisibilityC
             className={`rounded-full border px-4 py-2 text-xs uppercase tracking-[0.3em] ${
               !isPublic
                 ? "border-white/60 text-white"
-                : "border-black-700 text-black-200 hover:border-white/60"
+                : "border-white/20 text-white/60 hover:bg-white/8 hover:border-white/35 hover:text-white"
             } disabled:opacity-50`}
           >
             Private
@@ -66,7 +66,7 @@ export function ProfileVisibilityCard({ userEmail, profile }: ProfileVisibilityC
             className={`rounded-full border px-4 py-2 text-xs uppercase tracking-[0.3em] ${
               isPublic
                 ? "border-white/60 text-white"
-                : "border-black-700 text-black-200 hover:border-white/60"
+                : "border-white/20 text-white/60 hover:bg-white/8 hover:border-white/35 hover:text-white"
             } disabled:opacity-50`}
           >
             Public

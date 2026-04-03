@@ -58,13 +58,13 @@ export default async function Home() {
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/profile"
-              className="rounded-full border border-black-700 px-5 py-2 text-sm text-black-100 transition hover:border-white/60"
+              className="rounded-full border border-white/20 px-5 py-2 text-sm text-white/75 transition hover:bg-white/8 hover:border-white/35 hover:text-white"
             >
               Profile
             </Link>
             <Link
               href="/settings"
-              className="rounded-full border border-black-700 px-5 py-2 text-sm text-black-100 transition hover:border-white/60"
+              className="rounded-full border border-white/20 px-5 py-2 text-sm text-white/75 transition hover:bg-white/8 hover:border-white/35 hover:text-white"
             >
               Settings
             </Link>

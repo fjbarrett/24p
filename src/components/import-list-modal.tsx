@@ -32,7 +32,7 @@ export function ImportListModal() {
               </h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="rounded-full border border-black-600 px-3 py-1 text-xs text-black-200 transition hover:border-white/60"
+                className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/75 transition hover:bg-white/8 hover:border-white/35 hover:text-white"
                 aria-label="Close import list modal"
               >
                 Close

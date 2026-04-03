@@ -36,7 +36,7 @@ export function SignInButton({
     ? "text-white"
     : variant === "primary"
       ? "bg-black-200 text-black-900 hover:bg-black-300"
-      : "border border-black-600 text-white hover:border-white/80";
+      : "border border-white/20 text-white/75 hover:bg-white/8 hover:border-white/35 hover:text-white";
 
   async function handleClick() {
     if (session?.user) {
