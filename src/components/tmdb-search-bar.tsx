@@ -192,7 +192,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
                       setSelectedListId((current) => (current || lists[0]?.id) ?? "");
                       setStatus(null);
                     }}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition hover:bg-white/10 disabled:opacity-40 disabled:hover:bg-white/5"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-40"
                   >
                     <Plus className="h-5 w-5" />
                   </button>
@@ -224,7 +224,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
                         </select>
                         <button
                           type="button"
-                          className="flex w-full items-center justify-center rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-black shadow transition hover:brightness-95 disabled:opacity-60"
+                          className="flex w-full items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
                           onClick={() => handleAdd(movie.tmdbId)}
                           disabled={savingMovieId === movie.tmdbId}
                         >

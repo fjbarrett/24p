@@ -37,7 +37,7 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
     <div className="w-full">
       <button
         onClick={() => setIsOpen(true)}
-        className="flex w-full items-center justify-center rounded-full bg-[#0085ff] px-4 py-3 text-base font-semibold text-white transition hover:bg-[#0070d9] active:bg-[#005db8]"
+        className="flex w-full items-center justify-center rounded-full bg-white px-4 py-3 text-base font-semibold text-black transition hover:brightness-95 active:brightness-90"
       >
         +
       </button>
@@ -73,14 +73,14 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="rounded-full border border-white/15 px-4 py-2 text-base text-white/70 transition hover:bg-white/5"
+                  className="rounded-full bg-white px-4 py-2 text-base font-medium text-black transition hover:brightness-95 active:brightness-90"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="rounded-full bg-[#0085ff] px-4 py-2 text-base font-semibold text-white transition hover:bg-[#0070d9] disabled:opacity-50"
+                  className="rounded-full bg-white px-4 py-2 text-base font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
                 >
                   {isPending ? "Saving..." : "Save title"}
                 </button>

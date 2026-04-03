@@ -151,7 +151,7 @@ export function ListEditor({
             setIsEditing(next);
             onEditingChange?.(next);
           }}
-          className="rounded-full px-4 py-2 text-sm text-white/60 transition hover:bg-white/8 hover:text-white"
+          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90"
         >
           {isEditing ? "Stop editing" : "Edit movies"}
         </button>
@@ -199,7 +199,7 @@ export function ListEditor({
             setIsEditing(true);
             onEditingChange?.(true);
           }}
-          className="rounded-full px-4 py-2 text-sm text-white/60 transition hover:bg-white/8 hover:text-white"
+          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90"
         >
           Edit list
         </button>
@@ -257,7 +257,7 @@ export function ListEditor({
             type="button"
             onClick={handleAddShare}
             disabled={isSharing || !canShare}
-            className="rounded-full border border-white/15 px-3 py-2 text-xs text-white/70 transition hover:bg-white/5 disabled:opacity-50"
+            className="rounded-full bg-white px-3 py-2 text-xs font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
           >
             {isSharing ? "Sharing..." : "Share"}
           </button>
@@ -285,7 +285,7 @@ export function ListEditor({
                     type="button"
                     disabled={isSharing}
                     onClick={() => handleToggleShareEdit(share)}
-                    className="rounded-full border border-white/15 px-2 py-1 text-[10px] text-white/60 transition hover:bg-white/5 disabled:opacity-50"
+                    className="rounded-full bg-white px-2 py-1 text-[10px] font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
                   >
                     {share.canEdit ? "Revoke edits" : "Allow edits"}
                   </button>
@@ -294,7 +294,7 @@ export function ListEditor({
                       type="button"
                       disabled={isSharing}
                       onClick={() => handleRemoveShare(share.username ?? "")}
-                      className="rounded-full border border-white/15 px-2 py-1 text-[10px] text-white/60 transition hover:bg-white/5 disabled:opacity-50"
+                      className="rounded-full bg-white px-2 py-1 text-[10px] font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
                     >
                       Remove
                     </button>
@@ -312,7 +312,7 @@ export function ListEditor({
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-full bg-[#0085ff] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0070d9] disabled:opacity-50"
+          className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
         >
           {isPending ? "Saving..." : "Save changes"}
         </button>
@@ -327,7 +327,7 @@ export function ListEditor({
             setIsEditing(false);
             onEditingChange?.(false);
           }}
-          className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/70 transition hover:bg-white/5 disabled:opacity-50"
+          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
         >
           Cancel
         </button>
@@ -349,7 +349,7 @@ export function ListEditor({
               }
             });
           }}
-          className="rounded-full border border-rose-500/40 px-4 py-2 text-sm text-rose-400 transition hover:bg-rose-500/10 disabled:opacity-50"
+          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
         >
           {isPending ? "Deleting..." : "Delete list"}
         </button>

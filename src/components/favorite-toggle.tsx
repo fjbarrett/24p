@@ -40,7 +40,7 @@ export function FavoriteToggle({ listId, userEmail, initialFavorite }: FavoriteT
         type="button"
         onClick={handleToggle}
         disabled={isPending}
-        className={`rounded-full border px-4 py-2 text-xs uppercase tracking-[0.3em] transition disabled:opacity-60 ${isFavorite ? "border-[#0085ff] bg-[#0085ff]/15 text-[#6bb8ff] hover:bg-[#0085ff]/20" : "border-white/15 text-white/70 hover:bg-white/5"}`}
+        className="rounded-full bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
       >
         {isPending ? "Saving" : isFavorite ? "Favorited" : "Favorite"}
       </button>

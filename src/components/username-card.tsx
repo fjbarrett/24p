@@ -80,7 +80,7 @@ export function UsernameCard({ userEmail, profile }: UsernameCardProps) {
         <button
           type="submit"
           disabled={!isValid || isPending}
-          className="rounded-full border border-black-700 px-4 py-2 text-xs uppercase tracking-[0.3em] text-black-100 disabled:opacity-50"
+          className="rounded-full bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
         >
           {isPending ? "Saving" : "Save"}
         </button>
