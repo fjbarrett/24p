@@ -35,8 +35,8 @@ export function SignInButton({
   const styles = borderless
     ? "text-white/70 hover:text-white"
     : variant === "primary"
-      ? "bg-[#0085ff] text-white hover:bg-[#0070d9] active:bg-[#005db8]"
-      : "border border-white/15 text-white/80 hover:bg-white/5";
+      ? "bg-white text-black hover:brightness-95 active:brightness-90"
+      : "border border-white/20 text-white/75 hover:bg-white/8 hover:border-white/35 hover:text-white";
 
   async function handleClick() {
     if (session?.user) {
@@ -58,7 +58,7 @@ export function SignInButton({
   return (
     <button
       onClick={handleClick}
-      className={`rounded-full px-5 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0085ff] ${styles} ${className}`}
+      className={`rounded-full px-5 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${styles} ${className}`}
       disabled={pending}
       aria-label={ariaLabel ?? label}
     >
