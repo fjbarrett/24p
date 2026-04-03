@@ -125,25 +125,21 @@ export function ListEditor({
   if (!isOwner && !canEditList) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-black-300" style={{ paddingLeft: 16 }}>
-          {listPath}
-        </p>
-        <p className="text-xs text-black-500" style={{ paddingLeft: 16 }}>
-          Only the creator can edit this list.
-        </p>
+        <p className="text-xs uppercase tracking-[0.3em] text-black-500">List URL</p>
+        <p className="text-sm text-black-200 break-all">{listPath}</p>
+        <p className="text-xs text-black-500">Only the creator can edit this list.</p>
       </div>
     );
   }
 
   if (!isOwner && canEditList) {
     return (
-      <div className="space-y-3">
-        <p className="text-sm text-black-300" style={{ paddingLeft: 16 }}>
-          {listPath}
-        </p>
-        <p className="text-xs text-black-500" style={{ paddingLeft: 16 }}>
-          Shared with you for collaboration.
-        </p>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.3em] text-black-500">List URL</p>
+          <p className="text-sm text-black-200 break-all">{listPath}</p>
+          <p className="text-xs text-black-500">Shared with you for collaboration.</p>
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -191,8 +187,11 @@ export function ListEditor({
   if (!isEditing) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-black-300" style={{ paddingLeft: 16 }}>{listPath}</p>
-        {message && <p className="text-xs text-black-400" style={{ paddingLeft: 16 }}>{message}</p>}
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.3em] text-black-500">List URL</p>
+          <p className="text-sm text-black-200 break-all">{listPath}</p>
+          {message && <p className="text-xs text-black-400">{message}</p>}
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -209,18 +208,26 @@ export function ListEditor({
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <input
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        className="w-full rounded-2xl border border-black-700 bg-black-950 px-3 py-2 text-sm text-black-100"
-        aria-label="Title"
-      />
-      <input
-        value={slug}
-        onChange={(event) => setSlug(event.target.value)}
-        className="w-full rounded-2xl border border-black-700 bg-black-950 px-3 py-2 text-sm text-black-100"
-        aria-label="Slug"
-      />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <label className="space-y-2">
+          <span className="text-xs uppercase tracking-[0.3em] text-black-500">Title</span>
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            className="w-full rounded-2xl border border-black-700 bg-black-950 px-4 py-3 text-sm text-black-100"
+            aria-label="Title"
+          />
+        </label>
+        <label className="space-y-2">
+          <span className="text-xs uppercase tracking-[0.3em] text-black-500">Slug</span>
+          <input
+            value={slug}
+            onChange={(event) => setSlug(event.target.value)}
+            className="w-full rounded-2xl border border-black-700 bg-black-950 px-4 py-3 text-sm text-black-100"
+            aria-label="Slug"
+          />
+        </label>
+      </div>
       <div className="rounded-2xl border border-black-700 bg-black-950 px-3 py-2 text-sm text-black-200">
         <label className="flex items-center justify-between gap-4">
           <span className="text-xs uppercase tracking-[0.3em] text-black-400">Visibility</span>
@@ -239,12 +246,16 @@ export function ListEditor({
           </p>
         )}
       </div>
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.3em] text-black-500">List URL</p>
+        <p className="text-sm text-black-200 break-all">{listPath}</p>
+      </div>
       <div className="rounded-2xl border border-black-700 bg-black-950 px-3 py-3 text-sm text-black-200 space-y-3">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <span className="text-xs uppercase tracking-[0.3em] text-black-400">Shared access</span>
           <span className="text-[11px] text-black-400">Private lists stay off the public directory.</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <input
             value={shareUsername}
             onChange={(event) => setShareUsername(event.target.value)}
@@ -308,7 +319,7 @@ export function ListEditor({
         )}
       </div>
       {message && <p className="text-xs text-black-400">{message}</p>}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <button
           type="submit"
           disabled={isPending}

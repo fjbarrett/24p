@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AddToListPopover } from "@/components/add-to-list-popover";
+import { MovieListActions } from "@/components/movie-list-actions";
 import { loadLists, type SavedList } from "@/lib/list-store";
 
 type AddToListLoaderProps = {
@@ -38,7 +38,7 @@ export function AddToListLoader({ tmdbId, userEmail }: AddToListLoaderProps) {
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl bg-black-950/60 p-3">
+      <div className="rounded-2xl border border-white/10 bg-black-950/60 p-4">
         <p className="text-sm text-black-200">Loading your lists…</p>
       </div>
     );
@@ -46,11 +46,11 @@ export function AddToListLoader({ tmdbId, userEmail }: AddToListLoaderProps) {
 
   if (failed) {
     return (
-      <div className="rounded-2xl bg-black-950/60 p-3">
+      <div className="rounded-2xl border border-white/10 bg-black-950/60 p-4">
         <p className="text-sm text-black-200">Unable to load lists.</p>
       </div>
     );
   }
 
-  return <AddToListPopover lists={lists} tmdbId={tmdbId} userEmail={userEmail} />;
+  return <MovieListActions lists={lists} tmdbId={tmdbId} userEmail={userEmail} />;
 }

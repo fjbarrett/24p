@@ -248,21 +248,38 @@ export function ListMoviesGrid({
   };
 
   if (!listMovieIds.length) {
-    return <p className="pl-4 text-sm text-black-500">No movies yet. Add some from the detail pages.</p>;
+    return <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>;
   }
 
   return (
-    <div className="space-y-3">
-      {loading ? (
-        <p className="pl-4 text-sm text-black-500">
-          Loading movies… {Math.min(loadedCount, listMovieIds.length)}/{listMovieIds.length}
-        </p>
-      ) : null}
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <p className="text-xs uppercase tracking-[0.3em] text-black-500">Movies</p>
+          {loading ? (
+            <p className="text-sm text-black-500">
+              Loading movies… {Math.min(loadedCount, listMovieIds.length)}/{listMovieIds.length}
+            </p>
+          ) : (
+            <p className="text-sm text-black-400">
+              {listMovieIds.length} {listMovieIds.length === 1 ? "movie" : "movies"}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={loading || isExporting || !exportRows.length}
+          className="min-h-11 rounded-full bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isExporting ? "Exporting…" : "Export CSV"}
+        </button>
+      </div>
       {sortedLoadedMovies.length === 0 && !loading ? (
-        <p className="pl-4 text-sm text-black-500">No movies yet. Add some from the detail pages.</p>
+        <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>
       ) : (
         <ul
-          className="grid grid-cols-3 gap-2 pl-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
         >
           {displayIds.map((tmdbId) => {
             const movie = moviesById.get(tmdbId);
@@ -316,16 +333,6 @@ export function ListMoviesGrid({
           })}
         </ul>
       )}
-      <div className="flex justify-start pl-4 pt-2">
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={loading || isExporting || !exportRows.length}
-          className="rounded-full bg-white px-4 py-1 text-xs font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isExporting ? "Exporting…" : "Export CSV"}
-        </button>
-      </div>
     </div>
   );
 }

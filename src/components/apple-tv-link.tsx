@@ -50,7 +50,7 @@ export function AppleTvLink({ imdbId, title }: AppleTvLinkProps) {
       href={link.url}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:-translate-y-0.5 hover:shadow-lg"
+      className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90"
     >
       <span>Watch on Apple TV</span>
       {link.price ? <span className="text-black-500">({link.price})</span> : null}

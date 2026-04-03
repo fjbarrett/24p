@@ -21,10 +21,12 @@ export function ListDetailClient({
   const [isEditing, setIsEditing] = useState(false);
 
   return (
-    <>
-      <ListEditor list={list} viewerEmail={viewerEmail} canEdit={list.canEdit} onEditingChange={setIsEditing} />
+    <div className="space-y-5">
+      <section className="rounded-2xl border border-white/10 bg-black-950/60 p-4 sm:p-5">
+        <ListEditor list={list} viewerEmail={viewerEmail} canEdit={list.canEdit} onEditingChange={setIsEditing} />
+      </section>
 
-      <section className="space-y-3">
+      <section className="rounded-2xl border border-white/10 bg-black-950/60 p-4 sm:p-5">
         <ListMoviesGrid
           tmdbIds={list.movies}
           ratingsMap={ratingsMap}
@@ -36,6 +38,6 @@ export function ListDetailClient({
           isEditing={isEditing}
         />
       </section>
-    </>
+    </div>
   );
 }

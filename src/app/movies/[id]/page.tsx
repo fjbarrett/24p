@@ -82,11 +82,11 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <article className="mx-auto max-w-[1100px] space-y-3 rounded-3xl bg-black-900/70 p-3 shadow-2xl backdrop-blur sm:p-4">
+      <article className="mx-auto max-w-[1180px] space-y-6 rounded-[28px] border border-white/10 bg-black-900/70 p-4 shadow-2xl backdrop-blur sm:p-6 lg:p-8">
         <div className="flex items-center justify-between">
           <BackButton
             fallbackHref={backHref}
-            className="inline-flex items-center gap-2 rounded-full bg-black-950/70 px-4 py-2 text-xs font-medium text-black-200 transition hover:-translate-y-0.5 hover:text-white hover:shadow-lg"
+            className="inline-flex items-center gap-2 rounded-full bg-black-950/70 px-4 py-2 text-xs font-medium uppercase tracking-[0.3em] text-black-300 transition hover:bg-black-950 hover:text-white"
             aria-label="Close"
           >
             <span aria-hidden>←</span>
@@ -94,46 +94,62 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
           </BackButton>
         </div>
 
-        <header className="flex flex-col gap-4 text-left sm:flex-row sm:items-start sm:gap-6">
-          <div className="shrink-0">
+        <header className="grid gap-6 text-left lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
+          <div className="mx-auto w-full max-w-[220px] shrink-0 lg:mx-0">
             {movie.posterUrl ? (
               <Image
                 src={getLargePoster(movie.posterUrl)}
                 alt={`${movie.title} poster`}
                 width={200}
                 height={300}
-                className="h-auto w-[160px] rounded-3xl object-cover shadow-2xl sm:w-[200px]"
+                className="h-auto w-full rounded-3xl object-cover shadow-2xl"
                 priority
               />
             ) : (
-              <div className="flex aspect-[2/3] w-[160px] items-center justify-center rounded-3xl bg-black-800 text-sm text-black-500 sm:w-[200px]">
+              <div className="flex aspect-[2/3] w-full items-center justify-center rounded-3xl bg-black-800 text-sm text-black-500">
                 No art yet
               </div>
             )}
           </div>
 
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <h1 className="text-4xl font-semibold text-white sm:text-5xl">{movie.title}</h1>
-              {typeof movie.releaseYear === "number" || communityRatings ? (
-                <div className="flex flex-wrap items-center gap-2 py-1 text-sm text-black-500">
-                  {typeof movie.releaseYear === "number" ? <span>{movie.releaseYear}</span> : null}
-                  {communityRatings}
+          <div className="min-w-0 space-y-5">
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <h1 className="text-4xl font-semibold leading-tight text-white sm:text-5xl">{movie.title}</h1>
+                {typeof movie.releaseYear === "number" || communityRatings ? (
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-black-400">
+                    {typeof movie.releaseYear === "number" ? (
+                      <span className="inline-flex items-center rounded-full bg-black-950/70 px-3 py-1 font-medium text-black-200">
+                        {movie.releaseYear}
+                      </span>
+                    ) : null}
+                    {communityRatings}
+                  </div>
+                ) : null}
+              </div>
+
+              {(userEmail || movie.imdbId) ? (
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="w-full max-w-xl">
+                    {userEmail ? <AddToListLoader tmdbId={movie.tmdbId} userEmail={userEmail} /> : null}
+                  </div>
+                  {movie.imdbId ? (
+                    <div className="flex w-full lg:w-auto lg:justify-end">
+                      <AppleTvLink imdbId={movie.imdbId} title={movie.title} />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
 
-            {movie.overview && <p className="text-base leading-relaxed text-black-200">{movie.overview}</p>}
-
-            {userEmail ? <AddToListLoader tmdbId={movie.tmdbId} userEmail={userEmail} /> : null}
-
-            {credits ? <div className="space-y-2">{credits}</div> : null}
-
-            {movie.imdbId ? (
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <AppleTvLink imdbId={movie.imdbId} title={movie.title} />
-              </div>
+            {movie.overview ? (
+              <section className="rounded-2xl border border-white/10 bg-black-950/60 p-5">
+                <p className="text-xs uppercase tracking-[0.35em] text-black-500">Overview</p>
+                <p className="mt-3 max-w-3xl text-base leading-8 text-black-200">{movie.overview}</p>
+              </section>
             ) : null}
+
+            {credits ? <div>{credits}</div> : null}
           </div>
         </header>
       </article>
@@ -222,7 +238,7 @@ function renderCommunityRatings(movie: {
             href={item.href}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 rounded-full bg-black-950/60 px-2 py-1 text-xs font-medium text-black-200 transition hover:-translate-y-0.5 hover:text-white hover:shadow-lg"
+            className="inline-flex items-center gap-2 rounded-full bg-black-950/70 px-3 py-1.5 text-xs font-medium text-black-200 transition hover:bg-black-950 hover:text-white"
           >
             {item.icon ? (
               <Image src={item.icon} alt={`${item.label} logo`} width={18} height={18} className="h-4 w-auto" />
@@ -255,27 +271,27 @@ function renderCredits(movie: {
   }
 
   return (
-    <div className="rounded-2xl bg-black-950/60">
+    <section className="rounded-2xl border border-white/10 bg-black-950/60 p-5">
       <p className="text-xs uppercase tracking-[0.3em] text-black-500">Credits</p>
-      <div className="mt-2 space-y-2 text-sm text-black-200">
+      <div className="mt-4 space-y-4 text-sm text-black-200">
         {director ? (
-          <div className="flex flex-wrap gap-x-2">
-            <span className="font-semibold text-black-300">Director</span>
+          <div className="grid gap-1 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-4">
+            <span className="font-semibold text-black-400">Director</span>
             <PersonLinkRow person={director} />
           </div>
         ) : null}
         {cinematographer ? (
-          <div className="flex flex-wrap gap-x-2">
-            <span className="font-semibold text-black-300">Director of Photography</span>
+          <div className="grid gap-1 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-4">
+            <span className="font-semibold text-black-400">Director of Photography</span>
             <PersonLinkRow person={cinematographer} />
           </div>
         ) : null}
         {cast.length ? (
-          <div className="space-y-1">
-            <div className="font-semibold text-black-300">Cast</div>
-            <div className="space-y-1">
+          <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-4">
+            <div className="font-semibold text-black-400">Cast</div>
+            <div className="flex flex-wrap gap-2">
               {cast.map((person) => (
-                <div key={`${person.tmdbId}-${person.name}`}>
+                <div key={`${person.tmdbId}-${person.name}`} className="min-w-0">
                   <PersonLinkRow person={person} />
                 </div>
               ))}
@@ -283,14 +299,17 @@ function renderCredits(movie: {
           </div>
         ) : null}
       </div>
-    </div>
+    </section>
   );
 }
 
 function PersonLinkRow({ person }: { person: PersonLink }) {
   const label = person.role ? `${person.name} (${person.role})` : person.name;
   return (
-    <Link href={`/artists/${person.tmdbId}`} className="underline-offset-4 hover:underline">
+    <Link
+      href={`/artists/${person.tmdbId}`}
+      className="inline-flex rounded-full bg-black-900 px-3 py-1.5 text-black-100 transition hover:bg-black-800"
+    >
       {label}
     </Link>
   );

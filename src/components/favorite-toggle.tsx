@@ -35,12 +35,12 @@ export function FavoriteToggle({ listId, userEmail, initialFavorite }: FavoriteT
   };
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col items-start gap-1 sm:items-end">
       <button
         type="button"
         onClick={handleToggle}
         disabled={isPending}
-        className="rounded-full bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
+        className="min-h-11 rounded-full bg-white px-5 py-2.5 text-xs font-medium uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
       >
         {isPending ? "Saving" : isFavorite ? "Favorited" : "Favorite"}
       </button>
