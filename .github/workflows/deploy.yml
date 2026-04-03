@@ -33,7 +33,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          dockerfile: Dockerfile
+          file: Dockerfile
           push: true
           tags: ${{ env.IMAGE_WEB }}:latest
           cache-from: type=gha,scope=web
@@ -43,7 +43,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          dockerfile: rust-api/Dockerfile
+          file: rust-api/Dockerfile
           push: true
           tags: ${{ env.IMAGE_API }}:latest
           cache-from: type=gha,scope=api
