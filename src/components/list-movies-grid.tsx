@@ -168,7 +168,6 @@ export function ListMoviesGrid({
         typeof userRating === "number" ? userRating.toString() : "",
         typeof movie.rating === "number" ? movie.rating.toFixed(1) : "",
         typeof movie.imdbRating === "number" ? movie.imdbRating.toFixed(1) : "",
-        typeof movie.letterboxdRating === "number" ? movie.letterboxdRating.toFixed(2) : "",
       ];
     });
   }, [listTitle, ratingsMap, sortedLoadedMovies]);

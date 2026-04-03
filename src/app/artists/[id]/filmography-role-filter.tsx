@@ -129,15 +129,6 @@ function renderRatings(credit: FilmographyEntry) {
     });
   }
 
-  if (typeof credit.letterboxdRating === "number") {
-    items.push({
-      key: "lb",
-      href: `https://letterboxd.com/tmdb/${credit.tmdbId}/`,
-      value: credit.letterboxdRating.toFixed(2),
-      icon: "/letterboxd_logo.svg",
-    });
-  }
-
   if (!items.length) return null;
 
   return (

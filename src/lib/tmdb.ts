@@ -11,7 +11,6 @@ export type TmdbMovieSearchResult = {
   vote_count?: number;
   poster_path?: string | null;
   imdb_rating?: number | null;
-  letterboxd_rating?: number | null;
   imdb_id?: string | null;
 };
 
@@ -24,7 +23,6 @@ export type SimplifiedMovie = {
   popularity?: number;
   voteCount?: number;
   imdbRating?: number;
-  letterboxdRating?: number;
   imdbId?: string | null;
   posterUrl?: string | null;
   runtime?: number;
@@ -60,7 +58,6 @@ export type FilmographyEntry = {
   job?: string | null;
   role?: string | null;
   imdbRating?: number;
-  letterboxdRating?: number;
   imdbId?: string | null;
 };
 
@@ -91,8 +88,6 @@ function baseMovieMapping(result: TmdbMovieSearchResult): SimplifiedMovie {
   const voteCount = typeof result.vote_count === "number" ? result.vote_count : undefined;
   const posterUrl = result.poster_path ? `${TMDB_IMAGE_BASE}${result.poster_path}` : null;
   const imdbRating = typeof result.imdb_rating === "number" ? Number(result.imdb_rating.toFixed(1)) : undefined;
-  const letterboxdRating =
-    typeof result.letterboxd_rating === "number" ? Number(result.letterboxd_rating.toFixed(2)) : undefined;
   const imdbId = result.imdb_id ?? null;
 
   return {
@@ -104,7 +99,6 @@ function baseMovieMapping(result: TmdbMovieSearchResult): SimplifiedMovie {
     popularity,
     voteCount,
     imdbRating,
-    letterboxdRating,
     imdbId,
     posterUrl,
   };
