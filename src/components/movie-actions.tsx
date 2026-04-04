@@ -30,7 +30,9 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title }: MovieActionsP
                 overflow: 'hidden',
                 maxWidth: listExpanded ? '0px' : '100px',
                 marginLeft: listExpanded ? '0px' : '16px',
-                transition: 'opacity 200ms ease-out, transform 200ms ease-out, max-width 300ms cubic-bezier(0.4,0,0.2,1), margin-left 300ms cubic-bezier(0.4,0,0.2,1)',
+                transition: listExpanded
+                  ? 'opacity 150ms ease-in, transform 150ms ease-in, max-width 300ms cubic-bezier(0.4,0,0.2,1), margin-left 300ms cubic-bezier(0.4,0,0.2,1)'
+                  : 'opacity 200ms ease-out 220ms, transform 200ms ease-out 220ms, max-width 300ms cubic-bezier(0.4,0,0.2,1), margin-left 300ms cubic-bezier(0.4,0,0.2,1)',
               }}
             >
               <AppleTvLink imdbId={imdbId} title={title} />
