@@ -1,10 +1,12 @@
 import { ListsSection } from "@/components/lists-section";
 import { PressableLogo } from "@/components/pressable-logo";
 import { SignInButton } from "@/components/sign-in-button";
+import { SignOutIconButton } from "@/components/sign-out-icon-button";
 import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import { loadLists } from "@/lib/list-store";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
+import { Settings, User } from "lucide-react";
 import Image from "next/image";
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
@@ -27,30 +29,32 @@ export default async function Home() {
   }
 
   return (
-    <div className="text-black-100">
-      <div className="mx-auto max-w-[1000px]">
+    <div className="min-h-screen px-4 py-8 text-black-100 sm:px-6">
+      <div className="mx-auto flex w-full max-w-[900px] flex-col items-center">
         <Header isSignedIn lists={lists} userEmail={userEmail} />
 
-        <main className="space-y-10">
+        <main className="mt-0 w-full max-w-[760px] space-y-10">
           <ListsSection lists={lists} userEmail={userEmail} />
         </main>
 
-        <footer className="flex flex-col items-center gap-3 mb-6">
-          <div className="flex flex-wrap items-center justify-center gap-3">
+        <footer className="mb-6 mt-10 flex items-center justify-center gap-3">
             <Link
               href="/profile"
-              className="rounded-full bg-white px-5 py-2 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90"
+              aria-label="Profile"
+              title="Profile"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-white/75 transition hover:bg-white/8 hover:text-white active:scale-[0.98]"
             >
-              Profile
+              <User className="h-4 w-4" strokeWidth={2.25} />
             </Link>
             <Link
               href="/settings"
-              className="rounded-full bg-white px-5 py-2 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90"
+              aria-label="Settings"
+              title="Settings"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-white/75 transition hover:bg-white/8 hover:text-white active:scale-[0.98]"
             >
-              Settings
+              <Settings className="h-4 w-4" strokeWidth={2.25} />
             </Link>
-          </div>
-          <SignInButton className="px-5 py-2 text-sm" ariaLabel="Sign out" />
+          <SignOutIconButton />
         </footer>
       </div>
     </div>
@@ -79,24 +83,20 @@ function Header({
         {isSignedIn ? (
           <PressableLogo src="/icon-24p.png" alt="24p logo" width={219} height={192} />
         ) : (
-          <SignInButton
-            variant="ghost"
-            borderless
-            className="mt-[15px] rounded-[12px] p-0 border-none hover:border-none focus-visible:outline-white active:translate-y-[1px] active:scale-[0.99] transition"
-            ariaLabel="Sign in with Google"
-          >
-            <Image
-              src="/icon-24p.png"
-              alt="24p logo"
-              width={219}
-              height={192}
-              priority
-              loading="eager"
-              className="h-[192px] w-[219px] rounded-[10px] transition hover:opacity-90"
-            />
-          </SignInButton>
+          <Image
+            src="/icon-24p.png"
+            alt="24p logo"
+            width={219}
+            height={192}
+            priority
+            loading="eager"
+            className="mt-[15px] h-[192px] w-[219px] rounded-[10px]"
+          />
         )}
       </div>
+      {!isSignedIn ? (
+        <SignInButton ariaLabel="Sign in with Google" className="mt-4 px-5 py-2 text-sm" />
+      ) : null}
       {isSignedIn && (
         <div className="w-full max-w-[560px]">
           <TmdbSearchBar lists={lists} userEmail={userEmail} />

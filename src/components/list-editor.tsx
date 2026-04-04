@@ -12,11 +12,13 @@ export function ListEditor({
   viewerEmail,
   canEdit,
   onEditingChange,
+  hideOwnerEditButton = false,
 }: {
   list: SavedList;
   viewerEmail?: string | null;
   canEdit?: boolean;
   onEditingChange?: (isEditing: boolean) => void;
+  hideOwnerEditButton?: boolean;
 }) {
   const normalizedViewerEmail = viewerEmail?.trim().toLowerCase() ?? "";
   const isOwner = Boolean(normalizedViewerEmail && normalizedViewerEmail === list.userEmail);
@@ -34,7 +36,6 @@ export function ListEditor({
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
-  const listPath = list.username ? `/${list.username}/${slug}` : `/${slug}`;
   const canShare = Boolean(list.username);
 
   useEffect(() => {
@@ -125,8 +126,6 @@ export function ListEditor({
   if (!isOwner && !canEditList) {
     return (
       <div className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-black-500">List URL</p>
-        <p className="text-sm text-black-200 break-all">{listPath}</p>
         <p className="text-xs text-black-500">Only the creator can edit this list.</p>
       </div>
     );
@@ -135,11 +134,7 @@ export function ListEditor({
   if (!isOwner && canEditList) {
     return (
       <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-black-500">List URL</p>
-          <p className="text-sm text-black-200 break-all">{listPath}</p>
-          <p className="text-xs text-black-500">Shared with you for collaboration.</p>
-        </div>
+        <p className="text-xs text-black-500">Shared with you for collaboration.</p>
         <button
           type="button"
           onClick={() => {
@@ -176,6 +171,7 @@ export function ListEditor({
         if (nextPath !== currentPath) {
           router.replace(nextPath);
         } else {
+          router.replace(currentPath);
           router.refresh();
         }
       } catch (error) {
@@ -187,21 +183,19 @@ export function ListEditor({
   if (!isEditing) {
     return (
       <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-black-500">List URL</p>
-          <p className="text-sm text-black-200 break-all">{listPath}</p>
-          {message && <p className="text-xs text-black-400">{message}</p>}
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setIsEditing(true);
-            onEditingChange?.(true);
-          }}
-          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90"
-        >
-          Edit list
-        </button>
+        {message && <p className="text-xs text-black-400">{message}</p>}
+        {!hideOwnerEditButton ? (
+          <button
+            type="button"
+            onClick={() => {
+              setIsEditing(true);
+              onEditingChange?.(true);
+            }}
+            className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90"
+          >
+            Edit list
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -214,7 +208,7 @@ export function ListEditor({
           <input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            className="w-full rounded-2xl border border-black-700 bg-black-950 px-4 py-3 text-sm text-black-100"
+            className="w-full rounded-2xl bg-black-950 px-4 py-3 text-sm text-black-100"
             aria-label="Title"
           />
         </label>
@@ -223,18 +217,18 @@ export function ListEditor({
           <input
             value={slug}
             onChange={(event) => setSlug(event.target.value)}
-            className="w-full rounded-2xl border border-black-700 bg-black-950 px-4 py-3 text-sm text-black-100"
+            className="w-full rounded-2xl bg-black-950 px-4 py-3 text-sm text-black-100"
             aria-label="Slug"
           />
         </label>
       </div>
-      <div className="rounded-2xl border border-black-700 bg-black-950 px-3 py-2 text-sm text-black-200">
+      <div className="rounded-2xl bg-black-950 px-3 py-2 text-sm text-black-200">
         <label className="flex items-center justify-between gap-4">
           <span className="text-xs uppercase tracking-[0.3em] text-black-400">Visibility</span>
           <select
             value={visibility}
             onChange={(event) => setVisibility(event.target.value as SavedList["visibility"])}
-            className="rounded-full border border-black-700 bg-black-950 px-3 py-1 text-xs uppercase tracking-[0.2em] text-black-100"
+            className="rounded-full bg-black-900 px-3 py-1 text-xs uppercase tracking-[0.2em] text-black-100"
           >
             <option value="private">Private</option>
             <option value="public">Public</option>
@@ -246,11 +240,7 @@ export function ListEditor({
           </p>
         )}
       </div>
-      <div className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-black-500">List URL</p>
-        <p className="text-sm text-black-200 break-all">{listPath}</p>
-      </div>
-      <div className="rounded-2xl border border-black-700 bg-black-950 px-3 py-3 text-sm text-black-200 space-y-3">
+      <div className="rounded-2xl bg-black-950 px-3 py-3 text-sm text-black-200 space-y-3">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <span className="text-xs uppercase tracking-[0.3em] text-black-400">Shared access</span>
           <span className="text-[11px] text-black-400">Private lists stay off the public directory.</span>
@@ -261,7 +251,7 @@ export function ListEditor({
             onChange={(event) => setShareUsername(event.target.value)}
             placeholder="Share with username"
             disabled={!canShare}
-            className="w-full rounded-full border border-black-700 bg-black-950 px-3 py-2 text-xs text-black-100 disabled:opacity-60"
+            className="w-full rounded-full bg-black-900 px-3 py-2 text-xs text-black-100 disabled:opacity-60"
             aria-label="Share with username"
           />
           <button
@@ -337,6 +327,9 @@ export function ListEditor({
             setVisibility(list.visibility);
             setIsEditing(false);
             onEditingChange?.(false);
+            if (list.username) {
+              router.replace(`/${list.username}/${list.slug}`);
+            }
           }}
           className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
         >

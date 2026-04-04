@@ -62,6 +62,9 @@ export async function getPublicProfile(username: string): Promise<UserProfile | 
     );
     return data.profile ?? null;
   } catch (error) {
+    if (error instanceof Error && error.message === "Profile not found") {
+      return null;
+    }
     console.error("Failed to load public profile", error);
     return null;
   }
