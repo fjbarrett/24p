@@ -142,7 +142,7 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
               value={selectedListId}
               onChange={(e) => setSelectedListId(e.target.value)}
               disabled={loadingLists}
-              className="min-w-0 flex-1 bg-transparent text-sm text-black outline-none"
+              className="min-w-0 flex-1 bg-transparent text-center text-sm font-semibold text-black outline-none"
             >
               {loadingLists
                 ? <option>Loading…</option>
