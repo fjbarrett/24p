@@ -23,8 +23,8 @@ export function ListGallery({ lists, title = "Lists", emptyMessage, id = "lists"
   if (!lists.length) {
     return (
       <section id={id} className="rounded-3xl border border-white/10 bg-black-900/40 p-6 text-center">
-        <p className="text-xs uppercase tracking-[0.4em] text-black-400">{title}</p>
-        <p className="mt-2 text-sm text-black-500">
+        {title ? <p className="text-xs uppercase tracking-[0.4em] text-black-400">{title}</p> : null}
+        <p className={`${title ? "mt-2 " : ""}text-sm text-black-500`}>
           {emptyMessage ?? "No lists yet. Use the buttons below to create or import your first one."}
         </p>
       </section>
@@ -33,7 +33,7 @@ export function ListGallery({ lists, title = "Lists", emptyMessage, id = "lists"
 
   return (
     <section id={id} className="space-y-4">
-      <p className="text-xs uppercase tracking-[0.4em] text-black-400">{title}</p>
+      {title ? <p className="text-xs uppercase tracking-[0.4em] text-black-400">{title}</p> : null}
       <div className="grid gap-6 sm:grid-cols-2">
         {lists.map((list) => {
           const href = list.username ? `/${list.username}/${list.slug}` : null;

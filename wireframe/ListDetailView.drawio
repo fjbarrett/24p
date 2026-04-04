@@ -1,0 +1,92 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
+  <diagram name="Page-1" id="ListDetailView">
+    <mxGraphModel dx="996" dy="655" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="393" pageHeight="852" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="frame" parent="1" style="rounded=1;whiteSpace=wrap;html=1;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;fillColor=#000000;strokeColor=#333333;" value="" vertex="1">
+          <mxGeometry height="852" width="393" as="geometry" />
+        </mxCell>
+        <!-- Outer article: min-h-screen px-4 py-6 → article rounded-[28px] border bg-black-900/70 p-4 -->
+        <mxCell id="article" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#0d0d0d;strokeColor=#2a2a2a;" value="" vertex="1">
+          <mxGeometry height="810" width="361" x="16" y="24" as="geometry" />
+        </mxCell>
+        <!-- Back button: rounded-full bg-black-950/70 px-4 py-2 text-xs uppercase tracking -->
+        <mxCell id="back" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#111111;strokeColor=#333333;fontSize=10;fontColor=#AAAAAA;" value="BACK" vertex="1">
+          <mxGeometry height="28" width="54" x="32" y="40" as="geometry" />
+        </mxCell>
+        <!-- FavoriteToggle (right side) -->
+        <mxCell id="fav" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#111111;strokeColor=#333333;fontSize=12;fontColor=#AAAAAA;" value="♡" vertex="1">
+          <mxGeometry height="28" width="36" x="307" y="40" as="geometry" />
+        </mxCell>
+        <!-- Inner card: rounded-[28px] border border-white/10 bg-black-950 with gradient -->
+        <mxCell id="inner-card" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#050505;strokeColor=#222222;" value="" vertex="1">
+          <mxGeometry height="168" width="329" x="32" y="84" as="geometry" />
+        </mxCell>
+        <!-- @username: text-xs uppercase tracking-[0.3em] text-black-400 -->
+        <mxCell id="username" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#555555;" value="@USERNAME" vertex="1">
+          <mxGeometry height="16" width="120" x="52" y="108" as="geometry" />
+        </mxCell>
+        <!-- h1 List title: text-3xl font-semibold text-white -->
+        <mxCell id="list-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=24;fontColor=#FFFFFF;fontStyle=1;" value="List Title" vertex="1">
+          <mxGeometry height="36" width="280" x="52" y="128" as="geometry" />
+        </mxCell>
+        <!-- Accent bar: h-[3px] max-w-[220px] rounded-full -->
+        <mxCell id="accent" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#8c63e0;strokeColor=none;" value="" vertex="1">
+          <mxGeometry height="3" width="220" x="52" y="172" as="geometry" />
+        </mxCell>
+        <!-- Stats pills: "X films" + "Public/Private" -->
+        <mxCell id="pill-count" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#111111;strokeColor=none;fontSize=12;fontColor=#DDDDDD;" value="12 films" vertex="1">
+          <mxGeometry height="28" width="76" x="52" y="187" as="geometry" />
+        </mxCell>
+        <mxCell id="pill-vis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#111111;strokeColor=none;fontSize=12;fontColor=#CCCCCC;" value="Public list" vertex="1">
+          <mxGeometry height="28" width="84" x="140" y="187" as="geometry" />
+        </mxCell>
+        <!-- ListEditor section: rounded-2xl border border-white/10 bg-black-950/60 p-4 -->
+        <mxCell id="editor-section" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#050505;strokeColor=#1e1e1e;" value="" vertex="1">
+          <mxGeometry height="52" width="329" x="32" y="268" as="geometry" />
+        </mxCell>
+        <!-- Read-only state: URL + Edit list button -->
+        <mxCell id="editor-url-label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#666666;" value="LIST URL" vertex="1">
+          <mxGeometry height="14" width="80" x="48" y="278" as="geometry" />
+        </mxCell>
+        <mxCell id="editor-url" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#DDDDDD;" value="/username/list-slug" vertex="1">
+          <mxGeometry height="16" width="150" x="48" y="296" as="geometry" />
+        </mxCell>
+        <mxCell id="edit-btn" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#FFFFFF;strokeColor=none;fontSize=12;fontColor=#000000;" value="Edit list" vertex="1">
+          <mxGeometry height="28" width="76" x="269" y="280" as="geometry" />
+        </mxCell>
+        <!-- ListMoviesGrid section: rounded-2xl border border-white/10 bg-black-950/60 p-4 -->
+        <mxCell id="grid-section" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#050505;strokeColor=#1e1e1e;" value="" vertex="1">
+          <mxGeometry height="470" width="329" x="32" y="336" as="geometry" />
+        </mxCell>
+        <!-- "MOVIES" label + count -->
+        <mxCell id="movies-label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#666666;" value="MOVIES" vertex="1">
+          <mxGeometry height="16" width="60" x="48" y="352" as="geometry" />
+        </mxCell>
+        <mxCell id="movies-count" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#AAAAAA;" value="12 movies" vertex="1">
+          <mxGeometry height="16" width="80" x="48" y="370" as="geometry" />
+        </mxCell>
+        <!-- Poster grid: grid-cols-2 gap-3, poster aspect-[2/3] -->
+        <!-- Row 1 -->
+        <mxCell id="p1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#1a1a1a;strokeColor=#2a2a2a;" value="" vertex="1">
+          <mxGeometry height="171" width="150" x="48" y="396" as="geometry" />
+        </mxCell>
+        <mxCell id="p2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#1a1a1a;strokeColor=#2a2a2a;" value="" vertex="1">
+          <mxGeometry height="171" width="150" x="210" y="396" as="geometry" />
+        </mxCell>
+        <!-- Row 2 -->
+        <mxCell id="p3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#1a1a1a;strokeColor=#2a2a2a;" value="" vertex="1">
+          <mxGeometry height="171" width="150" x="48" y="579" as="geometry" />
+        </mxCell>
+        <mxCell id="p4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#1a1a1a;strokeColor=#2a2a2a;" value="" vertex="1">
+          <mxGeometry height="171" width="150" x="210" y="579" as="geometry" />
+        </mxCell>
+        <!-- Export CSV button: rounded-full bg-white -->
+        <mxCell id="export" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#FFFFFF;strokeColor=none;fontSize=12;fontColor=#000000;fontStyle=1;" value="Export CSV" vertex="1">
+          <mxGeometry height="32" width="116" x="138.5" y="766" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

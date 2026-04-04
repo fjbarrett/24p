@@ -1,0 +1,70 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
+  <diagram name="Page-1" id="HomeView">
+    <mxGraphModel dx="996" dy="655" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="393" pageHeight="852" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="frame" parent="1" style="rounded=1;whiteSpace=wrap;html=1;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;fillColor=#000000;strokeColor=#333333;" value="" vertex="1">
+          <mxGeometry height="852" width="393" as="geometry" />
+        </mxCell>
+        <!-- Logo: PressableLogo 219×192, centered -->
+        <mxCell id="logo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#111111;strokeColor=#333333;fontSize=13;fontColor=#999999;" value="logo" vertex="1">
+          <mxGeometry height="192" width="219" x="87" y="30" as="geometry" />
+        </mxCell>
+        <!-- TmdbSearchBar: max-w-[560px], full width on mobile, h≈48 -->
+        <mxCell id="search" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#111111;strokeColor=#444444;fontSize=13;fontColor=#555555;align=left;" value="  🔍  Search films..." vertex="1">
+          <mxGeometry height="48" width="361" x="16" y="238" as="geometry" />
+        </mxCell>
+        <!-- ListsSection: rounded-3xl bg-black-900/30 p-4, space-y-4 -->
+        <mxCell id="lists-section" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#0d0d0d;strokeColor=#222222;" value="" vertex="1">
+          <mxGeometry height="454" width="361" x="16" y="302" as="geometry" />
+        </mxCell>
+        <!-- CreateListButton: white rounded-full pill, full width -->
+        <mxCell id="create-btn" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#FFFFFF;strokeColor=none;fontSize=13;fontColor=#000000;" value="+ New List" vertex="1">
+          <mxGeometry height="36" width="329" x="32" y="318" as="geometry" />
+        </mxCell>
+        <!-- List card 1: h-40=160, rounded-2xl border border-black-800 bg-black-950, full width on mobile -->
+        <mxCell id="card1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#030303;strokeColor=#222222;" value="" vertex="1">
+          <mxGeometry height="160" width="329" x="32" y="374" as="geometry" />
+        </mxCell>
+        <!-- Accent stripe on card 1: inset-x-4 top-4 h-[3px] -->
+        <mxCell id="accent1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#8c63e0;strokeColor=none;" value="" vertex="1">
+          <mxGeometry height="3" width="297" x="48" y="390" as="geometry" />
+        </mxCell>
+        <!-- Card 1 title: text-xl font-semibold text-white, bottom of card -->
+        <mxCell id="card1-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=bottom;fontSize=18;fontColor=#FFFFFF;fontStyle=1;" value="List Title" vertex="1">
+          <mxGeometry height="36" width="200" x="48" y="470" as="geometry" />
+        </mxCell>
+        <!-- Card 1 film count: text-xs text-black-500 -->
+        <mxCell id="card1-count" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#555555;" value="12 films" vertex="1">
+          <mxGeometry height="16" width="80" x="48" y="508" as="geometry" />
+        </mxCell>
+        <!-- List card 2: gap-6=24px after card 1 -->
+        <mxCell id="card2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#030303;strokeColor=#222222;" value="" vertex="1">
+          <mxGeometry height="160" width="329" x="32" y="558" as="geometry" />
+        </mxCell>
+        <mxCell id="accent2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#e864c6;strokeColor=none;" value="" vertex="1">
+          <mxGeometry height="3" width="297" x="48" y="574" as="geometry" />
+        </mxCell>
+        <mxCell id="card2-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=bottom;fontSize=18;fontColor=#FFFFFF;fontStyle=1;" value="List Title" vertex="1">
+          <mxGeometry height="36" width="200" x="48" y="654" as="geometry" />
+        </mxCell>
+        <mxCell id="card2-count" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#555555;" value="8 films" vertex="1">
+          <mxGeometry height="16" width="80" x="48" y="692" as="geometry" />
+        </mxCell>
+        <!-- Footer: flex-col items-center gap-3 mb-6 -->
+        <!-- Profile + Settings row: flex-wrap items-center justify-center gap-3 -->
+        <mxCell id="footer-profile" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#FFFFFF;strokeColor=none;fontSize=13;fontColor=#000000;" value="Profile" vertex="1">
+          <mxGeometry height="32" width="80" x="96" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="footer-settings" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#FFFFFF;strokeColor=none;fontSize=13;fontColor=#000000;" value="Settings" vertex="1">
+          <mxGeometry height="32" width="80" x="217" y="750" as="geometry" />
+        </mxCell>
+        <!-- Sign out button -->
+        <mxCell id="footer-signout" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#FFFFFF;strokeColor=none;fontSize=13;fontColor=#000000;" value="Sign Out" vertex="1">
+          <mxGeometry height="32" width="90" x="151.5" y="792" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

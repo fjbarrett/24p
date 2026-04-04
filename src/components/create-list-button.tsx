@@ -44,13 +44,13 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
 
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="create-list-title"
           aria-describedby="create-list-desc"
         >
-          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black p-6 text-left shadow-2xl">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black-950 p-6 text-left shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
             <h3 className="text-xl font-semibold text-white" id="create-list-title">
               Name your list
             </h3>

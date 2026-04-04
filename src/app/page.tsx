@@ -2,8 +2,7 @@ import { ListsSection } from "@/components/lists-section";
 import { PressableLogo } from "@/components/pressable-logo";
 import { SignInButton } from "@/components/sign-in-button";
 import { TmdbSearchBar } from "@/components/tmdb-search-bar";
-import { ListGallery } from "@/components/list-gallery";
-import { loadFavorites, loadLists, loadPublicLists } from "@/lib/list-store";
+import { loadLists } from "@/lib/list-store";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import Image from "next/image";
@@ -16,23 +15,12 @@ export default async function Home() {
   const session = (await getServerSession(authOptions)) as Session | null;
   const userEmail = session?.user?.email?.toLowerCase() ?? "";
   const lists = userEmail ? await loadLists(userEmail) : [];
-  const favorites = userEmail ? await loadFavorites(userEmail) : [];
-  const publicLists = !session ? await loadPublicLists() : [];
 
   if (!session) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4 py-10 text-black-100 sm:px-8 lg:px-16">
-        <div className="w-full flex flex-col items-center justify-center gap-10">
+        <div className="flex w-full flex-col items-center justify-center gap-10">
           <Header isSignedIn={false} centered lists={[]} userEmail="" />
-          <div className="w-full max-w-[1000px]">
-            <ListGallery
-              lists={publicLists}
-              title="Public Directory"
-              id="public-directory"
-              emptyMessage="No public lists yet. Be the first to share one."
-              showOwner
-            />
-          </div>
         </div>
       </div>
     );
@@ -45,13 +33,6 @@ export default async function Home() {
 
         <main className="space-y-10">
           <ListsSection lists={lists} userEmail={userEmail} />
-          <ListGallery
-            lists={favorites}
-            title="Favorites"
-            id="favorites"
-            emptyMessage="Favorite a public list to pin it here."
-            showOwner
-          />
         </main>
 
         <footer className="flex flex-col items-center gap-3 mb-6">
