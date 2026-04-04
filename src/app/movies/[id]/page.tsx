@@ -103,7 +103,7 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
 
         {/* Year · Rating */}
         {(typeof movie.releaseYear === "number" || typeof movie.imdbRating === "number") ? (
-          <p className="mt-0.5 flex items-center gap-1.5 text-sm text-[#B3B3B3]">
+          <p className="mt-2 flex items-center gap-1.5 text-sm text-[#B3B3B3]">
             {typeof movie.releaseYear === "number" ? <span>{movie.releaseYear}</span> : null}
             {typeof movie.imdbRating === "number" ? (
               <>
