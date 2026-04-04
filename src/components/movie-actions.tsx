@@ -13,9 +13,16 @@ type MovieActionsProps = {
 
 export function MovieActions({ tmdbId, userEmail, imdbId, title }: MovieActionsProps) {
   const [listExpanded, setListExpanded] = useState(false);
+  const [revealed, setRevealed] = useState(!imdbId);
 
   return (
-    <div className="mt-9">
+    <div
+      className="mt-9"
+      style={{
+        opacity: revealed ? 1 : 0,
+        transition: 'opacity 500ms ease-out',
+      }}
+    >
       <AddToListButton
         tmdbId={tmdbId}
         userEmail={userEmail}
@@ -29,13 +36,13 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title }: MovieActionsP
                 pointerEvents: listExpanded ? 'none' : 'auto',
                 overflow: 'hidden',
                 maxWidth: listExpanded ? '0px' : '100px',
-                marginLeft: listExpanded ? '0px' : '16px',
+                marginLeft: '16px',
                 transition: listExpanded
                   ? 'opacity 150ms ease-in, transform 150ms ease-in, max-width 300ms cubic-bezier(0.4,0,0.2,1), margin-left 300ms cubic-bezier(0.4,0,0.2,1)'
-                  : 'opacity 200ms ease-out 220ms, transform 200ms ease-out 220ms, max-width 300ms cubic-bezier(0.4,0,0.2,1), margin-left 300ms cubic-bezier(0.4,0,0.2,1)',
+                  : 'opacity 200ms ease-out 220ms, transform 200ms ease-out 220ms, max-width 300ms cubic-bezier(0.4,0,0.2,1)',
               }}
             >
-              <AppleTvLink imdbId={imdbId} title={title} />
+              <AppleTvLink imdbId={imdbId} title={title} onReveal={() => setRevealed(true)} />
             </div>
           ) : null
         }

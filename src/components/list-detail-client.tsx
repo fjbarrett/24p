@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { SavedList } from "@/lib/list-store";
 import { ListEditor } from "@/components/list-editor";
-import { ListExportButton } from "@/components/list-export-button";
 import { ListMoviesGrid } from "@/components/list-movies-grid";
 
 type ListDetailClientProps = {
@@ -35,13 +34,13 @@ export function ListDetailClient({
           aria-label="Edit list"
         >
           <section className="w-full max-w-[760px] rounded-[28px] bg-black-950/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-5">
-            <ListEditor list={list} viewerEmail={viewerEmail} canEdit={list.canEdit} onEditingChange={setIsEditing} />
+            <ListEditor list={list} viewerEmail={viewerEmail} canEdit={list.canEdit} onEditingChange={setIsEditing} startEditing />
           </section>
         </div>
       ) : null}
 
       <section className="rounded-2xl bg-black-950/60 p-4 sm:p-5">
-        {!isEditing && !isOwner ? (
+{!isEditing && !isOwner ? (
           <div className="mb-4">
             <ListEditor
               list={list}
@@ -63,14 +62,6 @@ export function ListDetailClient({
           isEditing={isEditing}
         />
       </section>
-      <div className="flex justify-center">
-        <ListExportButton
-          tmdbIds={list.movies}
-          ratingsMap={ratingsMap}
-          listSlug={list.slug}
-          listTitle={list.title}
-        />
-      </div>
     </div>
   );
 }

@@ -62,3 +62,4 @@ body {
 @utility animate-fade-scale-out {
   animation: fadeScaleOut 150ms ease-in both;
 }
+

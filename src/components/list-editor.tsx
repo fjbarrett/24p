@@ -13,12 +13,14 @@ export function ListEditor({
   canEdit,
   onEditingChange,
   hideOwnerEditButton = false,
+  startEditing = false,
 }: {
   list: SavedList;
   viewerEmail?: string | null;
   canEdit?: boolean;
   onEditingChange?: (isEditing: boolean) => void;
   hideOwnerEditButton?: boolean;
+  startEditing?: boolean;
 }) {
   const normalizedViewerEmail = viewerEmail?.trim().toLowerCase() ?? "";
   const isOwner = Boolean(normalizedViewerEmail && normalizedViewerEmail === list.userEmail);
@@ -34,7 +36,7 @@ export function ListEditor({
   const [isLoadingShares, setIsLoadingShares] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(startEditing);
   const router = useRouter();
   const canShare = Boolean(list.username);
 
@@ -124,11 +126,7 @@ export function ListEditor({
   }
 
   if (!isOwner && !canEditList) {
-    return (
-      <div className="space-y-2">
-        <p className="text-xs text-black-500">Only the creator can edit this list.</p>
-      </div>
-    );
+    return null;
   }
 
   if (!isOwner && canEditList) {

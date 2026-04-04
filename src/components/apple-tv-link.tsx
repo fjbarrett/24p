@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type AppleTvLinkProps = {
   imdbId: string;
   title: string;
+  onReveal?: () => void;
 };
 
 type AppleTvPayload = {
@@ -12,11 +13,11 @@ type AppleTvPayload = {
   price: string | null;
 };
 
-export function AppleTvLink({ imdbId, title }: AppleTvLinkProps) {
+export function AppleTvLink({ imdbId, title, onReveal }: AppleTvLinkProps) {
   const [link, setLink] = useState<AppleTvPayload | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const appleTvUrl = link?.url ?? undefined;
   const isVisible = Boolean(appleTvUrl);
+  const revealedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -25,7 +26,10 @@ export function AppleTvLink({ imdbId, title }: AppleTvLinkProps) {
     async function load() {
       try {
         const params = new URLSearchParams({ imdbId, title });
-        const response = await fetch(`/api/apple-tv?${params.toString()}`, { signal: controller.signal });
+        const [response] = await Promise.all([
+          fetch(`/api/apple-tv?${params.toString()}`, { signal: controller.signal }),
+          new Promise<void>((resolve) => setTimeout(resolve, 900)),
+        ]);
         if (!response.ok) return;
         const payload = (await response.json()) as AppleTvPayload;
         if (active) {
@@ -34,14 +38,14 @@ export function AppleTvLink({ imdbId, title }: AppleTvLinkProps) {
       } catch {
         // ignore background fetch errors
       } finally {
-        if (active) {
-          setIsLoading(false);
+        if (active && !revealedRef.current) {
+          revealedRef.current = true;
+          onReveal?.();
         }
       }
     }
 
     if (imdbId) {
-      setIsLoading(true);
       load();
     }
 
@@ -49,21 +53,10 @@ export function AppleTvLink({ imdbId, title }: AppleTvLinkProps) {
       active = false;
       controller.abort();
     };
-  }, [imdbId, title]);
+  }, [imdbId, title, onReveal]);
 
   return (
-    <div
-      aria-hidden={!isVisible}
-      className="h-11 w-16 flex-shrink-0 overflow-hidden"
-      style={{
-        opacity: isVisible ? 1 : 0,
-        transform: isVisible ? "scale(1)" : "scale(0.9)",
-        pointerEvents: isVisible ? "auto" : "none",
-        transition: isVisible
-          ? "opacity 700ms ease-out 250ms, transform 700ms ease-out 250ms"
-          : "opacity 300ms ease-in, transform 300ms ease-in",
-      }}
-    >
+    <div aria-hidden={!isVisible} className="h-11 w-16 flex-shrink-0">
       {isVisible ? (
         <a
           href={appleTvUrl}
@@ -77,7 +70,7 @@ export function AppleTvLink({ imdbId, title }: AppleTvLinkProps) {
           </svg>
           <span className="text-sm font-semibold tracking-tight text-black">TV</span>
         </a>
-      ) : isLoading ? null : null}
+      ) : null}
     </div>
   );
 }

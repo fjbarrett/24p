@@ -134,31 +134,42 @@ function ListPosterMosaic({ tmdbIds, title }: { tmdbIds: number[]; title: string
 
   if (!posters.length) {
     return (
-      <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-px bg-black-900/80 p-px" aria-hidden>
+      <div className="absolute inset-x-0 top-0 flex h-[92px] items-start justify-start gap-0 px-4 pt-4" aria-hidden>
         {Array.from({ length: MOSAIC_LIMIT }).map((_, index) => (
-          <div key={index} className="bg-black-900" />
+          <div
+            key={index}
+            className={`h-[76px] w-[52px] rounded-[10px] bg-black-900/90 ${index > 0 ? "-ml-2" : ""}`}
+          />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-px bg-black-950 p-px" aria-hidden>
+    <div className="absolute inset-x-0 top-0 flex h-[92px] items-start justify-start gap-0 px-4 pt-4" aria-hidden>
       {Array.from({ length: MOSAIC_LIMIT }).map((_, index) => {
         const posterUrl = posters[index];
 
         if (!posterUrl) {
-          return <div key={`${title}-${index}`} className="bg-black-900" />;
+          return (
+            <div
+              key={`${title}-${index}`}
+              className={`h-[76px] w-[52px] rounded-[10px] bg-black-900/90 ${index > 0 ? "-ml-2" : ""}`}
+            />
+          );
         }
 
         return (
-          <div key={`${title}-${index}`} className="relative h-full w-full overflow-hidden bg-black-900">
+          <div
+            key={`${title}-${index}`}
+            className={`relative h-[76px] w-[52px] overflow-hidden rounded-[10px] bg-black-900/90 shadow-lg ${index > 0 ? "-ml-2" : ""}`}
+          >
             <Image
               src={posterUrl}
               alt=""
               fill
-              sizes="160px"
-              className="object-cover opacity-90"
+              sizes="52px"
+              className="object-cover opacity-95"
             />
           </div>
         );

@@ -6,6 +6,7 @@ import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getRatingsForUser } from "@/lib/ratings-store";
 import { ListDetailClient } from "@/components/list-detail-client";
+import { ListExportButton } from "@/components/list-export-button";
 import { FavoriteToggle } from "@/components/favorite-toggle";
 import { getPublicProfile } from "@/lib/profile-store";
 import type { Metadata } from "next";
@@ -121,13 +122,13 @@ export default async function ListDetail({
                 </span>
               ) : null}
             </div>
-            {isOwner && !initialEditing ? (
+            {isOwner ? (
               <div className="flex justify-center pt-1">
                 <Link
                   href={`/${encodeURIComponent(ownerUsername)}/${encodeURIComponent(list.slug)}?edit=1`}
                   aria-label="Edit list"
                   title="Edit list"
-                  className="flex h-10 w-10 items-center justify-center text-white/75 transition hover:text-white active:scale-[0.98]"
+                  className="flex h-10 w-10 items-center justify-center text-white/60 transition hover:text-white active:scale-[0.98]"
                 >
                   <Pencil className="h-4 w-4" strokeWidth={2.25} />
                 </Link>
@@ -136,6 +137,7 @@ export default async function ListDetail({
           </div>
         </div>
         <ListDetailClient
+          key={String(initialEditing)}
           list={list}
           viewerEmail={viewerEmail}
           ratingsMap={ratingsMap}
@@ -143,6 +145,14 @@ export default async function ListDetail({
           initialEditing={initialEditing}
         />
       </article>
+      <div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center border-t border-white/5 bg-black/60 py-3 backdrop-blur-sm">
+        <ListExportButton
+          tmdbIds={list.movies}
+          ratingsMap={ratingsMap}
+          listSlug={list.slug}
+          listTitle={list.title}
+        />
+      </div>
     </div>
   );
 }
