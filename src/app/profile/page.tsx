@@ -5,8 +5,8 @@ import type { Session } from "next-auth";
 import { UsernameCard } from "@/components/username-card";
 import { ProfileVisibilityCard } from "@/components/profile-visibility-card";
 import { authOptions } from "@/lib/auth";
-import { getProfile } from "@/lib/profile-store";
 import type { Metadata } from "next";
+import { getProfileForUser } from "@/lib/server/profiles";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ export default async function ProfilePage() {
     redirect("/");
   }
 
-  const profile = await getProfile(userEmail);
+  const profile = await getProfileForUser(userEmail);
 
   return (
     <div className="min-h-screen px-4 py-8 text-black-100 sm:px-8 lg:px-16">

@@ -78,7 +78,13 @@ function Header({
     <header
       className={`${layoutClass} relative`}
     >
-      <p className="text-2xl font-semibold tracking-tight text-white/90">24p</p>
+      <div className="space-y-1 text-center">
+        <p
+          className={`${isSignedIn ? "text-[2.6rem] sm:text-5xl" : "text-6xl sm:text-7xl"} font-semibold leading-none text-white`}
+        >
+          24p
+        </p>
+      </div>
       {!isSignedIn ? (
         <SignInButton ariaLabel="Sign in with Google" className="mt-4 px-5 py-2 text-sm" />
       ) : null}

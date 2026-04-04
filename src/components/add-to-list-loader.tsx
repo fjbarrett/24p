@@ -96,7 +96,7 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
         setMessage(null);
         await rustApiFetch(`/lists/${selectedListId}/items`, {
           method: "POST",
-          body: JSON.stringify({ tmdbId, userEmail: userEmail.trim().toLowerCase() }),
+          body: JSON.stringify({ tmdbId }),
         });
         collapse();
         router.refresh();

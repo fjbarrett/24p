@@ -11,14 +11,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  async rewrites() {
-    return [
-      {
-        source: "/api/tmdb/:path*",
-        destination: "/api/rust/tmdb/:path*",
-      },
-    ];
-  },
 };
 
 export default nextConfig;

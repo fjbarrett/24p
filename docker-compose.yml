@@ -16,23 +16,6 @@ services:
       timeout: 5s
       retries: 5
 
-  rust-api:
-    image: ghcr.io/fjbarrett/24p-api:latest
-    restart: unless-stopped
-    environment:
-      APP_HOST: 0.0.0.0
-      APP_PORT: ${APP_PORT:-8080}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/24p}
-      DB_MAX_CONNECTIONS: ${DB_MAX_CONNECTIONS:-5}
-      DB_SSLMODE: ${DB_SSLMODE:-disable}
-      STRAWBERRY_BASE_URL: ${STRAWBERRY_BASE_URL:-https://strawberry.fjbarrett.workers.dev}
-      TMDB_API_KEY: ${TMDB_API_KEY}
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "8080:8080"
-
   web:
     image: ghcr.io/fjbarrett/24p-web:latest
     restart: unless-stopped
@@ -44,13 +27,11 @@ services:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      RUST_API_ORIGIN: http://rust-api:8080
-      RUST_API_BASE_URL: http://rust-api:8080
-      RUST_API_URL: http://rust-api:8080
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/24p}
     depends_on:
-      rust-api:
-        condition: service_started
+      db:
+        condition: service_healthy
     ports:
       - "3000:3000"
 

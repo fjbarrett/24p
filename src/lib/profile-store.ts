@@ -17,9 +17,7 @@ export async function getProfile(userEmail: string): Promise<UserProfile | null>
     throw new Error("userEmail is required to load profile");
   }
   try {
-    const data = await rustApiFetch<{ profile: UserProfile | null }>(
-      `/profiles?userEmail=${encodeURIComponent(email)}`,
-    );
+    const data = await rustApiFetch<{ profile: UserProfile | null }>(`/profiles`);
     return data.profile ?? null;
   } catch (error) {
     console.error("Failed to load profile", error);
@@ -34,7 +32,7 @@ export async function setUsername(userEmail: string, username: string): Promise<
   }
   const data = await rustApiFetch<{ profile: UserProfile }>(`/profiles/username`, {
     method: "POST",
-    body: JSON.stringify({ userEmail: email, username }),
+    body: JSON.stringify({ username }),
   });
   return data.profile;
 }
@@ -46,7 +44,7 @@ export async function setProfileVisibility(userEmail: string, isPublic: boolean)
   }
   const data = await rustApiFetch<{ profile: UserProfile }>(`/profiles/visibility`, {
     method: "PATCH",
-    body: JSON.stringify({ userEmail: email, isPublic }),
+    body: JSON.stringify({ isPublic }),
   });
   return data.profile;
 }

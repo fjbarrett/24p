@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
-import { loadPublicLists } from "@/lib/list-store";
 import { getAppUrl } from "@/lib/app-url";
+import { loadPublicLists } from "@/lib/server/lists";
 
 export const dynamic = "force-dynamic";
 
@@ -67,4 +67,3 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return entries;
 }
-

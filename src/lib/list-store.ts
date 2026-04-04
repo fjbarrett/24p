@@ -109,7 +109,7 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
   }
   try {
     const data = await rustApiFetch<{ lists: ApiList[] }>(
-      `/lists?userEmail=${encodeURIComponent(email)}&includeShared=true`,
+      `/lists?includeShared=true`,
     );
     const mapped = data.lists.map(mapApiList);
     if (typeof window !== "undefined") {
@@ -122,7 +122,7 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
     }
     return mapped;
   } catch (error) {
-    console.error("Failed to load lists from Rust API", error);
+    console.error("Failed to load lists", error);
     return [];
   }
 }
@@ -138,10 +138,9 @@ export async function addList(
     throw new Error("userEmail is required to create a list");
   }
   const normalizedColor = normalizeListColor(color);
-  const payload = { title, movies: initialMovies, color: normalizedColor, userEmail: email };
   const data = await rustApiFetch<{ list: ApiList }>("/lists", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ title, movies: initialMovies, color: normalizedColor }),
   });
   const mapped = mapApiList(data.list);
   if (typeof window !== "undefined") {
@@ -165,7 +164,7 @@ export async function addMovieToList(listId: string, tmdbId: number, userEmail: 
   }
   const data = await rustApiFetch<{ list: ApiList }>(`/lists/${listId}/items`, {
     method: "POST",
-    body: JSON.stringify({ tmdbId, userEmail: email }),
+    body: JSON.stringify({ tmdbId }),
   });
   const mapped = mapApiList(data.list);
   cacheSingleList(email, mapped);
@@ -185,7 +184,6 @@ export async function updateList(
   if (data.slug && data.slug.trim()) payload.slug = slugify(data.slug);
   if (data.color && data.color.trim()) payload.color = normalizeListColor(data.color);
   if (data.visibility) payload.visibility = data.visibility;
-  payload.userEmail = email;
   const result = await rustApiFetch<{ list: ApiList }>(`/lists/${listId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
@@ -201,10 +199,10 @@ export async function getListByUsernameSlug(
   userEmail?: string | null,
 ): Promise<SavedList | undefined> {
   const email = userEmail ? normalizeEmail(userEmail) : "";
-  const params = email ? `?userEmail=${encodeURIComponent(email)}` : "";
+  void email;
   try {
     const data = await rustApiFetch<{ list: ApiList }>(
-      `/lists/public/${encodeURIComponent(username)}/${encodeURIComponent(slug)}${params}`,
+      `/lists/public/${encodeURIComponent(username)}/${encodeURIComponent(slug)}`,
     );
     const mapped = mapApiList(data.list);
     if (email) {
@@ -223,7 +221,6 @@ export async function deleteList(listId: string, userEmail: string): Promise<voi
   }
   await rustApiFetch<{ ok: boolean }>(`/lists/${listId}`, {
     method: "DELETE",
-    body: JSON.stringify({ userEmail: email }),
   });
   if (typeof window !== "undefined") {
     try {
@@ -286,7 +283,8 @@ export async function loadFavorites(userEmail: string): Promise<SavedList[]> {
     throw new Error("userEmail is required to load favorites");
   }
   try {
-    const data = await rustApiFetch<{ lists: ApiList[] }>(`/favorites?userEmail=${encodeURIComponent(email)}`);
+    void email;
+    const data = await rustApiFetch<{ lists: ApiList[] }>(`/favorites`);
     return data.lists.map(mapApiList);
   } catch (error) {
     console.error("Failed to load favorites", error);
@@ -301,7 +299,7 @@ export async function addFavorite(listId: string, userEmail: string): Promise<vo
   }
   await rustApiFetch<{ ok: boolean }>("/favorites", {
     method: "POST",
-    body: JSON.stringify({ listId, userEmail: email }),
+    body: JSON.stringify({ listId }),
   });
 }
 
@@ -312,7 +310,6 @@ export async function removeFavorite(listId: string, userEmail: string): Promise
   }
   await rustApiFetch<{ ok: boolean }>(`/favorites/${listId}`, {
     method: "DELETE",
-    body: JSON.stringify({ listId, userEmail: email }),
   });
 }
 
@@ -322,7 +319,7 @@ export async function loadListShares(listId: string, userEmail: string): Promise
     throw new Error("userEmail is required to load list shares");
   }
   const data = await rustApiFetch<{ shares: ListShare[] }>(
-    `/lists/${listId}/shares?userEmail=${encodeURIComponent(email)}`,
+    `/lists/${listId}/shares`,
   );
   return data.shares;
 }
@@ -338,7 +335,7 @@ export async function addListShare(listId: string, userEmail: string, username: 
   }
   const data = await rustApiFetch<{ shares: ListShare[] }>(`/lists/${listId}/shares`, {
     method: "POST",
-    body: JSON.stringify({ userEmail: email, username: trimmed }),
+    body: JSON.stringify({ username: trimmed }),
   });
   return data.shares;
 }
@@ -361,7 +358,7 @@ export async function updateListSharePermission(
     `/lists/${listId}/shares/${encodeURIComponent(trimmed)}`,
     {
       method: "PATCH",
-      body: JSON.stringify({ userEmail: email, canEdit }),
+      body: JSON.stringify({ canEdit }),
     },
   );
   return data.shares;
@@ -380,7 +377,6 @@ export async function removeListShare(listId: string, userEmail: string, usernam
     `/lists/${listId}/shares/${encodeURIComponent(trimmed)}`,
     {
       method: "DELETE",
-      body: JSON.stringify({ userEmail: email }),
     },
   );
   return data.shares;
