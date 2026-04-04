@@ -7,11 +7,10 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/24p-web
-  IMAGE_API: ghcr.io/${{ github.repository_owner }}/24p-api
 
 jobs:
   build-and-push:
-    name: Build and push images
+    name: Build and push image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,16 +37,6 @@ jobs:
           tags: ${{ env.IMAGE_WEB }}:latest
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
-
-      - name: Build and push API image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: rust-api/Dockerfile
-          push: true
-          tags: ${{ env.IMAGE_API }}:latest
-          cache-from: type=gha,scope=api
-          cache-to: type=gha,mode=max,scope=api
 
   deploy:
     name: Deploy to production

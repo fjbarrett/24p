@@ -38,7 +38,7 @@ export function ListGallery({ lists, title = "Lists", emptyMessage, id = "lists"
           const ownerHref = list.username ? `/${list.username}` : null;
           const card = (
             <div
-              className="group relative block h-40 overflow-hidden rounded-2xl border border-black-800 bg-black-950 transition hover:-translate-y-0.5 hover:border-black-600 hover:shadow-lg"
+              className="group relative block h-40 overflow-hidden rounded-2xl border border-black-800 bg-black-950"
             >
               {href && <Link href={href} className="absolute inset-0 z-10" aria-label={list.title} />}
               <div className="relative h-full w-full overflow-hidden rounded-2xl bg-black-950">

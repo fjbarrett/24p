@@ -1,0 +1,37 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
+  <diagram name="Page-1" id="SettingsView">
+    <mxGraphModel dx="996" dy="655" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="393" pageHeight="852" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="frame" parent="1" style="rounded=1;whiteSpace=wrap;html=1;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;fillColor=#000000;strokeColor=#333333;" value="" vertex="1">
+          <mxGeometry height="852" width="393" as="geometry" />
+        </mxCell>
+        <!-- Settings h1 -->
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=22;fontColor=#FFFFFF;fontStyle=1;" value="Settings" vertex="1">
+          <mxGeometry height="34" width="160" x="16" y="32" as="geometry" />
+        </mxCell>
+        <!-- Back button: rounded-full bg-white uppercase tracking px-4 py-2 text-xs -->
+        <mxCell id="back" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#FFFFFF;strokeColor=none;fontSize=10;fontColor=#000000;fontStyle=1;" value="BACK" vertex="1">
+          <mxGeometry height="30" width="60" x="317" y="33" as="geometry" />
+        </mxCell>
+        <!-- Import List card: rounded-3xl border border-white/10 bg-black-900/40 p-4 -->
+        <mxCell id="import-card" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=15;fillColor=#111111;strokeColor=#2a2a2a;" value="" vertex="1">
+          <mxGeometry height="110" width="361" x="16" y="82" as="geometry" />
+        </mxCell>
+        <!-- "IMPORT LIST" label: text-xs uppercase tracking-[0.4em] text-black-400 -->
+        <mxCell id="import-label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#666666;" value="IMPORT LIST" vertex="1">
+          <mxGeometry height="16" width="120" x="32" y="98" as="geometry" />
+        </mxCell>
+        <!-- Description: text-sm text-black-400 -->
+        <mxCell id="import-desc" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontColor=#888888;" value="Bring in a CSV export to seed a new list." vertex="1">
+          <mxGeometry height="20" width="300" x="32" y="118" as="geometry" />
+        </mxCell>
+        <!-- ImportListModal button: white pill -->
+        <mxCell id="import-btn" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#FFFFFF;strokeColor=none;fontSize=12;fontColor=#000000;" value="Import List" vertex="1">
+          <mxGeometry height="28" width="90" x="32" y="150" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

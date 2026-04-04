@@ -60,7 +60,7 @@ function ListCardBefore({ list }: { list: (typeof MOCK_LISTS)[0] }) {
 function ListCardAfter({ list }: { list: (typeof MOCK_LISTS)[0] }) {
   const accent = pickAccent(list.slug);
   return (
-    <div className="group relative block h-40 overflow-hidden rounded-2xl border border-black-800 bg-black-950 transition hover:-translate-y-0.5 hover:border-black-600 hover:shadow-lg">
+    <div className="group relative block h-40 overflow-hidden rounded-2xl border border-black-800 bg-black-950">
       <div className="relative h-full w-full overflow-hidden rounded-2xl bg-black-950">
         <div className="absolute inset-x-4 top-4 h-[3px] rounded-full opacity-70" style={{ background: accent }} aria-hidden />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black-900 via-black-950 to-black-950" />

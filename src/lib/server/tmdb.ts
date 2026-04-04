@@ -45,11 +45,7 @@ type TmdbMovieCredit = {
 };
 
 function getApiKey() {
-  const key = process.env.TMDB_API_KEY?.trim();
-  if (!key) {
-    throw new Error("TMDB_API_KEY is not configured");
-  }
-  return key;
+  return process.env.TMDB_API_KEY?.trim() || null;
 }
 
 function getStrawberryBaseUrl() {
@@ -60,14 +56,50 @@ function getStrawberryBaseUrl() {
   return candidate.replace(/\/$/, "");
 }
 
-async function tmdbFetch<T>(path: string, params?: Record<string, string | number | boolean | undefined>) {
-  const url = new URL(`${TMDB_API_ROOT}${path}`);
-  url.searchParams.set("api_key", getApiKey());
+function applyQueryParams(
+  url: URL,
+  params?: Record<string, string | number | boolean | undefined>,
+) {
   url.searchParams.set("language", "en-US");
   Object.entries(params ?? {}).forEach(([key, value]) => {
     if (value === undefined || value === "") return;
     url.searchParams.set(key, String(value));
   });
+}
+
+async function fetchFromStrawberry<T>(
+  path: string,
+  params?: Record<string, string | number | boolean | undefined>,
+) {
+  const base = getStrawberryBaseUrl();
+  if (!base) {
+    throw new Error("TMDB_API_KEY is not configured and STRAWBERRY_BASE_URL is unavailable");
+  }
+
+  const url = new URL(`/tmdb${path}`, base);
+  applyQueryParams(url, params);
+
+  const response = await fetch(url.toString(), {
+    headers: { Accept: "application/json" },
+    next: { revalidate: 60 * 60 * 6 },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Strawberry TMDB request failed: ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+async function tmdbFetch<T>(path: string, params?: Record<string, string | number | boolean | undefined>) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    return fetchFromStrawberry<T>(path, params);
+  }
+
+  const url = new URL(`${TMDB_API_ROOT}${path}`);
+  url.searchParams.set("api_key", apiKey);
+  applyQueryParams(url, params);
 
   const response = await fetch(url, {
     headers: { Accept: "application/json" },

@@ -85,7 +85,7 @@ export function PressableLogo({ src, alt, width, height, className }: PressableL
     <button
       type="button"
       aria-label="Pressable 24p logo"
-      className={`mt-10 rounded-[12px] transition-[transform,box-shadow,filter] duration-150 ease-out active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${className ?? ""}`}
+      className={`mt-4 rounded-[12px] transition-[transform,box-shadow,filter] duration-150 ease-out active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${className ?? ""}`}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
@@ -103,7 +103,8 @@ export function PressableLogo({ src, alt, width, height, className }: PressableL
         height={height}
         priority
         loading="eager"
-        className="h-[192px] w-[219px] rounded-[10px] select-none"
+        className="rounded-[10px] select-none"
+        style={{ width, height }}
         draggable={false}
       />
     </button>

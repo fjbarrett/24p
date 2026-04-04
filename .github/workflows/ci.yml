@@ -21,19 +21,3 @@ jobs:
 
       - name: Type check
         run: bun run tsc --noEmit
-
-  rust:
-    name: Rust
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rust-api
-
-      - name: Check
-        run: cargo check
-        working-directory: rust-api

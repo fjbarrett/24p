@@ -2,6 +2,7 @@
 
 | Date | Agent | Action |
 |------|-------|--------|
+| 2026-04-04 | Codex | Added Next-only GitHub Actions workflows, VBox bootstrap scripts, hardened the VBox host, and installed a self-hosted runner |
 | 2026-04-04 | Codex | Collapsed the Rust API boundary into Next route handlers and server-side Postgres/TMDB modules; Docker and docs now target a single web service |
 | 2026-04-04 | Codex | Softened MovieDetailView Apple TV CTA appearance with fade-scale mount animation |
 | 2026-04-04 | Codex | Slowed Apple TV CTA fade-scale mount animation for a softer detail-view appearance |
