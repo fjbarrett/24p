@@ -1,17 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getListByUsernameSlug, loadFavorites } from "@/lib/list-store";
+import type { SavedList } from "@/lib/list-store";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getRatingsForUser } from "@/lib/ratings-store";
 import { ListDetailClient } from "@/components/list-detail-client";
-import { ListExportButton } from "@/components/list-export-button";
 import { FavoriteToggle } from "@/components/favorite-toggle";
-import { getPublicProfile } from "@/lib/profile-store";
 import type { Metadata } from "next";
 import { BackButton } from "@/components/back-button";
 import { Pencil } from "lucide-react";
+import { getPublicProfileByUsername } from "@/lib/server/profiles";
+import { getRatingsMapForUser } from "@/lib/server/ratings";
+import { getListByUsernameSlugForViewer, loadFavoritesForUser } from "@/lib/server/lists";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export async function generateMetadata({
   const { username, slug } = await params;
   const session = (await getServerSession(authOptions)) as Session | null;
   const viewerEmail = session?.user?.email?.toLowerCase() ?? null;
-  const publicList = await getListByUsernameSlug(username, slug, viewerEmail);
+  const publicList = await getListByUsernameSlugForViewer(username, slug, viewerEmail);
 
   if (!publicList) {
     return {
@@ -56,60 +56,54 @@ export default async function ListDetail({
   const [{ username, slug }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const session = (await getServerSession(authOptions)) as Session | null;
   const viewerEmail = session?.user?.email?.toLowerCase() ?? null;
-  const list = await getListByUsernameSlug(username, slug, viewerEmail);
+  const list = await getListByUsernameSlugForViewer(username, slug, viewerEmail);
 
   if (!list) {
     notFound();
   }
 
   const ownerUsername = list.username ?? username;
-  const publicProfile = ownerUsername ? await getPublicProfile(ownerUsername) : null;
+  const publicProfile = ownerUsername ? await getPublicProfileByUsername(ownerUsername) : null;
   const ownerIsPublic = !!publicProfile?.isPublic;
-  const ratingsMap = viewerEmail ? await getRatingsForUser(viewerEmail) : {};
-  const favorites = viewerEmail ? await loadFavorites(viewerEmail) : [];
+  const ratingsMap: Record<number, number> = viewerEmail ? await getRatingsMapForUser(viewerEmail) : {};
+  const favorites: SavedList[] = viewerEmail ? await loadFavoritesForUser(viewerEmail) : [];
   const isFavorite = favorites.some((entry) => entry.id === list.id);
-  const accentColor = pickAccent(list);
   const fromParam = encodeURIComponent(`/${ownerUsername}/${list.slug}`);
   const initialEditing = getEditParam(resolvedSearchParams);
   const canFavorite = !!viewerEmail && viewerEmail !== list.userEmail;
   const isOwner = !!viewerEmail && viewerEmail === list.userEmail;
 
   return (
-    <div className="relative min-h-screen px-4 py-6 text-black-100 sm:px-6">
-      <BackButton
-        fallbackHref="/"
-        className="absolute left-10 top-[50px] z-20 text-sm text-white/70 transition hover:text-white"
-      >
-        ← Back
-      </BackButton>
-      <article className="mx-auto w-full max-w-[900px] space-y-6 rounded-[28px] bg-black-900/70 p-4 shadow-2xl backdrop-blur sm:p-6 lg:p-8">
-        <div className="flex justify-end">
+    <div className="min-h-screen text-black-100">
+      <div className="mx-auto w-full max-w-[900px] px-6 pt-6 sm:px-8">
+        <div className="flex items-center justify-between">
+          <BackButton
+            fallbackHref="/"
+            className="text-sm text-white/70 transition hover:text-white"
+          >
+            ← Back
+          </BackButton>
           {canFavorite && <FavoriteToggle listId={list.id} userEmail={viewerEmail} initialFavorite={isFavorite} />}
         </div>
+      </div>
+      <article className="mx-auto w-full max-w-[900px] space-y-6 rounded-[28px] bg-black-900/70 p-4 shadow-2xl backdrop-blur sm:p-6 lg:p-8 mt-3">
         <div className="relative overflow-hidden rounded-[28px] bg-black-950">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black-900/60 via-black-950/70 to-black-950" />
           <div className="relative z-10 space-y-4 px-5 py-6 text-center sm:px-6 sm:py-7">
-            <div className="space-y-2">
-              <div className="space-y-1">
-                {ownerIsPublic ? (
-                  <Link
-                    href={`/${encodeURIComponent(ownerUsername)}`}
-                    className="text-xs uppercase tracking-[0.3em] text-black-400 hover:text-white"
-                  >
-                    @{ownerUsername}
-                  </Link>
-                ) : (
-                  <p className="text-xs uppercase tracking-[0.3em] text-black-400">@{ownerUsername}</p>
-                )}
-                <h1 className="text-3xl font-semibold leading-tight text-white sm:text-4xl">{list.title}</h1>
-              </div>
-              <div
-                className="mx-auto h-[3px] w-full max-w-[220px] rounded-full opacity-70"
-                style={{ background: accentColor }}
-                aria-hidden
-              />
+            <div className="space-y-1">
+              <h1 className="text-3xl font-semibold leading-tight text-white sm:text-4xl">{list.title}</h1>
+              {ownerIsPublic ? (
+                <Link
+                  href={`/${encodeURIComponent(ownerUsername)}`}
+                  className="text-xs uppercase tracking-[0.3em] text-black-400 hover:text-white"
+                >
+                  @{ownerUsername}
+                </Link>
+              ) : (
+                <p className="text-xs uppercase tracking-[0.3em] text-black-400">@{ownerUsername}</p>
+              )}
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-black-400">
+            <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-black-400 mb-2">
               <span className="inline-flex items-center rounded-full bg-black-900 px-3 py-1.5 font-medium text-black-100">
                 {list.movies.length} {list.movies.length === 1 ? "film" : "films"}
               </span>
@@ -123,7 +117,7 @@ export default async function ListDetail({
               ) : null}
             </div>
             {isOwner ? (
-              <div className="flex justify-center pt-1">
+              <div className="flex justify-center !mt-0">
                 <Link
                   href={`/${encodeURIComponent(ownerUsername)}/${encodeURIComponent(list.slug)}?edit=1`}
                   aria-label="Edit list"
@@ -136,23 +130,17 @@ export default async function ListDetail({
             ) : null}
           </div>
         </div>
-        <ListDetailClient
-          key={String(initialEditing)}
-          list={list}
-          viewerEmail={viewerEmail}
-          ratingsMap={ratingsMap}
-          fromParam={fromParam}
-          initialEditing={initialEditing}
-        />
+        <div className="!mt-0">
+          <ListDetailClient
+            key={String(initialEditing)}
+            list={list}
+            viewerEmail={viewerEmail}
+            ratingsMap={ratingsMap}
+            fromParam={fromParam}
+            initialEditing={initialEditing}
+          />
+        </div>
       </article>
-      <div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center border-t border-white/5 bg-black/60 py-3 backdrop-blur-sm">
-        <ListExportButton
-          tmdbIds={list.movies}
-          ratingsMap={ratingsMap}
-          listSlug={list.slug}
-          listTitle={list.title}
-        />
-      </div>
     </div>
   );
 }
@@ -169,12 +157,4 @@ function getEditParam(
         })();
 
   return raw === "1" || raw === "true";
-}
-
-const accentColors = ["#e864c6", "#8c63e0", "#3d7fcf", "#54c295", "#d8a534", "#e68630", "#e05555"];
-
-function pickAccent(list: { id: string; slug?: string; title?: string }) {
-  const key = list.slug || list.title || list.id;
-  const shift = Array.from(key).reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % accentColors.length, 0);
-  return accentColors[shift];
 }

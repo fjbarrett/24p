@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { SavedList } from "@/lib/list-store";
 import { ListEditor } from "@/components/list-editor";
+import { ListExportButton } from "@/components/list-export-button";
 import { ListMoviesGrid } from "@/components/list-movies-grid";
 
 type ListDetailClientProps = {
@@ -62,6 +63,14 @@ export function ListDetailClient({
           isEditing={isEditing}
         />
       </section>
+      <div className="flex justify-center">
+        <ListExportButton
+          tmdbIds={list.movies}
+          ratingsMap={ratingsMap}
+          listSlug={list.slug}
+          listTitle={list.title}
+        />
+      </div>
     </div>
   );
 }

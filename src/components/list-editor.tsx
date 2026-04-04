@@ -155,7 +155,7 @@ export function ListEditor({
         setMessage(null);
         const data = await rustApiFetch<{ list: SavedList }>(`/lists/${list.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ title, slug, color, visibility, userEmail: list.userEmail }),
+          body: JSON.stringify({ title, slug, color, visibility }),
         });
         setTitle(data.list.title);
         setSlug(data.list.slug);
@@ -342,7 +342,6 @@ export function ListEditor({
                 setMessage(null);
                 await rustApiFetch(`/lists/${list.id}`, {
                   method: "DELETE",
-                  body: JSON.stringify({ userEmail: list.userEmail }),
                 });
                 router.push("/");
                 router.refresh();

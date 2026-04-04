@@ -2,6 +2,7 @@
 
 | Date | Agent | Action |
 |------|-------|--------|
+| 2026-04-04 | Codex | Collapsed the Rust API boundary into Next route handlers and server-side Postgres/TMDB modules; Docker and docs now target a single web service |
 | 2026-04-04 | Codex | Softened MovieDetailView Apple TV CTA appearance with fade-scale mount animation |
 | 2026-04-04 | Codex | Slowed Apple TV CTA fade-scale mount animation for a softer detail-view appearance |
 | 2026-04-04 | Codex | Reserved Apple TV CTA slot width during async load to prevent add-button layout jump |
@@ -22,4 +23,3 @@
 | 2026-04-04 | Codex | Simplified the list detail layout, moved export below the movies section, and replaced its text with an icon |
 | 2026-04-04 | Codex | Treated missing public profiles as nullable so list detail no longer crashes in development |
 | 2026-04-04 | Codex | Replaced list-card accent lines with poster mosaics and moved owner edit into a lighter icon-triggered dialog |
-| 2026-04-04 | Claude | Fixed list detail edit button — owner's ListEditor trigger was only inside the modal (circular), now rendered outside it |
