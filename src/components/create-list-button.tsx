@@ -1,15 +1,33 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { rustApiFetch } from "@/lib/rust-api-client";
 
 export function CreateListButton({ userEmail }: { userEmail: string }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState("Saturday Double Feature");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (!expanded) return;
+    const id = window.setTimeout(() => inputRef.current?.focus(), 180);
+    return () => window.clearTimeout(id);
+  }, [expanded]);
+
+  function handleExpand() {
+    setExpanded(true);
+    setError(null);
+  }
+
+  function collapse() {
+    setExpanded(false);
+    setError(null);
+    setTitle("Saturday Double Feature");
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,7 +43,7 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
           method: "POST",
           body: JSON.stringify({ title, userEmail: email }),
         });
-        setIsOpen(false);
+        collapse();
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unexpected error");
@@ -34,61 +52,56 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
   }
 
   return (
-    <div className="w-full">
-      <button
-        onClick={() => setIsOpen(true)}
-        className="flex w-full items-center justify-center rounded-full bg-white px-4 py-3 text-base font-semibold text-black transition hover:brightness-95 active:brightness-90"
+    <div className="flex w-full justify-center">
+      <form
+        onSubmit={handleSubmit}
+        className="relative h-12 overflow-hidden rounded-full bg-white transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+        style={{ width: expanded ? "100%" : "48px", willChange: "width", transform: "translateZ(0)" }}
       >
-        +
-      </button>
-
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="create-list-title"
-          aria-describedby="create-list-desc"
+        <button
+          type="button"
+          onClick={handleExpand}
+          aria-label="Create a new list"
+          className="absolute top-0 flex h-12 w-12 items-center justify-center text-2xl font-light text-black transition-[left,transform] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+          style={{
+            left: expanded ? "0px" : "50%",
+            transform: expanded ? "translateX(0)" : "translateX(-50%)",
+          }}
         >
-          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-black-950 p-6 text-left shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
-            <h3 className="text-xl font-semibold text-white" id="create-list-title">
-              Name your list
-            </h3>
-            <p className="mt-1 text-sm text-black-400" id="create-list-desc">
-              We will use this to generate the shareable slug.
-            </p>
-            <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
-              <label className="text-sm text-black-300">
-                Title
-                <input
-                  autoFocus
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  className="mt-1 w-full rounded-2xl border border-black-700 bg-black-950 px-3 py-2 text-base text-black-100 focus:border-black-400 focus:outline-none"
-                  maxLength={64}
-                />
-              </label>
-              <div className="flex items-center justify-end gap-2">
-                {error && <p className="text-xs text-rose-300">{error}</p>}
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="rounded-full bg-white px-4 py-2 text-base font-medium text-black transition hover:brightness-95 active:brightness-90"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="rounded-full bg-white px-4 py-2 text-base font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
-                >
-                  {isPending ? "Saving..." : "Save title"}
-                </button>
-              </div>
-            </form>
-          </div>
+          +
+        </button>
+
+        <div
+          className="absolute inset-0 flex items-center gap-2 pr-2 pl-12 transition-opacity duration-150"
+          style={{ opacity: expanded ? 1 : 0, transitionDelay: expanded ? "170ms" : "0ms", pointerEvents: expanded ? "auto" : "none" }}
+        >
+          <input
+            ref={inputRef}
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-black outline-none placeholder:text-black/40"
+            maxLength={64}
+            placeholder="New list title"
+            aria-label="New list title"
+          />
+          <button
+            type="button"
+            onClick={collapse}
+            className="shrink-0 px-1 text-base text-black/40 transition hover:text-black"
+            aria-label="Cancel create list"
+          >
+            ✕
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="shrink-0 px-2 text-sm font-semibold text-black disabled:opacity-40"
+          >
+            {isPending ? "…" : "Save"}
+          </button>
         </div>
-      )}
+      </form>
+      {error ? <p className="mt-2 text-center text-xs text-rose-300">{error}</p> : null}
     </div>
   );
 }

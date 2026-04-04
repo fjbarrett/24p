@@ -66,28 +66,25 @@ export default async function ListDetail({
   const isFavorite = favorites.some((entry) => entry.id === list.id);
   const accentColor = pickAccent(list);
   const fromParam = encodeURIComponent(`/${ownerUsername}/${list.slug}`);
-
   const canFavorite = !!viewerEmail && viewerEmail !== list.userEmail;
 
   return (
-    <div className="min-h-screen px-4 py-6 text-black-100 sm:px-6">
-      <article className="mx-auto max-w-[1100px] space-y-6 rounded-[28px] border border-white/10 bg-black-900/70 p-4 shadow-2xl backdrop-blur sm:p-6 lg:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <BackButton
-            fallbackHref="/"
-            className="inline-flex items-center rounded-full bg-black-950/70 px-4 py-2 text-xs font-medium uppercase tracking-[0.3em] text-black-300 transition hover:bg-black-950 hover:text-white"
-          >
-            <span>Back</span>
-          </BackButton>
-          {canFavorite && (
-            <FavoriteToggle listId={list.id} userEmail={viewerEmail} initialFavorite={isFavorite} />
-          )}
+    <div className="relative min-h-screen px-4 py-6 text-black-100 sm:px-6">
+      <BackButton
+        fallbackHref="/"
+        className="absolute left-10 top-[50px] z-20 text-sm text-white/70 transition hover:text-white"
+      >
+        ← Back
+      </BackButton>
+      <article className="mx-auto w-full max-w-[900px] space-y-6 rounded-[28px] bg-black-900/70 p-4 shadow-2xl backdrop-blur sm:p-6 lg:p-8">
+        <div className="flex justify-end">
+          {canFavorite && <FavoriteToggle listId={list.id} userEmail={viewerEmail} initialFavorite={isFavorite} />}
         </div>
-        <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-black-950">
+        <div className="relative overflow-hidden rounded-[28px] bg-black-950">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black-900/60 via-black-950/70 to-black-950" />
-          <div className="relative z-10 space-y-5 px-5 py-6 sm:px-6 sm:py-7">
-            <div className="space-y-3">
-              <div className="space-y-2">
+          <div className="relative z-10 space-y-4 px-5 py-6 text-center sm:px-6 sm:py-7">
+            <div className="space-y-2">
+              <div className="space-y-1">
                 {ownerIsPublic ? (
                   <Link
                     href={`/${encodeURIComponent(ownerUsername)}`}
@@ -101,12 +98,12 @@ export default async function ListDetail({
                 <h1 className="text-3xl font-semibold leading-tight text-white sm:text-4xl">{list.title}</h1>
               </div>
               <div
-                className="h-[3px] w-full max-w-[220px] rounded-full opacity-70"
+                className="mx-auto h-[3px] w-full max-w-[220px] rounded-full opacity-70"
                 style={{ background: accentColor }}
                 aria-hidden
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-black-400">
+            <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-black-400">
               <span className="inline-flex items-center rounded-full bg-black-900 px-3 py-1.5 font-medium text-black-100">
                 {list.movies.length} {list.movies.length === 1 ? "film" : "films"}
               </span>

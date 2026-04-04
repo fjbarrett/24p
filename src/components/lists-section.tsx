@@ -11,12 +11,13 @@ type ListsSectionProps = {
 
 export function ListsSection({ lists, userEmail }: ListsSectionProps) {
   return (
-    <div className="space-y-4 rounded-3xl bg-black-900/30 p-4 backdrop-blur sm:space-y-6 sm:p-6" id="lists">
-      <CreateListButton userEmail={userEmail} />
+    <div className="mx-auto w-full space-y-4 rounded-3xl bg-black-900/30 p-4 backdrop-blur sm:space-y-6 sm:p-6" id="lists">
       <ListGallery
         lists={lists}
+        title=""
         emptyMessage="No lists yet. Use the buttons below to create or import your first one."
       />
+      <CreateListButton userEmail={userEmail} />
     </div>
   );
 }

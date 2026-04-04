@@ -20,10 +20,7 @@ type ListMoviesGridProps = {
 
 export function ListMoviesGrid({
   tmdbIds,
-  ratingsMap,
   fromParam,
-  listSlug,
-  listTitle,
   listId,
   userEmail,
   isEditing = false,
@@ -31,7 +28,6 @@ export function ListMoviesGrid({
   const [movies, setMovies] = useState<SimplifiedMovie[]>([]);
   const [listMovieIds, setListMovieIds] = useState<number[]>(tmdbIds);
   const [loading, setLoading] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
 
   const moviesById = useMemo(() => {
@@ -140,7 +136,7 @@ export function ListMoviesGrid({
       cancelled = true;
       controller.abort();
     };
-  }, [listMovieIds, listSlug]);
+  }, [listMovieIds]);
 
   const displayIds = useMemo(() => listMovieIds, [listMovieIds]);
 
@@ -152,25 +148,6 @@ export function ListMoviesGrid({
     });
     return count;
   }, [listMovieIds, moviesById]);
-
-  const sortedLoadedMovies = useMemo(() => {
-    return displayIds.map((id) => moviesById.get(id)).filter((movie): movie is SimplifiedMovie => Boolean(movie));
-  }, [displayIds, moviesById]);
-
-  const exportRows = useMemo(() => {
-    return sortedLoadedMovies.map((movie) => {
-      const userRating = ratingsMap[movie.tmdbId];
-      return [
-        listTitle,
-        movie.title,
-        movie.tmdbId.toString(),
-        movie.releaseYear ? movie.releaseYear.toString() : "",
-        typeof userRating === "number" ? userRating.toString() : "",
-        typeof movie.rating === "number" ? movie.rating.toFixed(1) : "",
-        typeof movie.imdbRating === "number" ? movie.imdbRating.toFixed(1) : "",
-      ];
-    });
-  }, [listTitle, ratingsMap, sortedLoadedMovies]);
 
   const updateListCache = (updatedMovies: number[]) => {
     if (!userEmail || !listId || typeof window === "undefined") return;
@@ -206,68 +183,18 @@ export function ListMoviesGrid({
     }
   };
 
-  const handleExport = () => {
-    if (isExporting || !exportRows.length) return;
-    setIsExporting(true);
-    try {
-      const headers = [
-        "List Name",
-        "Movie Title",
-        "TMDB ID",
-        "Release Year",
-        "Your Rating",
-        "TMDB Rating",
-        "IMDb Rating",
-        "Letterboxd Rating",
-      ];
-      const lines = [headers, ...exportRows]
-        .map((row) =>
-          row
-            .map((value) => {
-              const safe = value ?? "";
-              const needsQuotes = /[",\n]/.test(safe);
-              const escaped = safe.replace(/"/g, '""');
-              return needsQuotes ? `"${escaped}"` : escaped;
-            })
-            .join(","),
-        )
-        .join("\n");
-      const blob = new Blob([lines], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const filename = `${slugifyForFilename(listSlug || listTitle)}-export.csv`;
-      link.href = url;
-      link.setAttribute("download", filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   if (!listMovieIds.length) {
     return <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>;
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <p className="text-xs uppercase tracking-[0.3em] text-black-500">Movies</p>
-          {loading ? (
-            <p className="text-sm text-black-500">
-              Loading movies… {Math.min(loadedCount, listMovieIds.length)}/{listMovieIds.length}
-            </p>
-          ) : (
-            <p className="text-sm text-black-400">
-              {listMovieIds.length} {listMovieIds.length === 1 ? "movie" : "movies"}
-            </p>
-          )}
-        </div>
-      </div>
-      {sortedLoadedMovies.length === 0 && !loading ? (
+      {loading ? (
+        <p className="text-sm text-black-500">
+          Loading movies… {Math.min(loadedCount, listMovieIds.length)}/{listMovieIds.length}
+        </p>
+      ) : null}
+      {displayIds.every((tmdbId) => !moviesById.has(tmdbId)) && !loading ? (
         <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>
       ) : (
         <ul
@@ -325,21 +252,8 @@ export function ListMoviesGrid({
           })}
         </ul>
       )}
-      <button
-        type="button"
-        onClick={handleExport}
-        disabled={loading || isExporting || !exportRows.length}
-        className="min-h-11 rounded-full bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isExporting ? "Exporting…" : "Export CSV"}
-      </button>
     </div>
   );
-}
-
-function slugifyForFilename(value: string) {
-  const base = value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
-  return base || "list";
 }
 
 function toSmallPoster(url: string): string {
