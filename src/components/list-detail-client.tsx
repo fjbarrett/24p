@@ -29,12 +29,12 @@ export function ListDetailClient({
     <div className="mx-auto w-full max-w-[760px] space-y-5">
       {isEditing ? (
         <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-4"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/90 px-3 py-3 sm:px-4 sm:py-4"
           role="dialog"
           aria-modal="true"
           aria-label="Edit list"
         >
-          <section className="max-h-[calc(100dvh-24px)] w-full max-w-[760px] overflow-y-auto rounded-[28px] bg-black-950/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-32px)] sm:p-5">
+          <section className="relative max-h-[calc(100dvh-24px)] w-full max-w-[820px] overflow-y-auto rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,26,26,0.98),rgba(13,13,13,1))] shadow-[0_36px_120px_rgba(0,0,0,0.72)] ring-1 ring-white/5 sm:max-h-[calc(100dvh-32px)]">
             <ListEditor list={list} viewerEmail={viewerEmail} canEdit={list.canEdit} onEditingChange={setIsEditing} startEditing />
           </section>
         </div>

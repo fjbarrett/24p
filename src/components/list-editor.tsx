@@ -199,92 +199,138 @@ export function ListEditor({
   }
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <label className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-black-500">Title</span>
-          <input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            className="w-full rounded-2xl bg-black-950 px-4 py-3 text-sm text-black-100"
-            aria-label="Title"
-          />
-        </label>
-        <label className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-black-500">Slug</span>
-          <input
-            value={slug}
-            onChange={(event) => setSlug(event.target.value)}
-            className="w-full rounded-2xl bg-black-950 px-4 py-3 text-sm text-black-100"
-            aria-label="Slug"
-          />
-        </label>
-      </div>
-      <div className="rounded-2xl bg-black-950 px-3 py-3 text-sm text-black-200">
-        <label className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <span className="text-xs uppercase tracking-[0.3em] text-black-400">Visibility</span>
-          <select
-            value={visibility}
-            onChange={(event) => setVisibility(event.target.value as SavedList["visibility"])}
-            className="w-full rounded-full bg-black-900 px-3 py-2 text-xs uppercase tracking-[0.2em] text-black-100 sm:w-auto sm:py-1"
-          >
-            <option value="private">Private</option>
-            <option value="public">Public</option>
-          </select>
-        </label>
-        {!list.username && visibility === "public" && (
-          <p className="mt-2 text-[11px] text-black-400">
-            Set a username first so your list can go public.
-          </p>
-        )}
-      </div>
-      <div className="rounded-2xl bg-black-950 px-3 py-3 text-sm text-black-200 space-y-3">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <span className="text-xs uppercase tracking-[0.3em] text-black-400">Shared access</span>
-          <span className="text-[11px] text-black-400">Private lists stay off the public directory.</span>
+    <form className="space-y-5 p-4 sm:p-6" onSubmit={handleSubmit}>
+      <div className="flex items-start justify-between gap-4 border-b border-white/8 pb-5">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight text-white">Edit list</h2>
+          <p className="text-sm text-black-400">{list.title}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            setTitle(list.title);
+            setSlug(list.slug);
+            setColor(normalizeListColor(list.color ?? DEFAULT_LIST_COLOR_ID));
+            setVisibility(list.visibility);
+            setIsEditing(false);
+            onEditingChange?.(false);
+          }}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/6 text-black-200 transition hover:bg-white/12 hover:text-white active:bg-white/16"
+          aria-label="Close editor"
+        >
+          <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className="space-y-4 rounded-[28px] border border-white/8 bg-white/[0.03] p-4 sm:p-5">
+          <label className="space-y-2">
+            <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">Title</span>
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              className="w-full rounded-2xl border border-white/8 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-black-500 focus:border-white/18 focus:bg-black/55"
+              aria-label="Title"
+            />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">Slug</span>
+            <input
+              value={slug}
+              onChange={(event) => setSlug(event.target.value)}
+              className="w-full rounded-2xl border border-white/8 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-black-500 focus:border-white/18 focus:bg-black/55"
+              aria-label="Slug"
+            />
+          </label>
+
+          <div className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3">
+            <p className="text-[11px] uppercase tracking-[0.28em] text-black-500">URL</p>
+            <p className="mt-2 break-all text-sm text-black-200">
+              {list.username ? `/${list.username}/${slug || "list"}` : `/${slug || "list"}`}
+            </p>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-[28px] border border-white/8 bg-white/[0.03] p-4 sm:p-5">
+          <div className="rounded-2xl border border-white/8 bg-black/35 p-3">
+            <label className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">Visibility</span>
+              <select
+                value={visibility}
+                onChange={(event) => setVisibility(event.target.value as SavedList["visibility"])}
+                className="w-full rounded-full border border-white/10 bg-white/8 px-4 py-2.5 text-xs uppercase tracking-[0.2em] text-white outline-none transition focus:border-white/20 sm:w-auto"
+              >
+                <option value="private">Private</option>
+                <option value="public">Public</option>
+              </select>
+            </label>
+            {!list.username && visibility === "public" && (
+              <p className="mt-3 rounded-2xl border border-amber-200/12 bg-amber-300/8 px-3 py-2 text-[11px] leading-5 text-amber-100">
+                Set a username first so your list can go public.
+              </p>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <section className="space-y-4 rounded-[28px] border border-white/8 bg-white/[0.03] p-4 sm:p-5">
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
             value={shareUsername}
             onChange={(event) => setShareUsername(event.target.value)}
             placeholder="Share with username"
             disabled={!canShare}
-            className="w-full rounded-full bg-black-900 px-3 py-2 text-xs text-black-100 disabled:opacity-60"
+            className="w-full rounded-2xl border border-white/8 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-black-500 focus:border-white/18 focus:bg-black/55 disabled:opacity-60"
             aria-label="Share with username"
           />
           <button
             type="button"
             onClick={handleAddShare}
             disabled={isSharing || !canShare}
-            className="rounded-full bg-white px-3 py-2 text-xs font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
+            className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
           >
             {isSharing ? "Sharing..." : "Share"}
           </button>
         </div>
+
         {!canShare && (
           <p className="text-[11px] text-black-400">
             Set a username on your profile to share private lists.
           </p>
         )}
-        {shareMessage && <p className="text-[11px] text-black-400">{shareMessage}</p>}
+        {shareMessage && (
+          <p className="rounded-2xl border border-white/8 bg-black/30 px-3 py-2 text-[11px] leading-5 text-black-300">
+            {shareMessage}
+          </p>
+        )}
         {isLoadingShares ? (
           <p className="text-[11px] text-black-400">Loading shared users...</p>
         ) : shares.length === 0 ? (
-          <p className="text-[11px] text-black-500">No shared users yet.</p>
+          <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-6 text-center text-[11px] text-black-500">
+            No shared users yet.
+          </div>
         ) : (
           <div className="space-y-2">
             {shares.map((share) => (
-            <div key={share.userEmail} className="flex flex-col gap-3 rounded-2xl bg-black-900/70 p-3 text-xs text-black-200 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                key={share.userEmail}
+                className="flex flex-col gap-3 rounded-[24px] border border-white/8 bg-black/35 p-3.5 text-xs text-black-200 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div className="min-w-0">
-                  <p>{formatShareLabel(share)}</p>
-                  <p className="text-[10px] text-black-500">{share.canEdit ? "Can edit" : "Read only"}</p>
+                  <p className="text-sm text-white">{formatShareLabel(share)}</p>
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-black-500">
+                    {share.canEdit ? "Can edit" : "Read only"}
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     disabled={isSharing}
                     onClick={() => handleToggleShareEdit(share)}
-                    className="rounded-full bg-white px-2.5 py-1.5 text-[10px] font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
+                    className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-[10px] font-medium text-white transition hover:bg-white/14 active:bg-white/18 disabled:opacity-50"
                   >
                     {share.canEdit ? "Revoke edits" : "Allow edits"}
                   </button>
@@ -293,7 +339,7 @@ export function ListEditor({
                       type="button"
                       disabled={isSharing}
                       onClick={() => handleRemoveShare(share.username ?? "")}
-                      className="rounded-full bg-white px-2.5 py-1.5 text-[10px] font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
+                      className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-[10px] font-medium text-white transition hover:bg-white/14 active:bg-white/18 disabled:opacity-50"
                     >
                       Remove
                     </button>
@@ -305,34 +351,13 @@ export function ListEditor({
             ))}
           </div>
         )}
-      </div>
-      {message && <p className="text-xs text-black-400">{message}</p>}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="w-full rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50 sm:w-auto"
-        >
-          {isPending ? "Saving..." : "Save changes"}
-        </button>
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => {
-            setTitle(list.title);
-            setSlug(list.slug);
-            setColor(normalizeListColor(list.color ?? DEFAULT_LIST_COLOR_ID));
-            setVisibility(list.visibility);
-            setIsEditing(false);
-            onEditingChange?.(false);
-            if (list.username) {
-              router.replace(`/${list.username}/${list.slug}`);
-            }
-          }}
-          className="w-full rounded-full bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50 sm:w-auto"
-        >
-          Cancel
-        </button>
+      </section>
+
+      {message ? (
+        <p className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3 text-xs text-black-300">{message}</p>
+      ) : null}
+
+      <div className="flex flex-col-reverse gap-3 border-t border-white/8 pt-5 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
           disabled={isPending}
@@ -350,10 +375,38 @@ export function ListEditor({
               }
             });
           }}
-          className="w-full rounded-full bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50 sm:w-auto"
+          className="w-full rounded-2xl border border-red-200/14 bg-red-300/8 px-4 py-3 text-sm font-medium text-red-100 transition hover:bg-red-300/12 active:bg-red-300/16 disabled:opacity-50 sm:w-auto"
         >
           {isPending ? "Deleting..." : "Delete list"}
         </button>
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => {
+              setTitle(list.title);
+              setSlug(list.slug);
+              setColor(normalizeListColor(list.color ?? DEFAULT_LIST_COLOR_ID));
+              setVisibility(list.visibility);
+              setIsEditing(false);
+              onEditingChange?.(false);
+              if (list.username) {
+                router.replace(`/${list.username}/${list.slug}`);
+              }
+            }}
+            className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/12 active:bg-white/16 disabled:opacity-50 sm:w-auto"
+          >
+            Cancel
+          </button>
+        <button
+          type="submit"
+          disabled={isPending}
+            className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50 sm:w-auto"
+        >
+          {isPending ? "Saving..." : "Save changes"}
+        </button>
+        </div>
       </div>
     </form>
   );
