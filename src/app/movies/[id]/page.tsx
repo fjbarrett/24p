@@ -107,7 +107,7 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
             {typeof movie.releaseYear === "number" ? <span>{movie.releaseYear}</span> : null}
             {typeof movie.imdbRating === "number" ? (
               <>
-                <Image src="/imdb_logo.svg" alt="IMDb" width={32} height={16} className="h-4 w-auto opacity-90" unoptimized />
+                <Image src="/imdb_logo.svg" alt="IMDb" width={32} height={16} className="ml-2 h-4 w-auto opacity-90" unoptimized />
                 <span>{movie.imdbRating}</span>
               </>
             ) : null}
