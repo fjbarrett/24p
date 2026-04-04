@@ -15,7 +15,6 @@ export function ListsSection({ lists, userEmail }: ListsSectionProps) {
       <CreateListButton userEmail={userEmail} />
       <ListGallery
         lists={lists}
-        title="Your Lists"
         emptyMessage="No lists yet. Use the buttons below to create or import your first one."
       />
     </div>

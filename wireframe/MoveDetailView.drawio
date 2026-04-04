@@ -19,16 +19,19 @@
         <mxCell id="description" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=top;rounded=0;fontSize=14;fontColor=#FAFAFA;fontFamily=Open Sans, Arial, sans-serif;" value="Movie description text left-aligned below year." vertex="1">
           <mxGeometry height="80" width="291" x="51" y="575" as="geometry" />
         </mxCell>
-        <!-- + Add to List: small white circle, icon-style -->
-        <mxCell id="btn-add" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;fontSize=22;fontColor=#000000;fontStyle=0;" value="+" vertex="1">
-          <mxGeometry height="44" width="44" x="134" y="683" as="geometry" />
+        <!-- Add to List: collapsed white pill that expands into list picker -->
+        <mxCell id="btn-add" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#FFFFFF;strokeColor=none;fontSize=22;fontColor=#000000;fontStyle=0;" value="+" vertex="1">
+          <mxGeometry height="44" width="44" x="118" y="683" as="geometry" />
         </mxCell>
-        <!-- Apple TV icon button: white pill with Apple logo + TV -->
+        <!-- Apple TV icon button: delayed bubble-in white pill -->
         <mxCell id="btn-atv" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#FFFFFF;strokeColor=none;fontSize=12;fontColor=#000000;fontStyle=1;" value=" TV" vertex="1">
-          <mxGeometry height="44" width="65" x="194" y="683" as="geometry" />
+          <mxGeometry height="44" width="64" x="178" y="683" as="geometry" />
         </mxCell>
-        <mxCell id="WSuWK9BxivdtDw90JTw6-12" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Back" vertex="1">
-          <mxGeometry height="30" width="60" x="40" y="50" as="geometry" />
+        <mxCell id="action-note" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;fontColor=#777777;" value="expands to picker" vertex="1">
+          <mxGeometry height="14" width="96" x="92" y="735" as="geometry" />
+        </mxCell>
+        <mxCell id="WSuWK9BxivdtDw90JTw6-12" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="← Back" vertex="1">
+          <mxGeometry height="30" width="72" x="34" y="50" as="geometry" />
         </mxCell>
         <mxCell id="WSuWK9BxivdtDw90JTw6-15" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=14;fontColor=#B3B3B3;" value="7.7" vertex="1">
           <mxGeometry height="20" width="83" x="202.5" y="540" as="geometry" />
