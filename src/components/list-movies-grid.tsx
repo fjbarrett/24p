@@ -266,14 +266,6 @@ export function ListMoviesGrid({
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={loading || isExporting || !exportRows.length}
-          className="min-h-11 rounded-full bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isExporting ? "Exporting…" : "Export CSV"}
-        </button>
       </div>
       {sortedLoadedMovies.length === 0 && !loading ? (
         <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>
@@ -333,6 +325,14 @@ export function ListMoviesGrid({
           })}
         </ul>
       )}
+      <button
+        type="button"
+        onClick={handleExport}
+        disabled={loading || isExporting || !exportRows.length}
+        className="min-h-11 rounded-full bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isExporting ? "Exporting…" : "Export CSV"}
+      </button>
     </div>
   );
 }

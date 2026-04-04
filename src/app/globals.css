@@ -26,3 +26,39 @@ body {
   background: var(--accent);
   color: #000000;
 }
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes fadeScaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fadeScaleOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.92); }
+}
+
+@utility animate-fade-slide-in {
+  animation: fadeSlideIn 200ms ease-out both;
+}
+
+@utility animate-fade-slide-out {
+  animation: fadeSlideOut 150ms ease-in both;
+}
+
+@utility animate-fade-scale-in {
+  animation: fadeScaleIn 200ms ease-out both;
+}
+
+@utility animate-fade-scale-out {
+  animation: fadeScaleOut 150ms ease-in both;
+}
