@@ -79,7 +79,12 @@ export async function setProfileVisibilityForUser(userEmail: string, isPublic: b
 
 export async function getPublicProfileByUsername(username: string) {
   const pool = getPool();
-  const normalized = normalizeUsername(username);
+  let normalized: string;
+  try {
+    normalized = normalizeUsername(username);
+  } catch {
+    return null;
+  }
   const result = await pool.query<ProfileRow>(
     "SELECT * FROM profiles WHERE username = $1 AND is_public = true",
     [normalized],

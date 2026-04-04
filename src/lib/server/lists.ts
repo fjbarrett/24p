@@ -322,7 +322,12 @@ export async function deleteListForUser(listId: string, userEmail: string) {
 
 export async function getListByUsernameSlugForViewer(username: string, slug: string, viewerEmail?: string | null) {
   const pool = getPool();
-  const normalizedUsername = normalizeUsername(username);
+  let normalizedUsername: string;
+  try {
+    normalizedUsername = normalizeUsername(username);
+  } catch {
+    return null;
+  }
   const owner = await pool.query<{ user_email: string }>("SELECT user_email FROM profiles WHERE username = $1", [
     normalizedUsername,
   ]);
