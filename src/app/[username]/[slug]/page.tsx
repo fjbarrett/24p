@@ -10,6 +10,7 @@ import { FavoriteToggle } from "@/components/favorite-toggle";
 import { getPublicProfile } from "@/lib/profile-store";
 import type { Metadata } from "next";
 import { BackButton } from "@/components/back-button";
+import { Pencil } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -46,10 +47,12 @@ export async function generateMetadata({
 
 export default async function ListDetail({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string; slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined> | URLSearchParams>;
 }) {
-  const { username, slug } = await params;
+  const [{ username, slug }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const session = (await getServerSession(authOptions)) as Session | null;
   const viewerEmail = session?.user?.email?.toLowerCase() ?? null;
   const list = await getListByUsernameSlug(username, slug, viewerEmail);
@@ -66,7 +69,9 @@ export default async function ListDetail({
   const isFavorite = favorites.some((entry) => entry.id === list.id);
   const accentColor = pickAccent(list);
   const fromParam = encodeURIComponent(`/${ownerUsername}/${list.slug}`);
+  const initialEditing = getEditParam(resolvedSearchParams);
   const canFavorite = !!viewerEmail && viewerEmail !== list.userEmail;
+  const isOwner = !!viewerEmail && viewerEmail === list.userEmail;
 
   return (
     <div className="relative min-h-screen px-4 py-6 text-black-100 sm:px-6">
@@ -116,6 +121,18 @@ export default async function ListDetail({
                 </span>
               ) : null}
             </div>
+            {isOwner && !initialEditing ? (
+              <div className="flex justify-center pt-1">
+                <Link
+                  href={`/${encodeURIComponent(ownerUsername)}/${encodeURIComponent(list.slug)}?edit=1`}
+                  aria-label="Edit list"
+                  title="Edit list"
+                  className="flex h-10 w-10 items-center justify-center text-white/75 transition hover:text-white active:scale-[0.98]"
+                >
+                  <Pencil className="h-4 w-4" strokeWidth={2.25} />
+                </Link>
+              </div>
+            ) : null}
           </div>
         </div>
         <ListDetailClient
@@ -123,10 +140,25 @@ export default async function ListDetail({
           viewerEmail={viewerEmail}
           ratingsMap={ratingsMap}
           fromParam={fromParam}
+          initialEditing={initialEditing}
         />
       </article>
     </div>
   );
+}
+
+function getEditParam(
+  search: Record<string, string | string[] | undefined> | URLSearchParams | undefined,
+) {
+  const raw =
+    search instanceof URLSearchParams
+      ? search.get("edit")
+      : (() => {
+          const value = search?.edit;
+          return Array.isArray(value) ? value[0] : value;
+        })();
+
+  return raw === "1" || raw === "true";
 }
 
 const accentColors = ["#e864c6", "#8c63e0", "#3d7fcf", "#54c295", "#d8a534", "#e68630", "#e05555"];

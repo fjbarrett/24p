@@ -1,15 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import type { SavedList } from "@/lib/list-store";
+import { rustApiFetch } from "@/lib/rust-api-client";
+import type { SimplifiedMovie } from "@/lib/tmdb";
 
-const accentColors = ["#e864c6", "#8c63e0", "#3d7fcf", "#54c295", "#d8a534", "#e68630", "#e05555"];
-
-function pickAccent(list: { id: string; slug?: string; title?: string }) {
-  const key = list.slug || list.title || list.id;
-  const shift = Array.from(key).reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % accentColors.length, 0);
-  return accentColors[shift];
-}
+const MOSAIC_LIMIT = 4;
 
 type ListGalleryProps = {
   lists: SavedList[];
@@ -38,19 +36,14 @@ export function ListGallery({ lists, title = "Lists", emptyMessage, id = "lists"
         {lists.map((list) => {
           const href = list.username ? `/${list.username}/${list.slug}` : null;
           const ownerHref = list.username ? `/${list.username}` : null;
-          const accent = pickAccent(list);
           const card = (
             <div
               className="group relative block h-40 overflow-hidden rounded-2xl border border-black-800 bg-black-950 transition hover:-translate-y-0.5 hover:border-black-600 hover:shadow-lg"
             >
               {href && <Link href={href} className="absolute inset-0 z-10" aria-label={list.title} />}
               <div className="relative h-full w-full overflow-hidden rounded-2xl bg-black-950">
-                <div
-                  className="absolute inset-x-4 top-4 h-[3px] rounded-full opacity-70"
-                  style={{ background: accent }}
-                  aria-hidden
-                />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black-900 via-black-950 to-black-950" />
+                <ListPosterMosaic tmdbIds={list.movies} title={list.title} />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black-900/25 via-black-950/50 to-black-950" />
                 <div className="relative z-0 flex h-full flex-col justify-end p-4">
                   {showOwner && list.username && ownerHref ? (
                     <Link
@@ -87,4 +80,120 @@ export function ListGallery({ lists, title = "Lists", emptyMessage, id = "lists"
       </div>
     </section>
   );
+}
+
+function ListPosterMosaic({ tmdbIds, title }: { tmdbIds: number[]; title: string }) {
+  const [posters, setPosters] = useState<(string | null)[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const ids = tmdbIds.slice(0, MOSAIC_LIMIT);
+
+    if (!ids.length) {
+      Promise.resolve().then(() => {
+        if (!cancelled) {
+          setPosters([]);
+        }
+      });
+      return;
+    }
+
+    async function load() {
+      const next = await Promise.all(
+        ids.map(async (tmdbId) => {
+          const cached = readCachedMovie(tmdbId);
+          if (cached?.posterUrl) {
+            return toSmallPoster(cached.posterUrl);
+          }
+
+          try {
+            const result = await rustApiFetch<{ detail: SimplifiedMovie }>(`/tmdb/movie/${tmdbId}?lite=true`);
+            if (result?.detail) {
+              writeCachedMovie(result.detail);
+              return result.detail.posterUrl ? toSmallPoster(result.detail.posterUrl) : null;
+            }
+          } catch {
+            // ignore poster lookup failures
+          }
+
+          return null;
+        }),
+      );
+
+      if (!cancelled) {
+        setPosters(next);
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tmdbIds]);
+
+  if (!posters.length) {
+    return (
+      <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-px bg-black-900/80 p-px" aria-hidden>
+        {Array.from({ length: MOSAIC_LIMIT }).map((_, index) => (
+          <div key={index} className="bg-black-900" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-px bg-black-950 p-px" aria-hidden>
+      {Array.from({ length: MOSAIC_LIMIT }).map((_, index) => {
+        const posterUrl = posters[index];
+
+        if (!posterUrl) {
+          return <div key={`${title}-${index}`} className="bg-black-900" />;
+        }
+
+        return (
+          <div key={`${title}-${index}`} className="relative h-full w-full overflow-hidden bg-black-900">
+            <Image
+              src={posterUrl}
+              alt=""
+              fill
+              sizes="160px"
+              className="object-cover opacity-90"
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function readCachedMovie(tmdbId: number) {
+  if (typeof window === "undefined") return null;
+
+  const raw = window.sessionStorage.getItem(`tmdb:${tmdbId}`);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as SimplifiedMovie;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedMovie(movie: SimplifiedMovie) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.setItem(`tmdb:${movie.tmdbId}`, JSON.stringify(movie));
+  } catch {
+    // ignore cache write errors
+  }
+}
+
+function toSmallPoster(url: string) {
+  return url.includes("/w500/")
+    ? url.replace("/w500/", "/w185/")
+    : url.includes("/w342/")
+      ? url.replace("/w342/", "/w185/")
+      : url;
 }
