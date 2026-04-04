@@ -105,11 +105,16 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
         {(typeof movie.releaseYear === "number" || typeof movie.imdbRating === "number") ? (
           <p className="mt-2 flex items-center gap-1.5 text-sm text-[#B3B3B3]">
             {typeof movie.releaseYear === "number" ? <span>{movie.releaseYear}</span> : null}
-            {typeof movie.imdbRating === "number" ? (
-              <>
-                <Image src="/imdb_logo.svg" alt="IMDb" width={32} height={16} className="ml-2 h-4 w-auto opacity-90" unoptimized />
+            {typeof movie.imdbRating === "number" && movie.imdbId ? (
+              <a
+                href={`https://www.imdb.com/title/${movie.imdbId}/`}
+                target="_blank"
+                rel="noreferrer"
+                className="ml-2 flex items-center gap-1 transition hover:opacity-70"
+              >
+                <Image src="/imdb_logo.svg" alt="IMDb" width={32} height={16} className="h-4 w-auto opacity-90" unoptimized />
                 <span>{movie.imdbRating}</span>
-              </>
+              </a>
             ) : null}
           </p>
         ) : null}
