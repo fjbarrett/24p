@@ -28,7 +28,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8 text-black-100 sm:px-6">
+    <div className="flex min-h-screen items-center justify-center px-4 py-8 text-black-100 sm:px-6">
       <div className="mx-auto flex w-full max-w-[900px] flex-col items-center">
         <Header isSignedIn lists={lists} userEmail={userEmail} />
 
