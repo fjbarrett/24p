@@ -1,16 +1,9 @@
-const DEFAULT_CLIENT_BASE_URL = "/api/rust";
-const DEFAULT_SERVER_BASE_URL =
-  process.env.RUST_API_ORIGIN ??
-  process.env.RUST_API_BASE_URL ??
-  process.env.RUST_API_URL ??
-  process.env.NEXT_PUBLIC_RUST_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_RUST_API_URL ??
-  (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8080" : "");
+import { getAppUrl } from "@/lib/app-url";
 
-const clientBaseUrl =
-  process.env.NEXT_PUBLIC_RUST_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_RUST_API_URL ??
-  DEFAULT_CLIENT_BASE_URL;
+const DEFAULT_CLIENT_BASE_URL = "/api";
+const DEFAULT_SERVER_BASE_URL = `${getAppUrl()}/api`;
+
+const clientBaseUrl = DEFAULT_CLIENT_BASE_URL;
 const serverBaseUrl = DEFAULT_SERVER_BASE_URL;
 
 function normalize(base: string) {
@@ -21,9 +14,7 @@ export function getRustApiBaseUrl() {
   const candidate = typeof window === "undefined" ? serverBaseUrl : clientBaseUrl;
   const normalized = candidate ? normalize(candidate) : "";
   if (!normalized) {
-    throw new Error(
-      "Rust API base URL is not configured. Set RUST_API_ORIGIN (and NEXT_PUBLIC_RUST_API_BASE_URL if overriding the proxy).",
-    );
+    throw new Error("API base URL is not configured.");
   }
   return normalized;
 }

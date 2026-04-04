@@ -37,7 +37,7 @@ export function MovieListActions({ lists, tmdbId, userEmail }: MovieListActionsP
         setMessage(null);
         await rustApiFetch(`/lists/${selectedListId}/items`, {
           method: "POST",
-          body: JSON.stringify({ tmdbId, userEmail: normalizedEmail }),
+          body: JSON.stringify({ tmdbId }),
         });
         setMessage("Movie added to list");
         router.refresh();

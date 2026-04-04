@@ -27,7 +27,7 @@ export function ImportListForm({ userEmail, onComplete }: ImportListFormProps) {
       try {
         await rustApiFetch("/lists/import", {
           method: "POST",
-          body: JSON.stringify({ title, data: raw, userEmail: email }),
+          body: JSON.stringify({ title, data: raw }),
         });
         setRaw("");
         setMessage("Import complete");

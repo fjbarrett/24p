@@ -1,17 +1,16 @@
 # Project Context
 
 ## Purpose
-24p — a Next.js film tracking web app with a Rust API backend.
+24p — a Next.js film tracking web app using Next route handlers and server-only data modules.
 
 ## Current State
-Active development. UI styling pass in progress (Bluesky-inspired button system).
+Active development. Rust service removed from the runtime path; app data now flows through Next `/api/*`, PostgreSQL, and server-side TMDB helpers.
 
 ## Structure
 ```
 src/
-  app/           # Next.js app router pages
+  app/           # Next.js app router pages and route handlers
   components/    # Client components (buttons, forms, editors, toggles)
-  lib/           # Stores, API clients, utilities
-rust-api/        # Rust backend
+  lib/           # Stores, API client, server modules, utilities
 public/          # Static assets
 ```

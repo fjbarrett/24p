@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ListGallery } from "@/components/list-gallery";
-import { loadPublicListsForUsername } from "@/lib/list-store";
-import { getPublicProfile } from "@/lib/profile-store";
 import type { Metadata } from "next";
+import { getPublicProfileByUsername } from "@/lib/server/profiles";
+import { loadPublicLists } from "@/lib/server/lists";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export async function generateMetadata({
   params: Promise<{ username: string }>;
 }): Promise<Metadata> {
   const { username } = await params;
-  const profile = await getPublicProfile(username);
+  const profile = await getPublicProfileByUsername(username);
   if (!profile) {
     return {
       title: "Not found",
@@ -46,13 +46,13 @@ export default async function PublicProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  const profile = await getPublicProfile(username);
+  const profile = await getPublicProfileByUsername(username);
 
   if (!profile) {
     notFound();
   }
 
-  const lists = await loadPublicListsForUsername(profile.username, 48);
+  const lists = await loadPublicLists(48, profile.username);
 
   return (
     <div className="min-h-screen px-4 py-8 text-black-100 sm:px-8 lg:px-16">

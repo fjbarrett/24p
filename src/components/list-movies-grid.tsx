@@ -171,7 +171,6 @@ export function ListMoviesGrid({
     try {
       const payload = await rustApiFetch<{ list: SavedList }>(`/lists/${listId}/items/${tmdbId}`, {
         method: "DELETE",
-        body: JSON.stringify({ userEmail }),
       });
       const updatedMovies = Array.isArray(payload.list.movies) ? payload.list.movies : [];
       setListMovieIds(updatedMovies);
@@ -198,7 +197,7 @@ export function ListMoviesGrid({
         <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>
       ) : (
         <ul
-          className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+          className="grid grid-cols-3 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5"
         >
           {displayIds.map((tmdbId) => {
             const movie = moviesById.get(tmdbId);
@@ -238,7 +237,7 @@ export function ListMoviesGrid({
                       alt={`${movie.title} poster`}
                       width={200}
                       height={300}
-                      sizes="(max-width: 640px) 30vw, (max-width: 768px) 22vw, 160px"
+                      sizes="(max-width: 640px) 26vw, (max-width: 768px) 22vw, 160px"
                       className="h-full w-full rounded-md object-cover"
                     />
                   ) : (

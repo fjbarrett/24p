@@ -220,13 +220,13 @@ export function ListEditor({
           />
         </label>
       </div>
-      <div className="rounded-2xl bg-black-950 px-3 py-2 text-sm text-black-200">
-        <label className="flex items-center justify-between gap-4">
+      <div className="rounded-2xl bg-black-950 px-3 py-3 text-sm text-black-200">
+        <label className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <span className="text-xs uppercase tracking-[0.3em] text-black-400">Visibility</span>
           <select
             value={visibility}
             onChange={(event) => setVisibility(event.target.value as SavedList["visibility"])}
-            className="rounded-full bg-black-900 px-3 py-1 text-xs uppercase tracking-[0.2em] text-black-100"
+            className="w-full rounded-full bg-black-900 px-3 py-2 text-xs uppercase tracking-[0.2em] text-black-100 sm:w-auto sm:py-1"
           >
             <option value="private">Private</option>
             <option value="public">Public</option>
@@ -274,17 +274,17 @@ export function ListEditor({
         ) : (
           <div className="space-y-2">
             {shares.map((share) => (
-              <div key={share.userEmail} className="flex items-center justify-between text-xs text-black-200">
-                <div>
+            <div key={share.userEmail} className="flex flex-col gap-3 rounded-2xl bg-black-900/70 p-3 text-xs text-black-200 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <p>{formatShareLabel(share)}</p>
                   <p className="text-[10px] text-black-500">{share.canEdit ? "Can edit" : "Read only"}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     disabled={isSharing}
                     onClick={() => handleToggleShareEdit(share)}
-                    className="rounded-full bg-white px-2 py-1 text-[10px] font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
+                    className="rounded-full bg-white px-2.5 py-1.5 text-[10px] font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
                   >
                     {share.canEdit ? "Revoke edits" : "Allow edits"}
                   </button>
@@ -293,7 +293,7 @@ export function ListEditor({
                       type="button"
                       disabled={isSharing}
                       onClick={() => handleRemoveShare(share.username ?? "")}
-                      className="rounded-full bg-white px-2 py-1 text-[10px] font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
+                      className="rounded-full bg-white px-2.5 py-1.5 text-[10px] font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
                     >
                       Remove
                     </button>
@@ -307,11 +307,11 @@ export function ListEditor({
         )}
       </div>
       {message && <p className="text-xs text-black-400">{message}</p>}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
+          className="w-full rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50 sm:w-auto"
         >
           {isPending ? "Saving..." : "Save changes"}
         </button>
@@ -329,7 +329,7 @@ export function ListEditor({
               router.replace(`/${list.username}/${list.slug}`);
             }
           }}
-          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
+          className="w-full rounded-full bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50 sm:w-auto"
         >
           Cancel
         </button>
@@ -350,7 +350,7 @@ export function ListEditor({
               }
             });
           }}
-          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
+          className="w-full rounded-full bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50 sm:w-auto"
         >
           {isPending ? "Deleting..." : "Delete list"}
         </button>

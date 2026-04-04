@@ -6,7 +6,7 @@ import { rustApiFetch } from "@/lib/rust-api-client";
 
 export function CreateListButton({ userEmail }: { userEmail: string }) {
   const [expanded, setExpanded] = useState(false);
-  const [title, setTitle] = useState("Saturday Double Feature");
+  const [title, setTitle] = useState("List title");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -14,7 +14,10 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
 
   useEffect(() => {
     if (!expanded) return;
-    const id = window.setTimeout(() => inputRef.current?.focus(), 180);
+    const id = window.setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 180);
     return () => window.clearTimeout(id);
   }, [expanded]);
 
@@ -26,7 +29,7 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
   function collapse() {
     setExpanded(false);
     setError(null);
-    setTitle("Saturday Double Feature");
+    setTitle("List title");
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -34,14 +37,13 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
     startTransition(async () => {
       try {
         setError(null);
-        const email = userEmail.trim().toLowerCase();
-        if (!email) {
+        if (!userEmail.trim()) {
           setError("Sign in to create lists");
           return;
         }
         await rustApiFetch("/lists", {
           method: "POST",
-          body: JSON.stringify({ title, userEmail: email }),
+          body: JSON.stringify({ title }),
         });
         collapse();
         router.refresh();
@@ -86,9 +88,9 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
           />
           <button
             type="button"
-            onClick={collapse}
+            onClick={() => setTitle("")}
             className="shrink-0 px-1 text-base text-black/40 transition hover:text-black"
-            aria-label="Cancel create list"
+            aria-label="Clear list title"
           >
             ✕
           </button>

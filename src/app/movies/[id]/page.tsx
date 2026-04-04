@@ -68,20 +68,23 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
   const jsonLd = buildMovieJsonLd(movie);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-black text-white">
-      <BackButton
-        fallbackHref={backHref}
-        className="absolute left-10 top-[50px] text-sm text-white/70 transition hover:text-white"
-      >
-        ← Back
-      </BackButton>
+    <div className="flex min-h-screen flex-col bg-black text-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <div className="mx-auto w-full max-w-[900px] px-6 pt-6 sm:px-8">
+        <BackButton
+          fallbackHref={backHref}
+          className="text-sm text-white/70 transition hover:text-white"
+        >
+          ← Back
+        </BackButton>
+      </div>
 
       {/* Main content */}
-      <div className="flex w-full max-w-sm flex-col items-center px-[51px] py-12">
+      <div className="flex flex-1 items-center justify-center">
+      <div className="flex w-full max-w-sm flex-col items-center px-[51px] py-8">
         {/* Poster */}
         {movie.posterUrl ? (
           <Image
@@ -130,6 +133,7 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
         {(userEmail || movie.imdbId) ? (
           <MovieActions tmdbId={movie.tmdbId} userEmail={userEmail} imdbId={movie.imdbId} title={movie.title} />
         ) : null}
+      </div>
       </div>
     </div>
   );

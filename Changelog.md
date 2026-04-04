@@ -6,6 +6,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 ### Added
+- Added Next route handlers and server-side Postgres/TMDB modules so the app no longer depends on a separate Rust service at runtime.
 ### Changed
 - Unified app action buttons and button-style links to use the sign-out button's white background and black text styling.
 - Refined movie and list detail views with clearer action placement, stronger section alignment, and more consistent control sizing.
@@ -13,6 +14,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Simplified the homepage, strengthened the create-list modal backdrop, and refreshed wireframes to match current home, list, and movie detail views.
 - Centered the home and list detail layouts, converted list creation to an inline expanding pill, and streamlined list detail controls and export actions.
 - Replaced list-card accent lines with poster mosaics and refined the list detail edit affordance into a lighter icon plus dialog flow.
+- Collapsed the backend architecture into the Next app, updated deployment/docs accordingly, and restored IMDb rating enrichment through the server TMDB helper.
+- Tightened detail-view alignment, improved list edit dialog behavior on mobile, and adjusted homepage/list-detail presentation polish.
 ### Fixed
 
 ## [0.1.0] - YYYY-MM-DD

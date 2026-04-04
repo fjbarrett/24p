@@ -2,9 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { FilmographyEntry, SimplifiedArtist } from "@/lib/tmdb";
-import { rustApiFetch } from "@/lib/rust-api-client";
 import { FilmographyRoleFilter } from "./filmography-role-filter";
 import type { Metadata } from "next";
+import { fetchTmdbPersonWithFilmography } from "@/lib/server/tmdb";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
   let payload: PersonResponse | null = null;
   try {
-    payload = await rustApiFetch<PersonResponse>(`/tmdb/person/${personId}`);
+    payload = await fetchTmdbPersonWithFilmography(personId);
   } catch {
     payload = null;
   }
@@ -62,7 +62,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ id: str
 
   let payload: PersonResponse | null = null;
   try {
-    payload = await rustApiFetch<PersonResponse>(`/tmdb/person/${personId}`);
+    payload = await fetchTmdbPersonWithFilmography(personId);
   } catch {
     payload = null;
   }

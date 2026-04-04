@@ -8,7 +8,7 @@ A collaborative movie list app. Search any film, build shareable lists, and rate
 |-------|-----------|
 | Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS v4 |
 | Auth | NextAuth.js with Google OAuth |
-| API | Rust (Axum) |
+| API | Next.js route handlers + server-only data modules |
 | Database | PostgreSQL |
 | Movie data | TMDB API |
 | Container | Docker + Docker Compose |
@@ -28,7 +28,6 @@ A collaborative movie list app. Search any film, build shareable lists, and rate
 ### Prerequisites
 
 - [Bun](https://bun.sh) (JavaScript runtime / package manager)
-- [Rust + Cargo](https://rustup.rs) (for the API server)
 - [PostgreSQL](https://www.postgresql.org) (or run everything via Docker)
 
 ### Local development
@@ -44,21 +43,16 @@ A collaborative movie list app. Search any film, build shareable lists, and rate
    ```
    See [Configuration](#configuration) below for where to obtain each value.
 
-3. Start the Rust API (from the `rust-api/` directory):
-   ```bash
-   cd rust-api && cargo run
-   ```
-
-4. In a separate terminal, start the Next.js dev server:
+3. Start the Next.js dev server:
    ```bash
    bun run dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000).
+4. Open [http://localhost:3000](http://localhost:3000).
 
 ### Docker (recommended for full stack)
 
-Runs Next.js, the Rust API, and PostgreSQL together:
+Runs Next.js and PostgreSQL together:
 
 ```bash
 cp .env.example .env
@@ -67,7 +61,6 @@ docker compose up --build
 
 Services:
 - Next.js → `http://localhost:3000`
-- Rust API → `http://localhost:8080`
 - PostgreSQL → `localhost:5432`
 
 ## Configuration
@@ -117,11 +110,8 @@ CREATE TABLE IF NOT EXISTS user_ratings (
 ├── src/
 │   ├── app/          # Next.js App Router pages and API routes
 │   ├── components/   # React components
-│   ├── lib/          # Shared utilities, API clients, stores
+│   ├── lib/          # Shared utilities, API clients, stores, server modules
 │   └── types/        # TypeScript type definitions
-├── rust-api/
-│   └── src/
-│       └── main.rs   # Axum HTTP server (lists, ratings, TMDB proxy)
 ├── public/           # Static assets
 ├── docker-compose.yml
 └── Dockerfile
