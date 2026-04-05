@@ -44,51 +44,53 @@ export function UsernameCard({ userEmail, profile }: UsernameCardProps) {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-3xl border border-white/10 bg-black-900/40 p-4 text-black-100"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.4em] text-black-400">Profile URL</p>
-          <div className="text-sm text-black-200">
-            {profile?.username ? (
-              isPublic ? (
-                <span>
-                  {baseUrl ? `${baseUrl}/${profile.username}` : `/${profile.username}`}
-                </span>
-              ) : (
-                <span>Profile is private. Make it public to share a URL.</span>
-              )
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-[28px] border border-white/8 bg-white/[0.03] p-4 sm:p-5">
+      <div className="space-y-1">
+        <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">Profile URL</span>
+        <p className="text-sm text-black-300">
+          {profile?.username ? (
+            isPublic ? (
+              `${baseUrl}/${profile.username}`
             ) : (
-              <span>Claim a username to unlock shareable URLs.</span>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-xs uppercase tracking-[0.3em] text-black-400" htmlFor="username-input">
+              "Profile is private — make it public to share a URL."
+            )
+          ) : (
+            "Claim a username to unlock shareable URLs."
+          )}
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+        <div className="space-y-2">
+          <label className="text-[11px] uppercase tracking-[0.28em] text-black-500" htmlFor="username-input">
             Username
           </label>
           <input
             id="username-input"
             value={username}
             onChange={(event) => setUsernameValue(event.target.value)}
-            className="w-full rounded-full border border-black-700 bg-black-950 px-4 py-2 text-sm text-black-100"
+            className="w-full rounded-2xl border border-white/8 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-black-500 focus:border-white/18 focus:bg-black/55"
             placeholder="yourname"
           />
         </div>
-        <button
-          type="submit"
-          disabled={!isValid || isPending}
-          className="rounded-full bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
-        >
-          {isPending ? "Saving" : "Save"}
-        </button>
+        <div className="flex items-end">
+          <button
+            type="submit"
+            disabled={!isValid || isPending}
+            className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50 sm:w-auto"
+          >
+            {isPending ? "Saving..." : "Save"}
+          </button>
+        </div>
       </div>
-      <p className="mt-2 text-[11px] text-black-500">
-        Use 3+ characters, letters and numbers only.
-      </p>
-      {message && <p className="mt-2 text-xs text-black-400">{message}</p>}
+
+      <p className="text-[11px] text-black-500">3+ characters, letters and numbers only.</p>
+
+      {message && (
+        <p className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3 text-xs text-black-300">
+          {message}
+        </p>
+      )}
     </form>
   );
 }

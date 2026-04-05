@@ -40,47 +40,44 @@ export function ImportListForm({ userEmail, onComplete }: ImportListFormProps) {
   }
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-black-900/40 p-6 space-y-3">
-      <div>
-        <p className="text-xs uppercase tracking-[0.4em] text-black-400">Import</p>
-        <h2 className="mt-2 text-2xl font-semibold text-white">Bring in Letterboxd or IMDb lists</h2>
-        <p className="text-sm text-black-400" id="import-help">
-          Paste CSV text (including exports from this page) or newline titles; we will match them on TMDB.
-        </p>
-      </div>
-      <form className="space-y-3" onSubmit={handleSubmit}>
-        <label className="text-sm text-black-300">
-          List title
+    <form className="space-y-4" onSubmit={handleSubmit} aria-describedby={message ? "import-status" : undefined}>
+      <section className="space-y-4 rounded-[28px] border border-white/8 bg-white/[0.03] p-4 sm:p-5">
+        <label className="space-y-2">
+          <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">List title</span>
           <input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            className="mt-1 w-full rounded-2xl border border-black-700 bg-black-950 px-3 py-2 text-sm text-black-100"
+            className="w-full rounded-2xl border border-white/8 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-black-500 focus:border-white/18 focus:bg-black/55"
           />
         </label>
-        <label className="text-sm text-black-300">
-          Paste export
+
+        <label className="space-y-2">
+          <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">Paste export</span>
           <textarea
             value={raw}
             onChange={(event) => setRaw(event.target.value)}
             rows={6}
-            className="mt-1 w-full rounded-2xl border border-black-700 bg-black-950 px-3 py-2 text-sm text-black-100"
-            placeholder="Title,Year\nInception,2010"
-            aria-describedby={["import-help", message ? "import-status" : null].filter(Boolean).join(" ")}
+            className="w-full rounded-2xl border border-white/8 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-black-500 focus:border-white/18 focus:bg-black/55"
+            placeholder={"Title,Year\nInception,2010"}
           />
         </label>
-        {message && (
-          <p className="text-xs text-black-400" id="import-status" role="status" aria-live="polite">
-            {message}
-          </p>
-        )}
+      </section>
+
+      {message && (
+        <p className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3 text-xs text-black-300" id="import-status" role="status" aria-live="polite">
+          {message}
+        </p>
+      )}
+
+      <div className="flex flex-col-reverse gap-3 border-t border-white/8 pt-5 sm:flex-row sm:justify-end">
         <button
           type="submit"
           disabled={isPending || !userEmail}
-          className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
+          className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50 sm:w-auto"
         >
           {isPending ? "Importing..." : "Import list"}
         </button>
-      </form>
-    </section>
+      </div>
+    </form>
   );
 }

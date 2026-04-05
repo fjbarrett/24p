@@ -23,49 +23,58 @@ export function ProfileVisibilityCard({ userEmail, profile }: ProfileVisibilityC
         setMessage(null);
         const updated = await setProfileVisibility(userEmail, nextValue);
         setIsPublic(updated.isPublic);
-        setMessage("Profile visibility updated.");
+        setMessage("Visibility updated.");
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Unable to update profile visibility.");
+        setMessage(error instanceof Error ? error.message : "Unable to update visibility.");
       }
     });
   };
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-black-900/40 p-4 text-black-100">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.4em] text-black-400">Profile visibility</p>
-          <p className="text-sm text-black-400">
-            {canUpdate
-              ? "Choose whether your profile is visible at your username URL."
-              : "Set a username before making your profile public."}
-          </p>
-          {canUpdate && isPublic && (
-            <p className="text-sm text-black-200">
-              {baseUrl ? `${baseUrl}/${username}` : `/${username}`}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => updateVisibility(false)}
-            disabled={!canUpdate || isPending}
-            className="rounded-full bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
-          >
-            Private
-          </button>
-          <button
-            type="button"
-            onClick={() => updateVisibility(true)}
-            disabled={!canUpdate || isPending}
-            className="rounded-full bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
-          >
-            Public
-          </button>
-        </div>
+    <section className="space-y-4 rounded-[28px] border border-white/8 bg-white/[0.03] p-4 sm:p-5">
+      <div className="space-y-1">
+        <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">Visibility</span>
+        <p className="text-sm text-black-400">
+          {canUpdate
+            ? isPublic
+              ? `Public — ${baseUrl}/${username}`
+              : "Private — only you can see your profile."
+            : "Set a username before making your profile public."}
+        </p>
       </div>
-      {message && <p className="mt-3 text-xs text-black-400">{message}</p>}
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => updateVisibility(false)}
+          disabled={!canUpdate || isPending}
+          className={`rounded-2xl border px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 ${
+            !isPublic
+              ? "border-white/20 bg-white/14 text-white"
+              : "border-white/10 bg-white/6 text-black-300 hover:bg-white/10 hover:text-white"
+          }`}
+        >
+          Private
+        </button>
+        <button
+          type="button"
+          onClick={() => updateVisibility(true)}
+          disabled={!canUpdate || isPending}
+          className={`rounded-2xl border px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 ${
+            isPublic
+              ? "border-white/20 bg-white/14 text-white"
+              : "border-white/10 bg-white/6 text-black-300 hover:bg-white/10 hover:text-white"
+          }`}
+        >
+          Public
+        </button>
+      </div>
+
+      {message && (
+        <p className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3 text-xs text-black-300">
+          {message}
+        </p>
+      )}
     </section>
   );
 }
