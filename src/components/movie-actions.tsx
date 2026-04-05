@@ -20,6 +20,7 @@ type MovieActionsProps = {
 
 export function MovieActions({ tmdbId, userEmail, imdbId, title, releaseYear }: MovieActionsProps) {
   const [listExpanded, setListExpanded] = useState(false);
+  const [watchExpanded, setWatchExpanded] = useState(false);
   const [revealed, setRevealed] = useState(!imdbId);
   const [appleTvUrl, setAppleTvUrl] = useState<string | null>(null);
   const [providers, setProviders] = useState<{ items: StreamingProvider[]; link: string | null }>({ items: [], link: null });
@@ -68,36 +69,38 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title, releaseYear }: 
 
   return (
     <div
-      className="mt-6"
+      className="mt-3"
       style={{ opacity: revealed ? 1 : 0, transition: 'opacity 500ms ease-out' }}
     >
-      <AddToListButton
-        tmdbId={tmdbId}
-        userEmail={userEmail}
-        onExpandChange={setListExpanded}
-        appleTvSlot={
-          <div
-            style={{
-              opacity: slotVisible ? 1 : 0,
-              transform: slotVisible ? 'scale(1)' : 'scale(0.9)',
-              pointerEvents: slotVisible ? 'auto' : 'none',
-              overflow: 'hidden',
-              maxWidth: slotVisible ? '400px' : '0px',
-              marginLeft: slotVisible ? '8px' : '0px',
-              transition: !slotVisible
-                ? 'opacity 150ms ease-in, transform 150ms ease-in, max-width 300ms cubic-bezier(0.4,0,0.2,1), margin-left 300ms cubic-bezier(0.4,0,0.2,1)'
-                : 'opacity 200ms ease-out 220ms, transform 200ms ease-out 220ms, max-width 300ms cubic-bezier(0.4,0,0.2,1)',
-            }}
-          >
-            <WatchButton
-              appleTvUrl={appleTvUrl}
-              providers={providers.items}
-              justWatchLink={providers.link}
-              directUrls={directUrls}
-            />
-          </div>
-        }
-      />
+      <div className="flex w-full max-w-[420px] items-start">
+        <AddToListButton
+          tmdbId={tmdbId}
+          userEmail={userEmail}
+          onExpandChange={setListExpanded}
+          hidden={watchExpanded}
+        />
+
+        <div
+          className="overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+          style={{
+            opacity: slotVisible ? 1 : 0,
+            transform: slotVisible ? 'scale(1)' : 'scale(0.9)',
+            pointerEvents: slotVisible ? 'auto' : 'none',
+            width: slotVisible ? (watchExpanded ? '100%' : '44px') : '0px',
+            maxWidth: slotVisible ? '420px' : '0px',
+            marginLeft: slotVisible && !watchExpanded ? '8px' : '0px',
+          }}
+        >
+          <WatchButton
+            appleTvUrl={appleTvUrl}
+            providers={providers.items}
+            justWatchLink={providers.link}
+            directUrls={directUrls}
+            onExpandChange={setWatchExpanded}
+            expandedWidth="100%"
+          />
+        </div>
+      </div>
     </div>
   );
 }
