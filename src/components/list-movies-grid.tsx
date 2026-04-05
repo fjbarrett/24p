@@ -196,14 +196,12 @@ export function ListMoviesGrid({
       {displayIds.every((tmdbId) => !moviesById.has(tmdbId)) && !loading ? (
         <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>
       ) : (
-        <ul
-          className="grid grid-cols-3 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5"
-        >
+        <ul className="flex flex-wrap justify-center gap-2.5 sm:gap-3">
           {displayIds.map((tmdbId) => {
             const movie = moviesById.get(tmdbId);
             if (!movie) {
               return (
-                <li key={tmdbId}>
+                <li key={tmdbId} className="w-[calc(33%-7px)] sm:w-[calc(25%-9px)] lg:w-[calc(20%-10px)]">
                   <div className="aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-black-900/40">
                     <div className="h-full w-full animate-pulse bg-black-800/60" />
                   </div>
@@ -212,7 +210,7 @@ export function ListMoviesGrid({
             }
 
             return (
-              <li key={movie.tmdbId}>
+              <li key={movie.tmdbId} className="w-[calc(33%-7px)] sm:w-[calc(25%-9px)] lg:w-[calc(20%-10px)]">
                 <Link
                   href={`/movies/${movie.tmdbId}?from=${fromParam}`}
                   className="group relative block aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-black-900/40 transition hover:border-black-400"
