@@ -38,7 +38,7 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title }: MovieActionsP
         setRevealed(true);
       }).catch(() => { if (active) setRevealed(true); });
     } else {
-      watchFetch;
+      void watchFetch;
     }
 
     return () => { active = false; };
