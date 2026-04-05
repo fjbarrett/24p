@@ -84,7 +84,8 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
       </div>
 
       {/* Main content */}
-      <div className="mx-auto flex w-full max-w-sm flex-col items-center px-[51px] pt-4 pb-8">
+      <div className="flex flex-1 items-center justify-center">
+      <div className="flex w-full max-w-sm flex-col items-center px-[51px] py-8">
         {/* Poster */}
         {movie.posterUrl ? (
           <Image
@@ -133,6 +134,7 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
         {(userEmail || movie.imdbId) ? (
           <MovieActions tmdbId={movie.tmdbId} userEmail={userEmail} imdbId={movie.imdbId} title={movie.title} />
         ) : null}
+      </div>
       </div>
     </div>
   );
