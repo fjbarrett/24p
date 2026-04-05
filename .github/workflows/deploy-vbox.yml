@@ -24,9 +24,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Write env file
+        working-directory: ${{ github.workspace }}
         run: |
-          install -d -m 700 /opt/24p
-          cat > /opt/24p/.env <<'EOF'
+          cat > .env <<'EOF'
           NEXTAUTH_SECRET=${{ secrets.VBOX_NEXTAUTH_SECRET }}
           NEXTAUTH_URL=${{ secrets.VBOX_NEXTAUTH_URL }}
           NEXT_PUBLIC_APP_URL=${{ secrets.VBOX_NEXT_PUBLIC_APP_URL }}
@@ -39,7 +39,7 @@ jobs:
           POSTGRES_PASSWORD=${{ secrets.VBOX_POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.VBOX_POSTGRES_DB }}
           EOF
-          chmod 600 /opt/24p/.env
+          chmod 600 .env
 
       - name: Deploy stack
         working-directory: ${{ github.workspace }}
