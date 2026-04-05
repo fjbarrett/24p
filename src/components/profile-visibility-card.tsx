@@ -31,7 +31,7 @@ export function ProfileVisibilityCard({ userEmail, profile }: ProfileVisibilityC
   };
 
   return (
-    <section className="space-y-4 rounded-[28px] border border-white/8 bg-white/[0.03] p-4 sm:p-5">
+    <section className="space-y-3 rounded-[20px] border border-white/8 bg-white/[0.03] p-3 sm:p-4">
       <div className="space-y-1">
         <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">Visibility</span>
         <p className="text-sm text-black-400">
@@ -48,7 +48,7 @@ export function ProfileVisibilityCard({ userEmail, profile }: ProfileVisibilityC
           type="button"
           onClick={() => updateVisibility(false)}
           disabled={!canUpdate || isPending}
-          className={`rounded-2xl border px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 ${
+          className={`rounded-xl border px-3 py-1.5 text-sm font-medium transition disabled:opacity-50 ${
             !isPublic
               ? "border-white/20 bg-white/14 text-white"
               : "border-white/10 bg-white/6 text-black-300 hover:bg-white/10 hover:text-white"
@@ -60,7 +60,7 @@ export function ProfileVisibilityCard({ userEmail, profile }: ProfileVisibilityC
           type="button"
           onClick={() => updateVisibility(true)}
           disabled={!canUpdate || isPending}
-          className={`rounded-2xl border px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 ${
+          className={`rounded-xl border px-3 py-1.5 text-sm font-medium transition disabled:opacity-50 ${
             isPublic
               ? "border-white/20 bg-white/14 text-white"
               : "border-white/10 bg-white/6 text-black-300 hover:bg-white/10 hover:text-white"

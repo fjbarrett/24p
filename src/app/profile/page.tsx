@@ -30,8 +30,8 @@ export default async function ProfilePage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8 text-black-100">
-      <div className="w-full max-w-[720px] space-y-5 rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,26,26,0.98),rgba(13,13,13,1))] p-4 shadow-[0_36px_120px_rgba(0,0,0,0.72)] ring-1 ring-white/5 sm:p-6">
-        <div className="flex items-start justify-between gap-4 border-b border-white/8 pb-5">
+      <div className="w-full max-w-[560px] space-y-3 rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,26,26,0.98),rgba(13,13,13,1))] p-3 shadow-[0_36px_120px_rgba(0,0,0,0.72)] ring-1 ring-white/5 sm:p-5">
+        <div className="flex items-start justify-between gap-4 border-b border-white/8 pb-3">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight text-white">Profile</h1>
             <p className="text-sm text-black-400">{userEmail}</p>

@@ -199,8 +199,8 @@ export function ListEditor({
   }
 
   return (
-    <form className="space-y-5 p-4 sm:p-6" onSubmit={handleSubmit}>
-      <div className="flex items-start justify-between gap-4 border-b border-white/8 pb-5">
+    <form className="space-y-3 p-3 sm:p-5" onSubmit={handleSubmit}>
+      <div className="flex items-start justify-between gap-4 border-b border-white/8 pb-3">
         <div className="space-y-1">
           <h2 className="text-2xl font-semibold tracking-tight text-white">Edit list</h2>
           <p className="text-sm text-black-400">{list.title}</p>
@@ -224,14 +224,14 @@ export function ListEditor({
         </button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <section className="space-y-4 rounded-[28px] border border-white/8 bg-white/[0.03] p-4 sm:p-5">
+      <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className="space-y-3 rounded-[20px] border border-white/8 bg-white/[0.03] p-3 sm:p-4">
           <label className="space-y-2">
             <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">Title</span>
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              className="w-full rounded-2xl border border-white/8 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-black-500 focus:border-white/18 focus:bg-black/55"
+              className="w-full rounded-2xl border border-white/8 bg-black/40 px-3 py-2 text-sm text-white outline-none transition placeholder:text-black-500 focus:border-white/18 focus:bg-black/55"
               aria-label="Title"
             />
           </label>
@@ -241,21 +241,21 @@ export function ListEditor({
             <input
               value={slug}
               onChange={(event) => setSlug(event.target.value)}
-              className="w-full rounded-2xl border border-white/8 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-black-500 focus:border-white/18 focus:bg-black/55"
+              className="w-full rounded-2xl border border-white/8 bg-black/40 px-3 py-2 text-sm text-white outline-none transition placeholder:text-black-500 focus:border-white/18 focus:bg-black/55"
               aria-label="Slug"
             />
           </label>
 
-          <div className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3">
+          <div className="rounded-xl border border-white/8 bg-black/30 px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.28em] text-black-500">URL</p>
-            <p className="mt-2 break-all text-sm text-black-200">
+            <p className="mt-1 break-all text-sm text-black-200">
               {list.username ? `/${list.username}/${slug || "list"}` : `/${slug || "list"}`}
             </p>
           </div>
         </section>
 
-        <section className="space-y-4 rounded-[28px] border border-white/8 bg-white/[0.03] p-4 sm:p-5">
-          <div className="rounded-2xl border border-white/8 bg-black/35 p-3">
+        <section className="space-y-3 rounded-[20px] border border-white/8 bg-white/[0.03] p-3 sm:p-4">
+          <div className="rounded-xl border border-white/8 bg-black/35 p-2.5">
             <label className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">Visibility</span>
               <select
@@ -276,7 +276,7 @@ export function ListEditor({
         </section>
       </div>
 
-      <section className="space-y-4 rounded-[28px] border border-white/8 bg-white/[0.03] p-4 sm:p-5">
+      <section className="space-y-3 rounded-[20px] border border-white/8 bg-white/[0.03] p-3 sm:p-4">
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
             value={shareUsername}
@@ -290,7 +290,7 @@ export function ListEditor({
             type="button"
             onClick={handleAddShare}
             disabled={isSharing || !canShare}
-            className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
+            className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
           >
             {isSharing ? "Sharing..." : "Share"}
           </button>
@@ -309,7 +309,7 @@ export function ListEditor({
         {isLoadingShares ? (
           <p className="text-[11px] text-black-400">Loading shared users...</p>
         ) : shares.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-6 text-center text-[11px] text-black-500">
+          <div className="rounded-xl border border-dashed border-white/10 bg-black/20 px-4 py-4 text-center text-[11px] text-black-500">
             No shared users yet.
           </div>
         ) : (
@@ -357,7 +357,7 @@ export function ListEditor({
         <p className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3 text-xs text-black-300">{message}</p>
       ) : null}
 
-      <div className="flex flex-col-reverse gap-3 border-t border-white/8 pt-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col-reverse gap-2 border-t border-white/8 pt-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
           disabled={isPending}
@@ -375,12 +375,12 @@ export function ListEditor({
               }
             });
           }}
-          className="w-full rounded-2xl border border-red-200/14 bg-red-300/8 px-4 py-3 text-sm font-medium text-red-100 transition hover:bg-red-300/12 active:bg-red-300/16 disabled:opacity-50 sm:w-auto"
+          className="w-full rounded-2xl border border-red-200/14 bg-red-300/8 px-4 py-2 text-sm font-medium text-red-100 transition hover:bg-red-300/12 active:bg-red-300/16 disabled:opacity-50 sm:w-auto"
         >
           {isPending ? "Deleting..." : "Delete list"}
         </button>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
             disabled={isPending}
@@ -395,17 +395,17 @@ export function ListEditor({
                 router.replace(`/${list.username}/${list.slug}`);
               }
             }}
-            className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/12 active:bg-white/16 disabled:opacity-50 sm:w-auto"
+            className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/12 active:bg-white/16 disabled:opacity-50 sm:w-auto"
           >
             Cancel
           </button>
-        <button
-          type="submit"
-          disabled={isPending}
-            className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50 sm:w-auto"
-        >
-          {isPending ? "Saving..." : "Save changes"}
-        </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="w-full rounded-2xl bg-white px-5 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50 sm:w-auto"
+          >
+            {isPending ? "Saving..." : "Save changes"}
+          </button>
         </div>
       </div>
     </form>
