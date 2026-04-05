@@ -112,8 +112,8 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
         {/* Expanding pill */}
         <form
           onSubmit={handleAdd}
-          className="relative h-11 overflow-hidden rounded-full bg-white transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-          style={{ width: expanded ? '270px' : '44px', willChange: 'width', transform: 'translateZ(0)' }}
+          className="relative h-10 overflow-hidden rounded-full bg-white transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+          style={{ width: expanded ? '270px' : '40px', willChange: 'width', transform: 'translateZ(0)' }}
         >
           {/* + icon — fades out instantly on expand, fades in late on collapse */}
           <button
