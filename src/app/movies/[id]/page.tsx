@@ -90,13 +90,13 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
           <Image
             src={getLargePoster(movie.posterUrl)}
             alt={`${movie.title} poster`}
-            width={230}
-            height={340}
+            width={200}
+            height={296}
             className="rounded-xl object-cover shadow-lg"
             priority
           />
         ) : (
-          <div className="flex h-[340px] w-[230px] items-center justify-center rounded-xl bg-neutral-800 text-sm text-neutral-500">
+          <div className="flex h-[296px] w-[200px] items-center justify-center rounded-xl bg-neutral-800 text-sm text-neutral-500">
             No art
           </div>
         )}
@@ -129,7 +129,7 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
 
         {/* Description */}
         {movie.overview ? (
-          <p className="mt-6 w-full text-left text-sm leading-relaxed text-[#FAFAFA]" style={{ fontFamily: '"Open Sans", Arial, sans-serif' }}>
+          <p className="mt-2 w-full text-left text-sm leading-relaxed text-[#FAFAFA]" style={{ fontFamily: '"Open Sans", Arial, sans-serif' }}>
             {movie.overview}
           </p>
         ) : null}
