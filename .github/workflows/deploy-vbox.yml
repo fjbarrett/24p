@@ -14,10 +14,10 @@ jobs:
     name: Deploy to VBox
     runs-on: [self-hosted, linux, x64, 24p-vbox]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
