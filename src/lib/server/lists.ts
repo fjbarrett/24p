@@ -607,7 +607,7 @@ export async function importListForUser(title: string, raw: string, userEmail: s
     throw new Error("Title and data are required");
   }
 
-  const entries = parseImportedTitles(raw);
+  const entries = parseImportedTitles(raw).slice(0, 500);
   if (!entries.length) {
     throw new Error("No movies could be parsed from the import data");
   }

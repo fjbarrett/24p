@@ -18,7 +18,7 @@ export async function GET(
   }
   try {
     return NextResponse.json(await fetchTmdbPersonWithFilmography(personId));
-  } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Unable to load artist", 500);
+  } catch {
+    return errorResponse("Unable to load artist", 500);
   }
 }

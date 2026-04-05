@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Script from "next/script";
+import { headers } from "next/headers";
 import { AuthProvider } from "@/components/providers/session-provider";
 import { getAppUrl } from "@/lib/app-url";
 import { ScrollRestoration } from "@/components/scroll-restoration";
@@ -72,11 +73,12 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="en">
       <body
@@ -86,10 +88,11 @@ export default function RootLayout({
         {shouldEnableAnalytics ? (
           <>
             <Script
+              nonce={nonce}
               src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsMeasurementId}`}
               strategy="afterInteractive"
             />
-            <Script id="google-analytics" strategy="afterInteractive">
+            <Script id="google-analytics" nonce={nonce} strategy="afterInteractive">
               {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());

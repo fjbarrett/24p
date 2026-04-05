@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   }
   try {
     return NextResponse.json(await searchTmdb(query));
-  } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Unable to search TMDB", 500);
+  } catch {
+    return errorResponse("Unable to search TMDB", 500);
   }
 }
