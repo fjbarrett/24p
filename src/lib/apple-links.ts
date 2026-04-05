@@ -31,7 +31,10 @@ export async function fetchAppleTvLink(
   url.searchParams.set("title", title);
 
   try {
-    const response = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+    const response = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
     if (!response.ok) {
       return { url: null, price: null };
     }

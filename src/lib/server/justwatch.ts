@@ -74,6 +74,7 @@ export async function fetchJustWatchLinks(
         variables: { q: title, country: locale, lang: "en" },
       }),
       next: { revalidate: 60 * 60 * 6 },
+      signal: AbortSignal.timeout(5000),
     });
 
     if (!response.ok) return {};

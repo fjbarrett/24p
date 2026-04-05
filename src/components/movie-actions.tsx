@@ -29,6 +29,9 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title, releaseYear }: 
     if (!userEmail) return;
     let active = true;
 
+    // Safety net: always reveal within 7s regardless of slow/hung API calls
+    const safetyTimer = setTimeout(() => { if (active) setRevealed(true); }, 7000);
+
     // Fetch streaming providers + direct JustWatch links in parallel
     const providersFetch = fetch(`/api/watch-providers?tmdbId=${tmdbId}`)
       .then((r) => r.ok ? r.json() : null)
@@ -61,7 +64,7 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title, releaseYear }: 
       void Promise.all([providersFetch, linksFetch]);
     }
 
-    return () => { active = false; };
+    return () => { active = false; clearTimeout(safetyTimer); };
   }, [tmdbId, userEmail, imdbId, title, releaseYear]);
 
   const slotVisible = !listExpanded;
