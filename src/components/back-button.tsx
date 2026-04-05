@@ -1,6 +1,7 @@
 "use client";
 
 import type { MouseEvent, ReactNode } from "react";
+import { useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
 type BackButtonProps = {
@@ -10,8 +11,17 @@ type BackButtonProps = {
   children: ReactNode;
 };
 
+const subscribe = () => () => {};
+
 export function BackButton({ fallbackHref, className, ariaLabel, children }: BackButtonProps) {
   const router = useRouter();
+  const hasHistory = useSyncExternalStore(
+    subscribe,
+    () => window.history.length > 1,
+    () => false,
+  );
+
+  if (!hasHistory) return null;
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.defaultPrevented) return;
@@ -19,12 +29,7 @@ export function BackButton({ fallbackHref, className, ariaLabel, children }: Bac
     if (event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) return;
 
     event.preventDefault();
-
-    if (window.history.length > 1) {
-      router.back();
-    } else {
-      router.push(fallbackHref);
-    }
+    router.back();
   };
 
   return (
