@@ -2,7 +2,6 @@
 
 | Date | Agent | Action |
 |------|-------|--------|
-| 2026-04-04 | Codex | Temporarily slowed Apple TV CTA bubble-in timing to make the transition easier to inspect |
 | 2026-04-04 | Codex | Removed public directory gallery from the signed-out homepage view |
 | 2026-04-04 | Codex | Removed Favorites section from the signed-in homepage pending redesign |
 | 2026-04-04 | Codex | Removed the Your Lists label and allowed titleless list galleries on the homepage |
@@ -22,3 +21,4 @@
 | 2026-04-05 | Codex | Expanded watch providers to fill the action row and fade out AddToList while open |
 | 2026-04-05 | Codex | Reverted watch-row takeover and restored the working side-by-side action layout |
 | 2026-04-05 | Codex | Hid the public-list back button for signed-out viewers so direct links no longer dead-end |
+| 2026-04-05 | Codex | Added outside-tap search dismissal and tightened watch/list-detail export UI behavior |

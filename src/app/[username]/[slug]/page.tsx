@@ -91,29 +91,29 @@ export default async function ListDetail({
       <article className="mx-auto w-full max-w-[900px] space-y-6 rounded-[28px] bg-black-900/70 p-4 shadow-2xl backdrop-blur sm:p-6 lg:p-8 mt-3">
         <div className="relative overflow-hidden rounded-[28px] bg-black-950">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black-900/60 via-black-950/70 to-black-950" />
-          <div className="relative z-10 space-y-4 px-5 pb-0 pt-6 text-center sm:px-6 sm:pt-7">
-            <h1 className="text-4xl font-semibold leading-tight text-white sm:text-5xl">{list.title}</h1>
-            <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-black-400 mb-2">
+          <div className="relative z-10 space-y-3 px-5 pb-0 pt-6 text-center sm:px-6 sm:pt-7">
+            <h1 className="text-4xl font-semibold leading-[1.05] text-white sm:text-5xl">{list.title}</h1>
+            <div className="mb-1 flex flex-wrap items-center justify-center gap-1.5 text-sm text-black-400">
               {ownerIsPublic ? (
                 <Link
                   href={`/${encodeURIComponent(ownerUsername)}`}
-                  className="inline-flex items-center rounded-full bg-black-900 px-3 py-1.5 font-medium text-black-200 hover:text-white"
+                  className="inline-flex items-center rounded-full bg-black-900 px-2.5 py-1 font-medium text-black-200 hover:text-white"
                 >
                   @{ownerUsername}
                 </Link>
               ) : (
-                <span className="inline-flex items-center rounded-full bg-black-900 px-3 py-1.5 font-medium text-black-200">
+                <span className="inline-flex items-center rounded-full bg-black-900 px-2.5 py-1 font-medium text-black-200">
                   @{ownerUsername}
                 </span>
               )}
-              <span className="inline-flex items-center rounded-full bg-black-900 px-3 py-1.5 font-medium text-black-100">
+              <span className="inline-flex items-center rounded-full bg-black-900 px-2.5 py-1 font-medium text-black-100">
                 {list.movies.length} {list.movies.length === 1 ? "film" : "films"}
               </span>
-              <span className="inline-flex items-center rounded-full bg-black-900 px-3 py-1.5 font-medium text-black-200">
+              <span className="inline-flex items-center rounded-full bg-black-900 px-2.5 py-1 font-medium text-black-200">
                 {list.visibility === "public" ? "Public list" : "Private list"}
               </span>
               {list.canEdit && viewerEmail && viewerEmail !== list.userEmail ? (
-                <span className="inline-flex items-center rounded-full bg-black-900 px-3 py-1.5 font-medium text-black-200">
+                <span className="inline-flex items-center rounded-full bg-black-900 px-2.5 py-1 font-medium text-black-200">
                   Shared with you
                 </span>
               ) : null}

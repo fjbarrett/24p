@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Upload } from "lucide-react";
+import { Download } from "lucide-react";
 import { rustApiFetch } from "@/lib/rust-api-client";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 
@@ -102,9 +102,9 @@ export function ListExportButton({ tmdbIds, ratingsMap, listSlug, listTitle }: L
       disabled={isExporting || !tmdbIds.length}
       aria-label="Export CSV"
       title="Export CSV"
-      className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black transition hover:brightness-95 active:brightness-90 disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white transition hover:bg-black-800 active:bg-black-900 disabled:cursor-not-allowed disabled:opacity-50"
     >
-      <Upload className={`h-4 w-4 ${isExporting ? "animate-pulse" : ""}`} strokeWidth={2.25} />
+      <Download className={`h-4 w-4 ${isExporting ? "animate-pulse" : ""}`} strokeWidth={2.25} />
     </button>
   );
 }
