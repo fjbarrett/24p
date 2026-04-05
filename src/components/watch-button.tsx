@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { STREAMING_ICONS, iconForeground } from "@/lib/streaming-icons";
 
 type Provider = {
   id: number;
@@ -15,14 +16,51 @@ type WatchButtonProps = {
   justWatchLink: string | null;
 };
 
+function ProviderIcon({ provider, href }: { provider: Provider; href: string | null }) {
+  const icon = STREAMING_ICONS[provider.id];
+
+  if (icon) {
+    const fg = iconForeground(icon.hex);
+    return (
+      <a
+        href={href ?? undefined}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`Watch on ${provider.name}`}
+        title={provider.name}
+        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md transition-opacity hover:opacity-75"
+        style={{ backgroundColor: `#${icon.hex}` }}
+      >
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" style={{ fill: fg }}>
+          <path d={icon.path} />
+        </svg>
+      </a>
+    );
+  }
+
+  // Fallback: TMDB image at w92 for better sharpness
+  const hiResUrl = provider.logoUrl.replace("/w45/", "/w92/");
+  return (
+    <a
+      href={href ?? undefined}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={`Watch on ${provider.name}`}
+      title={provider.name}
+      className="h-6 w-6 flex-shrink-0 overflow-hidden rounded-md transition-opacity hover:opacity-75"
+    >
+      <Image src={hiResUrl} alt={provider.name} width={24} height={24} className="h-6 w-6 object-cover" unoptimized />
+    </a>
+  );
+}
+
 export function WatchButton({ appleTvUrl, providers, justWatchLink }: WatchButtonProps) {
   const [expanded, setExpanded] = useState(false);
 
   const totalItems = providers.length + (appleTvUrl ? 1 : 0);
   if (totalItems === 0) return <div className="h-11 w-11" />;
 
-  // 8px left pad + 28px close + 8px gap + each item 32px + 8px gap + 8px right pad
-  const expandedWidth = 8 + 28 + 8 + totalItems * 40 + 8;
+  const expandedWidth = 8 + 28 + 8 + totalItems * 32 + 8;
 
   return (
     <div
@@ -57,17 +95,7 @@ export function WatchButton({ appleTvUrl, providers, justWatchLink }: WatchButto
         </button>
 
         {providers.map((provider) => (
-          <a
-            key={provider.id}
-            href={justWatchLink ?? undefined}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={`Watch on ${provider.name}`}
-            title={provider.name}
-            className="h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg transition-opacity hover:opacity-75"
-          >
-            <Image src={provider.logoUrl} alt={provider.name} width={32} height={32} className="h-8 w-8 object-cover" unoptimized />
-          </a>
+          <ProviderIcon key={provider.id} provider={provider} href={justWatchLink} />
         ))}
 
         {appleTvUrl && (
@@ -77,9 +105,9 @@ export function WatchButton({ appleTvUrl, providers, justWatchLink }: WatchButto
             rel="noreferrer"
             aria-label="Watch on Apple TV"
             title="Apple TV"
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-black transition-opacity hover:opacity-75"
+            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-black transition-opacity hover:opacity-75"
           >
-            <svg viewBox="0 0 24 24" className="h-[14px] w-[14px] fill-white" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-white" xmlns="http://www.w3.org/2000/svg">
               <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
             </svg>
           </a>
