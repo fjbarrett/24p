@@ -32,6 +32,16 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
     setTitle("List title");
   }
 
+  function handleClearOrCollapse() {
+    if (!title.trim()) {
+      collapse();
+      return;
+    }
+
+    setTitle("");
+    setError(null);
+  }
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     startTransition(async () => {
@@ -88,9 +98,9 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
           />
           <button
             type="button"
-            onClick={() => setTitle("")}
+            onClick={handleClearOrCollapse}
             className="shrink-0 px-1 text-base text-black/40 transition hover:text-black"
-            aria-label="Clear list title"
+            aria-label={title.trim() ? "Clear list title" : "Dismiss new list dialog"}
           >
             ✕
           </button>

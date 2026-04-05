@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { SimplifiedArtist, SimplifiedMovie } from "@/lib/tmdb";
 import { rustApiFetch } from "@/lib/rust-api-client";
 import { addMovieToList, type SavedList } from "@/lib/list-store";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 
 type TmdbSearchBarProps = {
   lists: SavedList[];
@@ -130,6 +130,16 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
     }
   }
 
+  function clearSearch() {
+    setQuery("");
+    setResults([]);
+    setArtists([]);
+    setError(null);
+    setPanelDismissed(false);
+    setActiveMovieId(null);
+    inputRef.current?.focus();
+  }
+
   return (
     <div ref={containerRef} className="relative w-full sm:w-auto sticky top-3 z-50 mx-auto" role="search" aria-label="Movie search">
       <div className="flex items-center justify-center gap-2">
@@ -150,8 +160,18 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
             aria-label="Search movies"
             aria-controls={resultsId}
             aria-describedby={error ? errorId : undefined}
-            className="w-full flex-1 bg-transparent text-lg text-black-100 placeholder:text-black-400 focus:outline-none"
+            className="w-full flex-1 bg-transparent pr-3 text-lg text-black-100 placeholder:text-black-400 focus:outline-none"
           />
+          {query ? (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label="Clear search"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/55 transition hover:text-white"
+            >
+              <X className="h-4 w-4" strokeWidth={2.25} />
+            </button>
+          ) : null}
         </div>
         {isSearching && <span className="text-xs text-black-500">Searching...</span>}
       </div>
