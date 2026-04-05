@@ -16,6 +16,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Replaced list-card accent lines with poster mosaics and refined the list detail edit affordance into a lighter icon plus dialog flow.
 - Collapsed the backend architecture into the Next app, updated deployment/docs accordingly, and restored IMDb rating enrichment through the server TMDB helper.
 - Tightened detail-view alignment, improved list edit dialog behavior on mobile, and adjusted homepage/list-detail presentation polish.
+- Hardened site-wide response headers and kept no-index environments from publishing sitemap entries.
 ### Fixed
 
 ## [0.1.0] - YYYY-MM-DD
