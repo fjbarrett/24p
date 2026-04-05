@@ -67,6 +67,28 @@ function getBrandOverride(href: string | null): Pick<DisplayProvider, "icon" | "
   return null;
 }
 
+function isAmazonUrl(href: string | null): boolean {
+  if (!href) return false;
+
+  try {
+    const hostname = new URL(href).hostname.toLowerCase();
+    return hostname.includes("primevideo.") || hostname.includes("amazon.") || hostname.includes("amzn.to");
+  } catch {
+    return false;
+  }
+}
+
+function isAmazonProvider(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return normalized.includes("amazon") || normalized.includes("prime video");
+}
+
+function dedupeProviderKey(href: string | null, providerName: string, providerId: number): string {
+  if (!href) return `provider:${providerId}`;
+  if (isAmazonUrl(href)) return "provider:amazon";
+  return normalizeHref(href);
+}
+
 function buildDisplayProviders(
   providers: Provider[],
   justWatchLink: string | null,
@@ -77,8 +99,14 @@ function buildDisplayProviders(
   return providers.flatMap((provider) => {
     const directUrl = directUrls[provider.id] ?? null;
     const href = directUrl ?? justWatchLink;
+
+    // Drop Amazon channel marketplace links for non-Amazon providers.
+    if (isAmazonUrl(directUrl) && !isAmazonProvider(provider.name)) {
+      return [];
+    }
+
     const override = getBrandOverride(directUrl);
-    const dedupeKey = directUrl ? normalizeHref(directUrl) : `provider:${provider.id}`;
+    const dedupeKey = dedupeProviderKey(href, provider.name, provider.id);
 
     if (seen.has(dedupeKey)) return [];
     seen.add(dedupeKey);

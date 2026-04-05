@@ -17,6 +17,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SimplifiedMovie[]>([]);
   const [artists, setArtists] = useState<SimplifiedArtist[]>([]);
+  const [panelDismissed, setPanelDismissed] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeMovieId, setActiveMovieId] = useState<number | null>(null);
@@ -26,6 +27,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
   const errorId = useId();
   const panelId = useId();
   const resultsId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const normalizedEmail = userEmail.trim().toLowerCase();
   useEffect(() => {
@@ -39,6 +41,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
     if (trimmed.length < 2) {
       setResults([]);
       setArtists([]);
+      setPanelDismissed(false);
       setError(null);
       setIsSearching(false);
       return;
@@ -80,10 +83,27 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
     };
   }, [query]);
 
+  useEffect(() => {
+    if (panelDismissed) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (containerRef.current?.contains(target)) return;
+      setPanelDismissed(true);
+      setActiveMovieId(null);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [panelDismissed]);
+
   const displayResults = results.filter((movie) => Boolean(movie.posterUrl));
   const displayArtists = artists.filter((artist) => artist.name);
 
-  const showResultsPanel = query.trim().length >= 2 || isSearching || !!error;
+  const showResultsPanel = !panelDismissed && (query.trim().length >= 2 || isSearching || !!error);
 
   const noLists = !lists.length;
 
@@ -111,7 +131,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
   }
 
   return (
-    <div className="relative w-full sm:w-auto sticky top-3 z-50 mx-auto" role="search" aria-label="Movie search">
+    <div ref={containerRef} className="relative w-full sm:w-auto sticky top-3 z-50 mx-auto" role="search" aria-label="Movie search">
       <div className="flex items-center justify-center gap-2">
         <div className="relative flex w-full max-w-[480px] items-center gap-3 overflow-hidden rounded-3xl bg-black-950/70 px-4 py-3 shadow-inner transition">
           <span className="flex items-center justify-center rounded-full p-2 text-white" aria-hidden>
@@ -120,7 +140,11 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
           <input
             ref={inputRef}
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setPanelDismissed(false);
+              setQuery(event.target.value);
+            }}
+            onFocus={() => setPanelDismissed(false)}
             type="search"
             placeholder="Search"
             aria-label="Search movies"
