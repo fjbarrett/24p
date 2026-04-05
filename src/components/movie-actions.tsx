@@ -67,7 +67,8 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title, releaseYear }: 
     return () => { active = false; clearTimeout(safetyTimer); };
   }, [tmdbId, userEmail, imdbId, title, releaseYear]);
 
-  const slotVisible = !listExpanded;
+  const hasWatchContent = providers.items.length > 0 || !!appleTvUrl;
+  const slotVisible = !listExpanded && hasWatchContent;
 
   return (
     <div
