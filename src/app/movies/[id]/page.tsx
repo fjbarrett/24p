@@ -132,7 +132,7 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
 
         {/* Action buttons */}
         {(userEmail || movie.imdbId) ? (
-          <MovieActions tmdbId={movie.tmdbId} userEmail={userEmail} imdbId={movie.imdbId} title={movie.title} />
+          <MovieActions tmdbId={movie.tmdbId} userEmail={userEmail} imdbId={movie.imdbId} title={movie.title} releaseYear={movie.releaseYear} />
         ) : null}
       </div>
       </div>

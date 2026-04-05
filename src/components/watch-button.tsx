@@ -14,6 +14,7 @@ type WatchButtonProps = {
   appleTvUrl?: string | null;
   providers: Provider[];
   justWatchLink: string | null;
+  directUrls?: Record<number, string>;
 };
 
 function ProviderIcon({ provider, href }: { provider: Provider; href: string | null }) {
@@ -54,7 +55,7 @@ function ProviderIcon({ provider, href }: { provider: Provider; href: string | n
   );
 }
 
-export function WatchButton({ appleTvUrl, providers, justWatchLink }: WatchButtonProps) {
+export function WatchButton({ appleTvUrl, providers, justWatchLink, directUrls = {} }: WatchButtonProps) {
   const [expanded, setExpanded] = useState(false);
 
   const totalItems = providers.length + (appleTvUrl ? 1 : 0);
@@ -95,7 +96,7 @@ export function WatchButton({ appleTvUrl, providers, justWatchLink }: WatchButto
         </button>
 
         {providers.map((provider) => (
-          <ProviderIcon key={provider.id} provider={provider} href={justWatchLink} />
+          <ProviderIcon key={provider.id} provider={provider} href={directUrls[provider.id] ?? justWatchLink} />
         ))}
 
         {appleTvUrl && (
