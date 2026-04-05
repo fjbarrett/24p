@@ -69,7 +69,21 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
   const [selectedListId, setSelectedListId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [inList, setInList] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    let active = true;
+    loadLists(userEmail)
+      .then((data) => {
+        if (!active) return;
+        setLists(data);
+        setSelectedListId(data[0]?.id ?? "");
+        setInList(data.some((list) => list.movies.includes(tmdbId)));
+      })
+      .catch(() => {/* silently ignore — icon defaults to + */});
+    return () => { active = false; };
+  }, [userEmail, tmdbId]);
 
   function handleExpand() {
     setExpanded(true);
@@ -98,6 +112,7 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
           method: "POST",
           body: JSON.stringify({ tmdbId }),
         });
+        setInList(true);
         collapse();
         router.refresh();
       } catch (err) {
@@ -115,15 +130,15 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
           className="relative h-11 overflow-hidden rounded-full bg-white transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
           style={{ width: expanded ? '270px' : '44px', willChange: 'width', transform: 'translateZ(0)' }}
         >
-          {/* + icon — fades out instantly on expand, fades in late on collapse */}
+          {/* + / ✓ icon — fades out instantly on expand, fades in late on collapse */}
           <button
             type="button"
             onClick={handleExpand}
-            aria-label="Add to list"
+            aria-label={inList ? "In a list" : "Add to list"}
             className="absolute inset-0 flex items-center justify-center text-xl font-light text-black transition-opacity duration-150"
             style={{ opacity: expanded ? 0 : 1, transitionDelay: expanded ? '0ms' : '200ms', pointerEvents: expanded ? 'none' : 'auto' }}
           >
-            +
+            {inList ? "✓" : "+"}
           </button>
 
           {/* Expanded content — fades in after pill opens, fades out instantly on collapse */}
