@@ -43,6 +43,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose file to production
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "docker-compose.yml"
+          target: /opt/24p/
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -53,5 +64,5 @@ jobs:
             cd /opt/24p
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
-            docker compose up -d
+            docker compose up -d --remove-orphans
             docker system prune -f
