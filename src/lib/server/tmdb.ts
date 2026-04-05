@@ -278,6 +278,58 @@ export async function fetchTmdbMovies(tmdbIds: number[]) {
   return results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
 }
 
+type WatchProvider = {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string;
+  display_priority: number;
+};
+
+type WatchProvidersResponse = {
+  results?: Record<string, {
+    link?: string;
+    flatrate?: WatchProvider[];
+  }>;
+};
+
+export type StreamingProvider = {
+  id: number;
+  name: string;
+  logoUrl: string;
+  displayPriority: number;
+};
+
+export type WatchProviders = {
+  providers: StreamingProvider[];
+  justWatchLink: string | null;
+};
+
+const APPLE_TV_PLUS_ID = 350;
+const TMDB_LOGO_BASE = "https://image.tmdb.org/t/p/w45";
+
+export async function fetchWatchProviders(tmdbId: number, locale = "US"): Promise<WatchProviders> {
+  try {
+    const data = await tmdbFetch<WatchProvidersResponse>(`/movie/${tmdbId}/watch/providers`);
+    const region = data.results?.[locale];
+    if (!region) return { providers: [], justWatchLink: null };
+
+    const providers = (region.flatrate ?? [])
+      .filter((p) => p.provider_id !== APPLE_TV_PLUS_ID)
+      .sort((a, b) => a.display_priority - b.display_priority)
+      .slice(0, 6)
+      .map((p) => ({
+        id: p.provider_id,
+        name: p.provider_name,
+        logoUrl: `${TMDB_LOGO_BASE}${p.logo_path}`,
+        displayPriority: p.display_priority,
+      }));
+
+    return { providers, justWatchLink: region.link ?? null };
+  } catch {
+    return { providers: [], justWatchLink: null };
+  }
+}
+
 export async function findTmdbMovieId(title: string, year?: string | null) {
   const response = await tmdbFetch<{ results?: TmdbMovie[] }>("/search/movie", {
     query: title,

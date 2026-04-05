@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AddToListButton } from "@/components/add-to-list-loader";
 import { AppleTvLink } from "@/components/apple-tv-link";
+import { WatchProviders } from "@/components/watch-providers";
 
 type MovieActionsProps = {
   tmdbId: number;
@@ -47,6 +48,11 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title }: MovieActionsP
           ) : null
         }
       />
+      {userEmail && (
+        <div className="mt-5">
+          <WatchProviders tmdbId={tmdbId} />
+        </div>
+      )}
     </div>
   );
 }
