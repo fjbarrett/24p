@@ -2,10 +2,6 @@
 
 | Date | Agent | Action |
 |------|-------|--------|
-| 2026-04-04 | Codex | Added Next-only GitHub Actions workflows, VBox bootstrap scripts, hardened the VBox host, and installed a self-hosted runner |
-| 2026-04-04 | Codex | Collapsed the Rust API boundary into Next route handlers and server-side Postgres/TMDB modules; Docker and docs now target a single web service |
-| 2026-04-04 | Codex | Softened MovieDetailView Apple TV CTA appearance with fade-scale mount animation |
-| 2026-04-04 | Codex | Slowed Apple TV CTA fade-scale mount animation for a softer detail-view appearance |
 | 2026-04-04 | Codex | Reserved Apple TV CTA slot width during async load to prevent add-button layout jump |
 | 2026-04-04 | Codex | Matched Apple TV CTA entrance to add-button bubble-in transition while preserving slot width |
 | 2026-04-04 | Codex | Added slight delayed start to Apple TV CTA bubble-in so detail actions settle first |
@@ -25,3 +21,4 @@
 | 2026-04-04 | Codex | Treated missing public profiles as nullable so list detail no longer crashes in development |
 | 2026-04-04 | Codex | Replaced list-card accent lines with poster mosaics and moved owner edit into a lighter icon-triggered dialog |
 | 2026-04-05 | Codex | Show ✓ instead of + on AddToListButton when the movie is already in any of the user's lists |
+| 2026-04-05 | Codex | Deduplicated watch-button destinations and show Amazon branding for Amazon-bound links |
