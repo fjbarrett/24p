@@ -164,7 +164,7 @@ export function WatchButton({ appleTvUrl, providers, justWatchLink, directUrls =
   const displayProviders = buildDisplayProviders(providers, justWatchLink, directUrls);
 
   const totalItems = displayProviders.length + (appleTvUrl ? 1 : 0);
-  if (totalItems === 0) return <div className="h-11 w-11" />;
+  if (totalItems === 0) return null;
 
   const expandedWidth = 8 + 28 + 8 + totalItems * 32 + 8;
 
