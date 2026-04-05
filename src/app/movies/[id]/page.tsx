@@ -122,16 +122,16 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
           </p>
         ) : null}
 
+        {/* Description */}
+        {movie.overview ? (
+          <p className="mt-7 w-full text-left text-sm leading-relaxed text-[#FAFAFA]" style={{ fontFamily: '"Open Sans", Arial, sans-serif' }}>
+            {movie.overview}
+          </p>
+        ) : null}
+
         {/* Action buttons */}
         {(userEmail || movie.imdbId) ? (
           <MovieActions tmdbId={movie.tmdbId} userEmail={userEmail} imdbId={movie.imdbId} title={movie.title} />
-        ) : null}
-
-        {/* Description */}
-        {movie.overview ? (
-          <p className="mt-6 w-full text-left text-sm leading-relaxed text-[#FAFAFA]" style={{ fontFamily: '"Open Sans", Arial, sans-serif' }}>
-            {movie.overview}
-          </p>
         ) : null}
       </div>
       </div>

@@ -35,7 +35,7 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title }: MovieActionsP
                 transform: listExpanded ? 'scale(0.9)' : 'scale(1)',
                 pointerEvents: listExpanded ? 'none' : 'auto',
                 overflow: 'hidden',
-                maxWidth: listExpanded ? '0px' : '116px',
+                maxWidth: listExpanded ? '0px' : '120px',
                 marginLeft: '8px',
                 transition: listExpanded
                   ? 'opacity 150ms ease-in, transform 150ms ease-in, max-width 300ms cubic-bezier(0.4,0,0.2,1), margin-left 300ms cubic-bezier(0.4,0,0.2,1)'
