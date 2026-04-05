@@ -18,6 +18,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Tightened detail-view alignment, improved list edit dialog behavior on mobile, and adjusted homepage/list-detail presentation polish.
 - Hardened site-wide response headers and kept no-index environments from publishing sitemap entries.
 ### Fixed
+- Swapped middleware nonce generation to an Edge-safe Web Crypto path so deployed hosts no longer crash on every request.
 
 ## [0.1.0] - YYYY-MM-DD
 ### Added
