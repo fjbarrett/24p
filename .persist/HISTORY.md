@@ -2,7 +2,6 @@
 
 | Date | Agent | Action |
 |------|-------|--------|
-| 2026-04-04 | Codex | Matched Apple TV CTA entrance to add-button bubble-in transition while preserving slot width |
 | 2026-04-04 | Codex | Added slight delayed start to Apple TV CTA bubble-in so detail actions settle first |
 | 2026-04-04 | Codex | Temporarily slowed Apple TV CTA bubble-in timing to make the transition easier to inspect |
 | 2026-04-04 | Codex | Removed public directory gallery from the signed-out homepage view |
@@ -22,3 +21,4 @@
 | 2026-04-05 | Codex | Show ✓ instead of + on AddToListButton when the movie is already in any of the user's lists |
 | 2026-04-05 | Codex | Deduplicated watch-button destinations and show Amazon branding for Amazon-bound links |
 | 2026-04-05 | Codex | Expanded watch providers to fill the action row and fade out AddToList while open |
+| 2026-04-05 | Codex | Reverted watch-row takeover and restored the working side-by-side action layout |

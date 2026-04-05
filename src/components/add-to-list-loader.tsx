@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { MovieListActions } from "@/components/movie-list-actions";
 import { loadLists, type SavedList } from "@/lib/list-store";
 import { rustApiFetch } from "@/lib/rust-api-client";
@@ -59,10 +59,10 @@ export function AddToListLoader({ tmdbId, userEmail }: AddToListLoaderProps) {
 
 type AddToListButtonProps = AddToListLoaderProps & {
   onExpandChange?: (expanded: boolean) => void;
-  hidden?: boolean;
+  appleTvSlot?: ReactNode;
 };
 
-export function AddToListButton({ tmdbId, userEmail, onExpandChange, hidden = false }: AddToListButtonProps) {
+export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot }: AddToListButtonProps) {
   const [expanded, setExpanded] = useState(false);
   const [lists, setLists] = useState<SavedList[]>([]);
   const [loadingLists, setLoadingLists] = useState(false);
@@ -123,15 +123,7 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, hidden = fa
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div
-        className="overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-        style={{
-          width: hidden ? "0px" : expanded ? "270px" : "44px",
-          opacity: hidden ? 0 : 1,
-          transform: hidden ? "scale(0.92)" : "scale(1)",
-          pointerEvents: hidden ? "none" : "auto",
-        }}
-      >
+      <div className="flex items-center justify-center">
         <form
           onSubmit={handleAdd}
           className="relative h-11 overflow-hidden rounded-full bg-white transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
@@ -187,6 +179,8 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, hidden = fa
             </button>
           </div>
         </form>
+
+        {appleTvSlot}
       </div>
 
       {message ? <p className="text-xs text-neutral-400">{message}</p> : null}
