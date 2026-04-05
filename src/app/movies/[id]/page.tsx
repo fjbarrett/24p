@@ -2,6 +2,7 @@ import Image from "next/image";
 import { fetchTmdbMovie } from "@/lib/tmdb-server";
 import { MovieActions } from "@/components/movie-actions";
 import { BackButton } from "@/components/back-button";
+import { DescriptionExpander } from "@/components/description-expander";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -83,30 +84,29 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
       </div>
 
       {/* Main content */}
-      <div className="flex flex-1 items-center justify-center">
-      <div className="flex w-full max-w-sm flex-col items-center px-[51px] py-8">
+      <div className="mx-auto flex w-full max-w-sm flex-col items-center px-[51px] pt-4 pb-8">
         {/* Poster */}
         {movie.posterUrl ? (
           <Image
             src={getLargePoster(movie.posterUrl)}
             alt={`${movie.title} poster`}
-            width={230}
-            height={340}
+            width={200}
+            height={296}
             className="rounded-xl object-cover shadow-lg"
             priority
           />
         ) : (
-          <div className="flex h-[340px] w-[230px] items-center justify-center rounded-xl bg-neutral-800 text-sm text-neutral-500">
+          <div className="flex h-[296px] w-[200px] items-center justify-center rounded-xl bg-neutral-800 text-sm text-neutral-500">
             No art
           </div>
         )}
 
         {/* Title */}
-        <h1 className="mt-5 text-center text-2xl text-white">{movie.title}</h1>
+        <h1 className="mt-3 text-center text-2xl text-white">{movie.title}</h1>
 
         {/* Year · Rating */}
         {(typeof movie.releaseYear === "number" || typeof movie.imdbRating === "number") ? (
-          <p className="mt-2 flex items-center gap-1.5 text-sm text-[#B3B3B3]">
+          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-[#B3B3B3]">
             {typeof movie.releaseYear === "number" ? <span>{movie.releaseYear}</span> : null}
             {typeof movie.imdbRating === "number" && movie.imdbId ? (
               <a
@@ -124,16 +124,15 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
 
         {/* Description */}
         {movie.overview ? (
-          <p className="mt-7 w-full text-left text-sm leading-relaxed text-[#FAFAFA]" style={{ fontFamily: '"Open Sans", Arial, sans-serif' }}>
-            {movie.overview}
-          </p>
+          <div className="mt-4 w-full">
+            <DescriptionExpander text={movie.overview} />
+          </div>
         ) : null}
 
         {/* Action buttons */}
         {(userEmail || movie.imdbId) ? (
           <MovieActions tmdbId={movie.tmdbId} userEmail={userEmail} imdbId={movie.imdbId} title={movie.title} />
         ) : null}
-      </div>
       </div>
     </div>
   );
