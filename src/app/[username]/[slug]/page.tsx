@@ -77,12 +77,14 @@ export default async function ListDetail({
     <div className="min-h-screen text-black-100">
       <div className="mx-auto w-full max-w-[900px] px-6 pt-6 sm:px-8">
         <div className="flex items-center justify-between">
-          <BackButton
-            fallbackHref="/"
-            className="text-sm text-white/70 transition hover:text-white"
-          >
-            ← Back
-          </BackButton>
+          {viewerEmail ? (
+            <BackButton
+              fallbackHref="/"
+              className="text-sm text-white/70 transition hover:text-white"
+            >
+              ← Back
+            </BackButton>
+          ) : <div />}
           {canFavorite && <FavoriteToggle listId={list.id} userEmail={viewerEmail} initialFavorite={isFavorite} />}
         </div>
       </div>
