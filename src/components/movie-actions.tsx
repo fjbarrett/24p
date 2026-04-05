@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import { AddToListButton } from "@/components/add-to-list-loader";
 import { AppleTvLink } from "@/components/apple-tv-link";
-import { WatchProviders } from "@/components/watch-providers";
+
+type StreamingProvider = {
+  id: number;
+  name: string;
+  logoUrl: string;
+};
 
 type MovieActionsProps = {
   tmdbId: number;
@@ -15,6 +21,24 @@ type MovieActionsProps = {
 export function MovieActions({ tmdbId, userEmail, imdbId, title }: MovieActionsProps) {
   const [listExpanded, setListExpanded] = useState(false);
   const [revealed, setRevealed] = useState(!imdbId);
+  const [providers, setProviders] = useState<{ items: StreamingProvider[]; link: string | null }>({ items: [], link: null });
+
+  useEffect(() => {
+    if (!userEmail) return;
+    let active = true;
+    fetch(`/api/watch-providers?tmdbId=${tmdbId}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (active && data?.providers?.length) {
+          setProviders({ items: data.providers, link: data.justWatchLink });
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [tmdbId, userEmail]);
+
+  const slotVisible = !listExpanded;
+  const hasSlot = imdbId || providers.items.length > 0;
 
   return (
     <div
@@ -29,30 +53,48 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title }: MovieActionsP
         userEmail={userEmail}
         onExpandChange={setListExpanded}
         appleTvSlot={
-          imdbId ? (
+          hasSlot ? (
             <div
+              className="flex items-center gap-2"
               style={{
-                opacity: listExpanded ? 0 : 1,
-                transform: listExpanded ? 'scale(0.9)' : 'scale(1)',
-                pointerEvents: listExpanded ? 'none' : 'auto',
+                opacity: slotVisible ? 1 : 0,
+                transform: slotVisible ? 'scale(1)' : 'scale(0.9)',
+                pointerEvents: slotVisible ? 'auto' : 'none',
                 overflow: 'hidden',
-                maxWidth: listExpanded ? '0px' : '120px',
-                marginLeft: '8px',
-                transition: listExpanded
+                maxWidth: slotVisible ? '400px' : '0px',
+                marginLeft: slotVisible ? '8px' : '0px',
+                transition: !slotVisible
                   ? 'opacity 150ms ease-in, transform 150ms ease-in, max-width 300ms cubic-bezier(0.4,0,0.2,1), margin-left 300ms cubic-bezier(0.4,0,0.2,1)'
                   : 'opacity 200ms ease-out 220ms, transform 200ms ease-out 220ms, max-width 300ms cubic-bezier(0.4,0,0.2,1)',
               }}
             >
-              <AppleTvLink imdbId={imdbId} title={title} onReveal={() => setRevealed(true)} />
+              {imdbId && (
+                <AppleTvLink imdbId={imdbId} title={title} onReveal={() => setRevealed(true)} />
+              )}
+              {providers.items.map((provider) => (
+                <a
+                  key={provider.id}
+                  href={providers.link ?? undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Watch on ${provider.name}`}
+                  title={provider.name}
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white"
+                >
+                  <Image
+                    src={provider.logoUrl}
+                    alt={provider.name}
+                    width={44}
+                    height={44}
+                    className="h-11 w-11 object-cover"
+                    unoptimized
+                  />
+                </a>
+              ))}
             </div>
           ) : null
         }
       />
-      {userEmail && (
-        <div className="mt-5">
-          <WatchProviders tmdbId={tmdbId} />
-        </div>
-      )}
     </div>
   );
 }
