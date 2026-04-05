@@ -17,7 +17,7 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title }: MovieActionsP
 
   return (
     <div
-      className="my-2"
+      className="mt-9"
       style={{
         opacity: revealed ? 1 : 0,
         transition: 'opacity 500ms ease-out',
