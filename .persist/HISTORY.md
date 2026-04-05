@@ -24,3 +24,4 @@
 | 2026-04-04 | Codex | Simplified the list detail layout, moved export below the movies section, and replaced its text with an icon |
 | 2026-04-04 | Codex | Treated missing public profiles as nullable so list detail no longer crashes in development |
 | 2026-04-04 | Codex | Replaced list-card accent lines with poster mosaics and moved owner edit into a lighter icon-triggered dialog |
+| 2026-04-05 | Codex | Show ✓ instead of + on AddToListButton when the movie is already in any of the user's lists |

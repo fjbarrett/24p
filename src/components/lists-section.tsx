@@ -16,6 +16,7 @@ export function ListsSection({ lists, userEmail }: ListsSectionProps) {
         lists={lists}
         title=""
         emptyMessage="No lists yet. Use the buttons below to create or import your first one."
+        viewerEmail={userEmail}
       />
       <CreateListButton userEmail={userEmail} />
     </div>
