@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { randomBytes } from "crypto";
 
 export function middleware(request: NextRequest) {
-  const nonce = randomBytes(16).toString("base64");
+  const nonce = crypto.randomUUID().replace(/-/g, "");
 
   const csp = [
     "default-src 'self'",
@@ -11,6 +10,9 @@ export function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://image.tmdb.org",
     "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
     "frame-ancestors 'none'",
   ].join("; ");
 

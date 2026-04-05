@@ -9,6 +9,10 @@ function absolute(path: string) {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  if (process.env.NEXT_PUBLIC_NO_INDEX === "true") {
+    return [];
+  }
+
   const entries: MetadataRoute.Sitemap = [
     {
       url: absolute("/"),
