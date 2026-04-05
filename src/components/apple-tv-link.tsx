@@ -58,12 +58,12 @@ export function AppleTvLink({ imdbId, title, onReveal }: AppleTvLinkProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div aria-hidden={!isVisible} className="h-10 flex-shrink-0">
+    <div aria-hidden={!isVisible} className="h-11 flex-shrink-0">
       {isVisible ? (
         <div
-          className="flex h-10 items-center justify-start overflow-hidden rounded-full bg-white active:brightness-90"
+          className="flex h-11 items-center justify-start overflow-hidden rounded-full bg-white active:brightness-90"
           style={{
-            width: expanded ? 116 : 40,
+            width: expanded ? 120 : 44,
             transition: 'width 300ms cubic-bezier(0.34,1.2,0.64,1)',
           }}
         >
@@ -72,7 +72,7 @@ export function AppleTvLink({ imdbId, title, onReveal }: AppleTvLinkProps) {
             type="button"
             aria-label={expanded ? "Collapse" : "Watch on Apple TV"}
             onClick={() => setExpanded((v) => !v)}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center"
           >
             <svg viewBox="0 0 20 20" className="h-[18px] w-[18px] flex-shrink-0 fill-black" xmlns="http://www.w3.org/2000/svg">
               <path d="M2 4.5A2.5 2.5 0 0 1 4.5 2h11A2.5 2.5 0 0 1 18 4.5v8a2.5 2.5 0 0 1-2.5 2.5H12l.5 1.5H14a.75.75 0 0 1 0 1.5H6a.75.75 0 0 1 0-1.5h1.5L8 15H4.5A2.5 2.5 0 0 1 2 12.5v-8ZM4.5 3.5A1 1 0 0 0 3.5 4.5v8a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-11Z" />
