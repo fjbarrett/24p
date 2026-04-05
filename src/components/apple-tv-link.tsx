@@ -58,7 +58,7 @@ export function AppleTvLink({ imdbId, title, onReveal }: AppleTvLinkProps) {
   const [hovered, setHovered] = useState(false);
 
   return (
-    <div aria-hidden={!isVisible} className="h-9 w-9 flex-shrink-0">
+    <div aria-hidden={!isVisible} className="h-9 flex-shrink-0">
       {isVisible ? (
         <a
           href={appleTvUrl}
