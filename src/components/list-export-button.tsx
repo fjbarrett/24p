@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download } from "lucide-react";
-import { rustApiFetch } from "@/lib/rust-api-client";
+import { apiFetch } from "@/lib/api-client";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 
 type ListExportButtonProps = {
@@ -26,7 +26,7 @@ export function ListExportButton({ tmdbIds, ratingsMap, listSlug, listTitle }: L
           if (cached) return cached;
 
           try {
-            const result = await rustApiFetch<{ detail: SimplifiedMovie }>(`/tmdb/movie/${tmdbId}?lite=true`);
+            const result = await apiFetch<{ detail: SimplifiedMovie }>(`/tmdb/movie/${tmdbId}?lite=true`);
             if (result?.detail) {
               writeCachedMovie(result.detail);
               return result.detail;

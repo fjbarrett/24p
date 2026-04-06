@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import type { SimplifiedArtist, SimplifiedMovie } from "@/lib/tmdb";
-import { rustApiFetch } from "@/lib/rust-api-client";
+import { apiFetch } from "@/lib/api-client";
 import { addMovieToList, type SavedList } from "@/lib/list-store";
 import { Plus, Search, X } from "lucide-react";
 
@@ -55,7 +55,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
       }, networkTimeoutMs);
       try {
         setIsSearching(true);
-        const payload = await rustApiFetch<{ results: SimplifiedMovie[]; artists?: SimplifiedArtist[] }>(
+        const payload = await apiFetch<{ results: SimplifiedMovie[]; artists?: SimplifiedArtist[] }>(
           `/tmdb/search?query=${encodeURIComponent(trimmed)}`,
           { signal: controller.signal },
         );

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { SavedList } from "@/lib/list-store";
-import { rustApiFetch } from "@/lib/rust-api-client";
+import { apiFetch } from "@/lib/api-client";
 
 type MovieListActionsProps = {
   lists: SavedList[];
@@ -35,7 +35,7 @@ export function MovieListActions({ lists, tmdbId, userEmail }: MovieListActionsP
     startTransition(async () => {
       try {
         setMessage(null);
-        await rustApiFetch(`/lists/${selectedListId}/items`, {
+        await apiFetch(`/lists/${selectedListId}/items`, {
           method: "POST",
           body: JSON.stringify({ tmdbId }),
         });

@@ -1,5 +1,5 @@
 import { normalizeListColor } from "@/lib/list-colors";
-import { rustApiFetch } from "@/lib/rust-api-client";
+import { apiFetch } from "@/lib/api-client";
 
 export type SavedList = {
   id: string;
@@ -108,7 +108,7 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
     }
   }
   try {
-    const data = await rustApiFetch<{ lists: ApiList[] }>(
+    const data = await apiFetch<{ lists: ApiList[] }>(
       `/lists?includeShared=true`,
     );
     const mapped = data.lists.map(mapApiList);
@@ -138,7 +138,7 @@ export async function addList(
     throw new Error("userEmail is required to create a list");
   }
   const normalizedColor = normalizeListColor(color);
-  const data = await rustApiFetch<{ list: ApiList }>("/lists", {
+  const data = await apiFetch<{ list: ApiList }>("/lists", {
     method: "POST",
     body: JSON.stringify({ title, movies: initialMovies, color: normalizedColor }),
   });
@@ -162,7 +162,7 @@ export async function addMovieToList(listId: string, tmdbId: number, userEmail: 
   if (!email) {
     throw new Error("userEmail is required to update a list");
   }
-  const data = await rustApiFetch<{ list: ApiList }>(`/lists/${listId}/items`, {
+  const data = await apiFetch<{ list: ApiList }>(`/lists/${listId}/items`, {
     method: "POST",
     body: JSON.stringify({ tmdbId }),
   });
@@ -184,7 +184,7 @@ export async function updateList(
   if (data.slug && data.slug.trim()) payload.slug = slugify(data.slug);
   if (data.color && data.color.trim()) payload.color = normalizeListColor(data.color);
   if (data.visibility) payload.visibility = data.visibility;
-  const result = await rustApiFetch<{ list: ApiList }>(`/lists/${listId}`, {
+  const result = await apiFetch<{ list: ApiList }>(`/lists/${listId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
@@ -201,7 +201,7 @@ export async function getListByUsernameSlug(
   const email = userEmail ? normalizeEmail(userEmail) : "";
   void email;
   try {
-    const data = await rustApiFetch<{ list: ApiList }>(
+    const data = await apiFetch<{ list: ApiList }>(
       `/lists/public/${encodeURIComponent(username)}/${encodeURIComponent(slug)}`,
     );
     const mapped = mapApiList(data.list);
@@ -219,7 +219,7 @@ export async function deleteList(listId: string, userEmail: string): Promise<voi
   if (!email) {
     throw new Error("userEmail is required to delete a list");
   }
-  await rustApiFetch<{ ok: boolean }>(`/lists/${listId}`, {
+  await apiFetch<{ ok: boolean }>(`/lists/${listId}`, {
     method: "DELETE",
   });
   if (typeof window !== "undefined") {
@@ -253,7 +253,7 @@ function cacheSingleList(email: string, updated: SavedList) {
 
 export async function loadPublicLists(limit = 24): Promise<SavedList[]> {
   try {
-    const data = await rustApiFetch<{ lists: ApiList[] }>(`/lists/public?limit=${limit}`);
+    const data = await apiFetch<{ lists: ApiList[] }>(`/lists/public?limit=${limit}`);
     return data.lists.map(mapApiList);
   } catch (error) {
     console.error("Failed to load public lists", error);
@@ -267,7 +267,7 @@ export async function loadPublicListsForUsername(username: string, limit = 24): 
     return [];
   }
   try {
-    const data = await rustApiFetch<{ lists: ApiList[] }>(
+    const data = await apiFetch<{ lists: ApiList[] }>(
       `/lists/public?limit=${limit}&username=${encodeURIComponent(normalized)}`,
     );
     return data.lists.map(mapApiList);
@@ -284,7 +284,7 @@ export async function loadFavorites(userEmail: string): Promise<SavedList[]> {
   }
   try {
     void email;
-    const data = await rustApiFetch<{ lists: ApiList[] }>(`/favorites`);
+    const data = await apiFetch<{ lists: ApiList[] }>(`/favorites`);
     return data.lists.map(mapApiList);
   } catch (error) {
     console.error("Failed to load favorites", error);
@@ -297,7 +297,7 @@ export async function addFavorite(listId: string, userEmail: string): Promise<vo
   if (!email) {
     throw new Error("userEmail is required to favorite a list");
   }
-  await rustApiFetch<{ ok: boolean }>("/favorites", {
+  await apiFetch<{ ok: boolean }>("/favorites", {
     method: "POST",
     body: JSON.stringify({ listId }),
   });
@@ -308,7 +308,7 @@ export async function removeFavorite(listId: string, userEmail: string): Promise
   if (!email) {
     throw new Error("userEmail is required to remove a favorite");
   }
-  await rustApiFetch<{ ok: boolean }>(`/favorites/${listId}`, {
+  await apiFetch<{ ok: boolean }>(`/favorites/${listId}`, {
     method: "DELETE",
   });
 }
@@ -318,7 +318,7 @@ export async function loadListShares(listId: string, userEmail: string): Promise
   if (!email) {
     throw new Error("userEmail is required to load list shares");
   }
-  const data = await rustApiFetch<{ shares: ListShare[] }>(
+  const data = await apiFetch<{ shares: ListShare[] }>(
     `/lists/${listId}/shares`,
   );
   return data.shares;
@@ -333,7 +333,7 @@ export async function addListShare(listId: string, userEmail: string, username: 
   if (!trimmed) {
     throw new Error("username is required to share a list");
   }
-  const data = await rustApiFetch<{ shares: ListShare[] }>(`/lists/${listId}/shares`, {
+  const data = await apiFetch<{ shares: ListShare[] }>(`/lists/${listId}/shares`, {
     method: "POST",
     body: JSON.stringify({ username: trimmed }),
   });
@@ -354,7 +354,7 @@ export async function updateListSharePermission(
   if (!trimmed) {
     throw new Error("username is required to update list shares");
   }
-  const data = await rustApiFetch<{ shares: ListShare[] }>(
+  const data = await apiFetch<{ shares: ListShare[] }>(
     `/lists/${listId}/shares/${encodeURIComponent(trimmed)}`,
     {
       method: "PATCH",
@@ -373,7 +373,7 @@ export async function removeListShare(listId: string, userEmail: string, usernam
   if (!trimmed) {
     throw new Error("username is required to remove list shares");
   }
-  const data = await rustApiFetch<{ shares: ListShare[] }>(
+  const data = await apiFetch<{ shares: ListShare[] }>(
     `/lists/${listId}/shares/${encodeURIComponent(trimmed)}`,
     {
       method: "DELETE",
