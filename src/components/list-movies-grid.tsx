@@ -201,7 +201,7 @@ export function ListMoviesGrid({
             const movie = moviesById.get(tmdbId);
             if (!movie) {
               return (
-                <li key={tmdbId} className="w-[calc(33%-7px)] sm:w-[calc(25%-9px)] lg:w-[calc(20%-10px)]">
+                <li key={tmdbId} className="w-[calc(50%-6px)] sm:w-[calc(33%-7px)] lg:w-[calc(25%-9px)]">
                   <div className="aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-black-900/40">
                     <div className="h-full w-full animate-pulse bg-black-800/60" />
                   </div>
@@ -210,7 +210,7 @@ export function ListMoviesGrid({
             }
 
             return (
-              <li key={movie.tmdbId} className="w-[calc(33%-7px)] sm:w-[calc(25%-9px)] lg:w-[calc(20%-10px)]">
+              <li key={movie.tmdbId} className="w-[calc(50%-6px)] sm:w-[calc(33%-7px)] lg:w-[calc(25%-9px)]">
                 <Link
                   href={`/movies/${movie.tmdbId}?from=${fromParam}`}
                   className="group relative block aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-black-900/40 transition hover:border-black-400"
