@@ -5,7 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import type { ListShare, SavedList } from "@/lib/list-store";
 import { addListShare, loadListShares, removeListShare, updateListSharePermission } from "@/lib/list-store";
 import { DEFAULT_LIST_COLOR_ID, normalizeListColor } from "@/lib/list-colors";
-import { rustApiFetch } from "@/lib/rust-api-client";
+import { apiFetch } from "@/lib/api-client";
 
 export function ListEditor({
   list,
@@ -153,7 +153,7 @@ export function ListEditor({
     startTransition(async () => {
       try {
         setMessage(null);
-        const data = await rustApiFetch<{ list: SavedList }>(`/lists/${list.id}`, {
+        const data = await apiFetch<{ list: SavedList }>(`/lists/${list.id}`, {
           method: "PATCH",
           body: JSON.stringify({ title, slug, color, visibility }),
         });
@@ -365,7 +365,7 @@ export function ListEditor({
             startTransition(async () => {
               try {
                 setMessage(null);
-                await rustApiFetch(`/lists/${list.id}`, {
+                await apiFetch(`/lists/${list.id}`, {
                   method: "DELETE",
                 });
                 router.push("/");

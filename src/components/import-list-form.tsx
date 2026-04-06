@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { rustApiFetch } from "@/lib/rust-api-client";
+import { apiFetch } from "@/lib/api-client";
 
 type ImportListFormProps = {
   userEmail?: string | null;
@@ -25,7 +25,7 @@ export function ImportListForm({ userEmail, onComplete }: ImportListFormProps) {
       }
 
       try {
-        await rustApiFetch("/lists/import", {
+        await apiFetch("/lists/import", {
           method: "POST",
           body: JSON.stringify({ title, data: raw }),
         });

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { rustApiFetch } from "@/lib/rust-api-client";
+import { apiFetch } from "@/lib/api-client";
 
 export function CreateListButton({ userEmail }: { userEmail: string }) {
   const [expanded, setExpanded] = useState(false);
@@ -51,7 +51,7 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
           setError("Sign in to create lists");
           return;
         }
-        await rustApiFetch("/lists", {
+        await apiFetch("/lists", {
           method: "POST",
           body: JSON.stringify({ title }),
         });

@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { MovieListActions } from "@/components/movie-list-actions";
 import { loadLists, type SavedList } from "@/lib/list-store";
-import { rustApiFetch } from "@/lib/rust-api-client";
+import { apiFetch } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
 
 type AddToListLoaderProps = {
@@ -108,7 +108,7 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
     startTransition(async () => {
       try {
         setMessage(null);
-        await rustApiFetch(`/lists/${selectedListId}/items`, {
+        await apiFetch(`/lists/${selectedListId}/items`, {
           method: "POST",
           body: JSON.stringify({ tmdbId }),
         });
