@@ -288,6 +288,20 @@ export async function searchTmdb(query: string) {
   return { results, artists };
 }
 
+export async function fetchTmdbShow(tmdbId: number): Promise<SimplifiedMovie> {
+  const show = await tmdbFetch<TmdbMovie>(`/tv/${tmdbId}`, {
+    append_to_response: "external_ids",
+  });
+  // external_ids comes back as a nested object when using append_to_response
+  const externalIds = (show as unknown as { external_ids?: { imdb_id?: string | null } }).external_ids;
+  const withImdbId: TmdbMovie = externalIds?.imdb_id ? { ...show, imdb_id: externalIds.imdb_id } : show;
+  const mapped = mapMovie(withImdbId, "tv");
+  if (mapped.imdbId) {
+    mapped.imdbRating = await fetchExternalRatings(mapped.imdbId);
+  }
+  return mapped;
+}
+
 export async function fetchTmdbMovie(tmdbId: number, lite = false): Promise<SimplifiedMovie> {
   const movie = await tmdbFetch<TmdbMovie>(`/movie/${tmdbId}`, {
     append_to_response: lite ? undefined : "credits",

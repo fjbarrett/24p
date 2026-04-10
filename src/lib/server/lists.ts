@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "crypto";
-import type { ListShare, SavedList } from "@/lib/list-store";
+import type { ListItem, ListShare, SavedList } from "@/lib/list-store";
 import { getPool } from "@/lib/server/db";
 import { findTmdbMovieId } from "@/lib/server/tmdb";
 import { saveRatingsForUser } from "@/lib/server/ratings";
@@ -11,13 +11,23 @@ type ListRow = {
   title: string;
   slug: string;
   visibility: "public" | "private";
-  movies: number[];
+  items: Array<{ tmdbId: number; mediaType: string }>;
   created_at: string;
   color: string | null;
   user_email: string;
   username: string | null;
   can_edit?: boolean;
 };
+
+// Subquery fragment that aggregates list_items into a JSON array, ordered newest-first
+const ITEMS_SUBQUERY = `
+  COALESCE(
+    (SELECT json_agg(json_build_object('tmdbId', li.tmdb_id, 'mediaType', li.media_type)
+                     ORDER BY li.position DESC)
+     FROM list_items li WHERE li.list_id = lists.id),
+    '[]'::json
+  ) AS items
+`;
 
 type ShareRow = {
   list_id: string;
@@ -78,13 +88,18 @@ function slugify(value: string) {
 }
 
 function mapList(row: ListRow): SavedList {
+  const items: ListItem[] = (Array.isArray(row.items) ? row.items : []).map((item) => ({
+    tmdbId: item.tmdbId,
+    mediaType: item.mediaType === "tv" ? "tv" : "movie",
+  }));
   return {
     id: row.id,
     title: row.title,
     slug: row.slug,
     visibility: row.visibility,
     createdAt: new Date(row.created_at).toISOString(),
-    movies: Array.isArray(row.movies) ? row.movies : [],
+    items,
+    movies: items.map((item) => item.tmdbId),
     color: normalizeColor(row.color),
     userEmail: normalizeEmail(row.user_email),
     username: row.username,
@@ -114,7 +129,7 @@ async function fetchListById(id: string) {
   const pool = getPool();
   const result = await pool.query<ListRow>(
     `
-      SELECT lists.*, profiles.username
+      SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}
       FROM lists
       LEFT JOIN profiles ON lists.user_email = profiles.user_email
       WHERE lists.id = $1
@@ -180,21 +195,32 @@ async function generateSlug(title: string, userEmail: string, excludeId?: string
   }
 }
 
-async function insertList(title: string, movies: number[], color: string | null, userEmail: string) {
+async function insertList(
+  title: string,
+  initialItems: Array<{ tmdbId: number; mediaType: "movie" | "tv" }>,
+  color: string | null,
+  userEmail: string,
+) {
   const pool = getPool();
   const slug = await generateSlug(title, userEmail);
-  const result = await pool.query<ListRow>(
-    `
-      INSERT INTO lists (id, title, slug, visibility, movies, color, user_email)
-      VALUES ($1, $2, $3, 'private', $4, $5, $6)
-      RETURNING *
-    `,
-    [randomUUID(), title, slug, movies, normalizeColor(color), userEmail],
+  const listId = randomUUID();
+  await pool.query(
+    `INSERT INTO lists (id, title, slug, visibility, color, user_email) VALUES ($1, $2, $3, 'private', $4, $5)`,
+    [listId, title, slug, normalizeColor(color), userEmail],
   );
-  const created = await fetchListById(result.rows[0].id);
-  if (!created) {
-    throw new Error("List not found");
+  if (initialItems.length) {
+    const values = initialItems
+      .map((item, index) => `($1, $${index * 2 + 2}, $${index * 2 + 3}, ${initialItems.length - 1 - index})`)
+      .join(", ");
+    const params: unknown[] = [listId];
+    initialItems.forEach((item) => params.push(item.tmdbId, item.mediaType));
+    await pool.query(
+      `INSERT INTO list_items (list_id, tmdb_id, media_type, position) VALUES ${values} ON CONFLICT DO NOTHING`,
+      params,
+    );
   }
+  const created = await fetchListById(listId);
+  if (!created) throw new Error("List not found");
   return mapList({ ...created, can_edit: true });
 }
 
@@ -214,6 +240,7 @@ export async function listListsForUser(userEmail: string, includeShared = false)
         SELECT
           lists.*,
           profiles.username,
+          ${ITEMS_SUBQUERY},
           CASE
             WHEN lists.user_email = $1 THEN true
             ELSE COALESCE(list_shares.can_edit, false)
@@ -226,7 +253,7 @@ export async function listListsForUser(userEmail: string, includeShared = false)
         ORDER BY lists.created_at DESC
       `
     : `
-        SELECT lists.*, profiles.username, true AS can_edit
+        SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}, true AS can_edit
         FROM lists
         LEFT JOIN profiles ON lists.user_email = profiles.user_email
         WHERE lists.user_email = $1
@@ -241,7 +268,9 @@ export async function createListForUser(title: string, userEmail: string, movies
   if (!normalizedTitle) {
     throw new Error("Title is required");
   }
-  return insertList(normalizedTitle, Array.from(new Set(movies)), color ?? null, userEmail);
+  const uniqueIds = Array.from(new Set(movies));
+  const items = uniqueIds.map((id) => ({ tmdbId: id, mediaType: "movie" as const }));
+  return insertList(normalizedTitle, items, color ?? null, userEmail);
 }
 
 export async function updateListForUser(
@@ -278,7 +307,12 @@ export async function updateListForUser(
   return mapList({ ...updated, can_edit: true });
 }
 
-export async function addMovieToListForUser(listId: string, tmdbId: number, userEmail: string) {
+export async function addMovieToListForUser(
+  listId: string,
+  tmdbId: number,
+  userEmail: string,
+  mediaType: "movie" | "tv" = "movie",
+) {
   const pool = getPool();
   const existing = await fetchListById(listId);
   if (!existing) {
@@ -290,12 +324,19 @@ export async function addMovieToListForUser(listId: string, tmdbId: number, user
     throw new Error("List not found");
   }
 
-  const nextMovies = existing.movies.includes(tmdbId) ? existing.movies : [tmdbId, ...existing.movies];
-  await pool.query("UPDATE lists SET movies = $2 WHERE id = $1", [listId, nextMovies]);
+  const nextPosition = await pool
+    .query<{ max: number | null }>("SELECT MAX(position) AS max FROM list_items WHERE list_id = $1", [listId])
+    .then((r) => (r.rows[0]?.max ?? -1) + 1);
+
+  await pool.query(
+    `INSERT INTO list_items (list_id, tmdb_id, media_type, position)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (list_id, tmdb_id) DO NOTHING`,
+    [listId, tmdbId, mediaType, nextPosition],
+  );
+
   const updated = await fetchListById(listId);
-  if (!updated) {
-    throw new Error("List not found");
-  }
+  if (!updated) throw new Error("List not found");
   return mapList({ ...updated, can_edit: canEdit });
 }
 
@@ -311,12 +352,10 @@ export async function removeMovieFromListForUser(listId: string, tmdbId: number,
     throw new Error("List not found");
   }
 
-  const nextMovies = existing.movies.filter((movieId) => movieId !== tmdbId);
-  await pool.query("UPDATE lists SET movies = $2 WHERE id = $1", [listId, nextMovies]);
+  await pool.query("DELETE FROM list_items WHERE list_id = $1 AND tmdb_id = $2", [listId, tmdbId]);
+
   const updated = await fetchListById(listId);
-  if (!updated) {
-    throw new Error("List not found");
-  }
+  if (!updated) throw new Error("List not found");
   return mapList({ ...updated, can_edit: canEdit });
 }
 
@@ -347,7 +386,7 @@ export async function getListByUsernameSlugForViewer(username: string, slug: str
 
   const result = await pool.query<ListRow>(
     `
-      SELECT lists.*, profiles.username
+      SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}
       FROM lists
       LEFT JOIN profiles ON lists.user_email = profiles.user_email
       WHERE lists.user_email = $1 AND lists.slug = $2
@@ -384,7 +423,7 @@ export async function loadPublicLists(limit = 24, username?: string | null) {
     }
     const result = await pool.query<ListRow>(
       `
-        SELECT lists.*, profiles.username
+        SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}
         FROM lists
         JOIN profiles ON lists.user_email = profiles.user_email
         WHERE lists.visibility = 'public' AND lists.user_email = $1
@@ -398,7 +437,7 @@ export async function loadPublicLists(limit = 24, username?: string | null) {
 
   const result = await pool.query<ListRow>(
     `
-      SELECT lists.*, profiles.username
+      SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}
       FROM lists
       JOIN profiles ON lists.user_email = profiles.user_email
       WHERE lists.visibility = 'public'
@@ -414,7 +453,7 @@ export async function loadFavoritesForUser(userEmail: string) {
   const pool = getPool();
   const result = await pool.query<ListRow>(
     `
-      SELECT lists.*, profiles.username
+      SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}
       FROM user_favorites
       JOIN lists ON lists.id = user_favorites.list_id
       LEFT JOIN profiles ON lists.user_email = profiles.user_email
@@ -637,7 +676,7 @@ export async function importListForUser(title: string, raw: string, userEmail: s
     throw new Error("No movies could be matched");
   }
 
-  const list = await insertList(normalizedTitle, ids, null, userEmail);
+  const list = await insertList(normalizedTitle, ids.map((id) => ({ tmdbId: id, mediaType: "movie" as const })), null, userEmail);
   if (ratings.length) {
     await saveRatingsForUser(userEmail, ratings);
   }

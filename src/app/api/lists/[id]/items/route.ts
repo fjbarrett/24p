@@ -14,11 +14,12 @@ export async function POST(
 
   try {
     const { id } = await context.params;
-    const payload = (await request.json()) as { tmdbId?: number };
+    const payload = (await request.json()) as { tmdbId?: number; mediaType?: string };
     if (!Number.isInteger(payload.tmdbId)) {
       return errorResponse("tmdbId is required");
     }
-    const list = await addMovieToListForUser(id, Number(payload.tmdbId), userEmail);
+    const mediaType = payload.mediaType === "tv" ? "tv" : "movie";
+    const list = await addMovieToListForUser(id, Number(payload.tmdbId), userEmail, mediaType);
     return NextResponse.json({ list });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update list";

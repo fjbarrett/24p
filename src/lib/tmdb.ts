@@ -42,6 +42,11 @@ export type PersonLink = {
   role?: string | null;
 };
 
+export type ListItem = {
+  tmdbId: number;
+  mediaType: "movie" | "tv";
+};
+
 export type SimplifiedArtist = {
   tmdbId: number;
   name: string;

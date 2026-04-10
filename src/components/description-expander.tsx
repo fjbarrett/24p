@@ -12,7 +12,7 @@ export function DescriptionExpander({ text }: { text: string }) {
         style={{
           fontFamily: '"Open Sans", Arial, sans-serif',
           display: "-webkit-box",
-          WebkitLineClamp: expanded ? "unset" : 3,
+          WebkitLineClamp: expanded ? "unset" : 5,
           WebkitBoxOrient: "vertical",
           overflow: expanded ? "visible" : "hidden",
         }}

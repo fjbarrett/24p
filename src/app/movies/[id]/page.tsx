@@ -3,6 +3,7 @@ import { fetchTmdbMovie } from "@/lib/tmdb-server";
 import { MovieActions } from "@/components/movie-actions";
 import { BackButton } from "@/components/back-button";
 import { DescriptionExpander } from "@/components/description-expander";
+import { MovieTrailerToggle } from "@/components/movie-trailer-toggle";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -26,7 +27,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const title = typeof movie.releaseYear === "number" ? `${movie.title} (${movie.releaseYear})` : movie.title;
     const description = movie.overview?.trim() ? movie.overview : `Details for ${movie.title} on 24p.`;
     const canonical = `/movies/${movie.tmdbId}`;
-    const imageUrl = movie.posterUrl ? getLargePoster(movie.posterUrl) : null;
+    const imageUrl = movie.backdropUrl
+      ? getLargeImage(movie.backdropUrl, "backdrop")
+      : movie.posterUrl
+        ? getLargeImage(movie.posterUrl, "poster")
+        : null;
 
     return {
       title,
@@ -84,30 +89,21 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
       </div>
 
       {/* Main content */}
-      <div className="flex flex-1 items-center justify-center">
-      <div className="flex w-full max-w-sm flex-col items-center px-[51px] py-8">
+      <div className="mx-auto w-full max-w-[800px] px-6 py-8 sm:px-10">
         {/* Poster */}
-        {movie.posterUrl ? (
-          <Image
-            src={getLargePoster(movie.posterUrl)}
-            alt={`${movie.title} poster`}
-            width={200}
-            height={296}
-            className="rounded-xl object-cover shadow-lg"
-            priority
-          />
-        ) : (
-          <div className="flex h-[296px] w-[200px] items-center justify-center rounded-xl bg-neutral-800 text-sm text-neutral-500">
-            No art
-          </div>
-        )}
+        <MovieTrailerToggle
+          tmdbId={movie.tmdbId}
+          title={movie.title}
+          posterUrl={movie.posterUrl ? getLargeImage(movie.posterUrl, "poster") : null}
+          backdropUrl={movie.backdropUrl ? getLargeImage(movie.backdropUrl, "backdrop") : null}
+        />
 
         {/* Title */}
         <h1 className="mt-3 text-center text-2xl text-white">{movie.title}</h1>
 
         {/* Year · Rating */}
         {(typeof movie.releaseYear === "number" || typeof movie.imdbRating === "number") ? (
-          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-[#B3B3B3]">
+          <p className="mt-1.5 flex items-center justify-center gap-1.5 text-sm text-[#B3B3B3]">
             {typeof movie.releaseYear === "number" ? <span>{movie.releaseYear}</span> : null}
             {typeof movie.imdbRating === "number" && movie.imdbId ? (
               <a
@@ -134,7 +130,6 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
         {(userEmail || movie.imdbId) ? (
           <MovieActions tmdbId={movie.tmdbId} userEmail={userEmail} imdbId={movie.imdbId} title={movie.title} releaseYear={movie.releaseYear} />
         ) : null}
-      </div>
       </div>
     </div>
   );
@@ -164,8 +159,9 @@ function safeDecode(value: string) {
   }
 }
 
-function getLargePoster(url: string): string {
-  return url.includes("/w185/") ? url.replace("/w185/", "/w500/") : url;
+function getLargeImage(url: string, type: "poster" | "backdrop"): string {
+  if (!url.includes("/w185/")) return url;
+  return url.replace("/w185/", type === "backdrop" ? "/w1280/" : "/w780/");
 }
 
 function buildMovieJsonLd(movie: {
@@ -174,15 +170,22 @@ function buildMovieJsonLd(movie: {
   overview?: string | null;
   releaseYear?: number | null;
   posterUrl?: string | null;
+  backdropUrl?: string | null;
   imdbId?: string | null;
 }) {
   const canonicalUrl = new URL(`/movies/${movie.tmdbId}`, getAppUrl()).toString();
+  const imageUrl = movie.backdropUrl
+    ? getLargeImage(movie.backdropUrl, "backdrop")
+    : movie.posterUrl
+      ? getLargeImage(movie.posterUrl, "poster")
+      : undefined;
+
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Movie",
     name: movie.title,
     description: movie.overview ?? undefined,
-    image: movie.posterUrl ? getLargePoster(movie.posterUrl) : undefined,
+    image: imageUrl,
     datePublished: movie.releaseYear ? `${movie.releaseYear}-01-01` : undefined,
     url: canonicalUrl,
   };

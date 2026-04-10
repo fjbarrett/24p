@@ -78,7 +78,7 @@ export function ListDetailClient({
           </div>
         ) : null}
         <ListMoviesGrid
-          tmdbIds={list.movies}
+          items={list.items}
           ratingsMap={ratingsMap}
           fromParam={fromParam}
           listSlug={list.slug}

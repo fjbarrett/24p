@@ -107,7 +107,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
 
   const noLists = !lists.length;
 
-  async function handleAdd(movieId: number) {
+  async function handleAdd(movieId: number, mediaType: "movie" | "tv" = "movie") {
     if (!normalizedEmail) {
       setStatus({ movieId, message: "Sign in to save movies.", tone: "error" });
       return;
@@ -119,7 +119,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
     try {
       setSavingMovieId(movieId);
       setStatus(null);
-      await addMovieToList(selectedListId, movieId, normalizedEmail);
+      await addMovieToList(selectedListId, movieId, normalizedEmail, mediaType);
       setStatus({ movieId, message: "Added to list.", tone: "success" });
       setActiveMovieId(null);
     } catch (err) {
@@ -232,13 +232,12 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
                   </Link>
                   <button
                     type="button"
-                    aria-label={isShow ? "Adding TV shows to lists is coming soon" : `Add ${movie.title} to a list`}
+                    aria-label={`Add ${movie.title} to a list`}
                     aria-controls={`add-to-list-${movie.tmdbId}`}
                     aria-expanded={activeMovieId === movie.tmdbId}
-                    disabled={isShow || noLists || !normalizedEmail}
-                    title={isShow ? "Adding TV shows to lists is coming soon" : undefined}
+                    disabled={noLists || !normalizedEmail}
                     onClick={() => {
-                      if (isShow || noLists || !normalizedEmail) return;
+                      if (noLists || !normalizedEmail) return;
                       setActiveMovieId((current) => (current === movie.tmdbId ? null : movie.tmdbId));
                       setSelectedListId((current) => (current || lists[0]?.id) ?? "");
                       setStatus(null);
@@ -276,7 +275,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
                         <button
                           type="button"
                           className="flex w-full items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
-                          onClick={() => handleAdd(movie.tmdbId)}
+                          onClick={() => handleAdd(movie.tmdbId, isShow ? "tv" : "movie")}
                           disabled={savingMovieId === movie.tmdbId}
                         >
                           {savingMovieId === movie.tmdbId ? "Adding..." : "Add to list"}
