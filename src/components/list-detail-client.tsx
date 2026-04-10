@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Pencil } from "lucide-react";
 import type { SavedList } from "@/lib/list-store";
 import { ListEditor } from "@/components/list-editor";
 import { ListExportButton } from "@/components/list-export-button";
@@ -12,7 +13,6 @@ type ListDetailClientProps = {
   viewerEmail: string | null;
   ratingsMap: Record<number, number>;
   fromParam: string;
-  initialEditing?: boolean;
 };
 
 export function ListDetailClient({
@@ -20,9 +20,8 @@ export function ListDetailClient({
   viewerEmail,
   ratingsMap,
   fromParam,
-  initialEditing = false,
 }: ListDetailClientProps) {
-  const [isEditing, setIsEditing] = useState(initialEditing);
+  const [isEditing, setIsEditing] = useState(false);
   const normalizedViewerEmail = viewerEmail?.trim().toLowerCase() ?? "";
   const isOwner = Boolean(normalizedViewerEmail && normalizedViewerEmail === list.userEmail);
 
@@ -42,7 +41,19 @@ export function ListDetailClient({
       ) : null}
 
       <section className="rounded-2xl bg-black-950/60 p-4 sm:p-5">
-{!isEditing && !isOwner ? (
+        {isOwner ? (
+          <div className="mb-3 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              aria-label="Edit list"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/40 transition hover:bg-white/8 hover:text-white/80"
+            >
+              <Pencil className="h-3.5 w-3.5" strokeWidth={2.25} />
+            </button>
+          </div>
+        ) : null}
+        {!isEditing && !isOwner ? (
           <div className="mb-4">
             <ListEditor
               list={list}
@@ -61,7 +72,7 @@ export function ListDetailClient({
           listTitle={list.title}
           listId={list.id}
           userEmail={viewerEmail}
-          isEditing={isEditing}
+          isEditing={isEditing && !isOwner}
         />
       </section>
       {isOwner ? <ListSuggestionsPanel listId={list.id} /> : null}

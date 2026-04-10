@@ -8,7 +8,6 @@ import { ListDetailClient } from "@/components/list-detail-client";
 import { FavoriteToggle } from "@/components/favorite-toggle";
 import type { Metadata } from "next";
 import { BackButton } from "@/components/back-button";
-import { Pencil } from "lucide-react";
 import { getPublicProfileByUsername } from "@/lib/server/profiles";
 import { getRatingsMapForUser } from "@/lib/server/ratings";
 import { getListByUsernameSlugForViewer, loadFavoritesForUser } from "@/lib/server/lists";
@@ -48,12 +47,10 @@ export async function generateMetadata({
 
 export default async function ListDetail({
   params,
-  searchParams,
 }: {
   params: Promise<{ username: string; slug: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined> | URLSearchParams>;
 }) {
-  const [{ username, slug }, resolvedSearchParams] = await Promise.all([params, searchParams]);
+  const { username, slug } = await params;
   const session = (await getServerSession(authOptions)) as Session | null;
   const viewerEmail = session?.user?.email?.toLowerCase() ?? null;
   const list = await getListByUsernameSlugForViewer(username, slug, viewerEmail);
@@ -69,7 +66,6 @@ export default async function ListDetail({
   const favorites: SavedList[] = viewerEmail ? await loadFavoritesForUser(viewerEmail) : [];
   const isFavorite = favorites.some((entry) => entry.id === list.id);
   const fromParam = encodeURIComponent(`/${ownerUsername}/${list.slug}`);
-  const initialEditing = getEditParam(resolvedSearchParams);
   const canFavorite = !!viewerEmail && viewerEmail !== list.userEmail;
   const isOwner = !!viewerEmail && viewerEmail === list.userEmail;
 
@@ -118,28 +114,14 @@ export default async function ListDetail({
                 </span>
               ) : null}
             </div>
-            {isOwner ? (
-              <div className="flex justify-center !mt-0">
-                <Link
-                  href={`/${encodeURIComponent(ownerUsername)}/${encodeURIComponent(list.slug)}?edit=1`}
-                  aria-label="Edit list"
-                  title="Edit list"
-                  className="flex h-10 w-10 items-center justify-center text-white/60 transition hover:text-white active:scale-[0.98]"
-                >
-                  <Pencil className="h-4 w-4" strokeWidth={2.25} />
-                </Link>
-              </div>
-            ) : null}
           </div>
         </div>
         <div className="!mt-0">
           <ListDetailClient
-            key={String(initialEditing)}
             list={list}
             viewerEmail={viewerEmail}
             ratingsMap={ratingsMap}
             fromParam={fromParam}
-            initialEditing={initialEditing}
           />
         </div>
       </article>
@@ -147,16 +129,3 @@ export default async function ListDetail({
   );
 }
 
-function getEditParam(
-  search: Record<string, string | string[] | undefined> | URLSearchParams | undefined,
-) {
-  const raw =
-    search instanceof URLSearchParams
-      ? search.get("edit")
-      : (() => {
-          const value = search?.edit;
-          return Array.isArray(value) ? value[0] : value;
-        })();
-
-  return raw === "1" || raw === "true";
-}
