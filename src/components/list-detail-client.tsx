@@ -53,19 +53,21 @@ export function ListDetailClient({
     <div className="mx-auto w-full max-w-[760px] space-y-5">
       {modal}
 
+      {isOwner ? (
+        <div className="flex justify-center pb-1 pt-2">
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            aria-label="Edit list"
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-white/40 transition hover:bg-white/8 hover:text-white/70"
+          >
+            <Pencil className="h-3 w-3" strokeWidth={2.25} />
+            Edit
+          </button>
+        </div>
+      ) : null}
+
       <section className="rounded-2xl bg-black-950/60 p-4 sm:p-5">
-        {isOwner ? (
-          <div className="mb-3 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setIsEditing(true)}
-              aria-label="Edit list"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white/40 transition hover:bg-white/8 hover:text-white/80"
-            >
-              <Pencil className="h-3.5 w-3.5" strokeWidth={2.25} />
-            </button>
-          </div>
-        ) : null}
         {!isEditing && !isOwner ? (
           <div className="mb-4">
             <ListEditor
