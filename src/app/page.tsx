@@ -25,7 +25,7 @@ export default async function Home() {
           <SignInButton ariaLabel="Sign in with Google" className="px-5 py-2 text-sm" />
         </div>
       ) : null}
-      <div className={`mx-auto flex w-full flex-col items-center ${isSignedIn ? "max-w-[900px]" : "max-w-[1280px] -translate-y-6"}`}>
+      <div className={`mx-auto flex w-full flex-col items-center ${isSignedIn ? "max-w-[900px]" : "max-w-[1280px] -translate-y-16"}`}>
         <Header isSignedIn={isSignedIn} centered={!session} lists={lists} userEmail={userEmail} />
 
         {session ? (

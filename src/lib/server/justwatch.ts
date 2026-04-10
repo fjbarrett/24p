@@ -10,6 +10,8 @@ const DEFAULT_PLATFORM = "WEB";
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_BATCHES = 3;
 const PAGE_STRIDE_MULTIPLIER = 3;
+const RATING_SORT_LIMIT = 240;
+const RATING_SORT_BATCH_SIZE = 100;
 
 type JwOffer = {
   standardWebURL: string;
@@ -666,6 +668,85 @@ export async function fetchStreamingCatalog({
       return movie;
     }
 
+    return {
+      ...movie,
+      posterUrl: movie.posterUrl ?? artwork.posterUrl,
+      backdropUrls: movie.backdropUrls.length ? movie.backdropUrls : artwork.backdropUrl ? [artwork.backdropUrl] : [],
+    };
+  });
+}
+
+// Fetches a large pool of catalog entries (no seed randomisation) for global sorting.
+// Used by the rating sort so the entire result set is ranked before pagination.
+export async function fetchStreamingCatalogAll({
+  providerShortNames,
+  locale = DEFAULT_LOCALE,
+}: {
+  providerShortNames?: string[];
+  locale?: string;
+}): Promise<StreamingCatalogMovie[]> {
+  const normalizedProviders = [...new Set(
+    (providerShortNames ?? [])
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean),
+  )];
+  const queryProviders = expandProviderShortNames(normalizedProviders);
+  const collected = new Map<number, StreamingCatalogMovie>();
+
+  for (
+    let batch = 0;
+    batch < Math.ceil(RATING_SORT_LIMIT / RATING_SORT_BATCH_SIZE) + 2 && collected.size < RATING_SORT_LIMIT;
+    batch += 1
+  ) {
+    const data = await postJustWatch<JwPopularTitlesResult>(POPULAR_TITLES_QUERY, {
+      country: locale,
+      language: DEFAULT_LANGUAGE,
+      first: RATING_SORT_BATCH_SIZE,
+      offset: batch * RATING_SORT_BATCH_SIZE,
+      popularTitlesFilter: {
+        objectTypes: ["MOVIE", "SHOW"],
+        ...(queryProviders.length ? { packages: queryProviders } : {}),
+      },
+      formatPoster: "JPG",
+      profile: "S718",
+      backdropProfile: "S1920",
+      filter: { bestOnly: true },
+    });
+
+    const nodes = (data?.data?.popularTitles?.edges ?? [])
+      .map((edge) => edge?.node)
+      .filter((node): node is JwMovie => Boolean(node && (node.objectType === "MOVIE" || node.objectType === "SHOW")));
+
+    if (!nodes.length) break;
+
+    for (const node of nodes) {
+      const offer = getStreamingOffer(node, normalizedProviders);
+      if (!offer) continue;
+      const mapped = mapCatalogMovie(node, offer);
+      if (!mapped || collected.has(mapped.tmdbId)) continue;
+      collected.set(mapped.tmdbId, mapped);
+    }
+  }
+
+  const movies = Array.from(collected.values()).slice(0, RATING_SORT_LIMIT);
+  const missingArt = movies.filter((movie) => !movie.posterUrl && movie.backdropUrls.length === 0);
+
+  if (!missingArt.length) return movies;
+
+  const artworkResults = await Promise.allSettled(
+    missingArt.map((movie) =>
+      fetchTmdbArtwork(movie.tmdbId, movie.contentType === "SHOW" ? "tv" : "movie"),
+    ),
+  );
+
+  return movies.map((movie) => {
+    if (movie.posterUrl || movie.backdropUrls.length > 0) return movie;
+    const missingIndex = missingArt.findIndex((candidate) => candidate.tmdbId === movie.tmdbId);
+    const artwork =
+      missingIndex >= 0 && artworkResults[missingIndex]?.status === "fulfilled"
+        ? artworkResults[missingIndex].value
+        : null;
+    if (!artwork) return movie;
     return {
       ...movie,
       posterUrl: movie.posterUrl ?? artwork.posterUrl,
