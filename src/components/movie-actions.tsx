@@ -16,9 +16,10 @@ type MovieActionsProps = {
   imdbId?: string | null;
   title: string;
   releaseYear?: number;
+  mediaType?: "movie" | "tv";
 };
 
-export function MovieActions({ tmdbId, userEmail, imdbId, title, releaseYear }: MovieActionsProps) {
+export function MovieActions({ tmdbId, userEmail, imdbId, title, releaseYear, mediaType = "movie" }: MovieActionsProps) {
   const [listExpanded, setListExpanded] = useState(false);
   const [revealed, setRevealed] = useState(!imdbId);
   const [appleTvUrl, setAppleTvUrl] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title, releaseYear }: 
     const safetyTimer = setTimeout(() => { if (active) setRevealed(true); }, 7000);
 
     // Fetch streaming providers + direct JustWatch links in parallel
-    const providersFetch = fetch(`/api/watch-providers?tmdbId=${tmdbId}`)
+    const providersFetch = fetch(`/api/watch-providers?tmdbId=${tmdbId}&mediaType=${mediaType}`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (active && data?.providers?.length) {
@@ -78,6 +79,7 @@ export function MovieActions({ tmdbId, userEmail, imdbId, title, releaseYear }: 
       <AddToListButton
         tmdbId={tmdbId}
         userEmail={userEmail}
+        mediaType={mediaType}
         onExpandChange={setListExpanded}
         appleTvSlot={
           <div

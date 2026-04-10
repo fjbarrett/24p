@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { apiFetch } from "@/lib/api-client";
-import type { SavedList } from "@/lib/list-store";
+import type { ListItem, SavedList } from "@/lib/list-store";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 
 type ListMoviesGridProps = {
-  tmdbIds: number[];
+  items: ListItem[];
   ratingsMap: Record<number, number>;
   fromParam: string;
   listSlug: string;
@@ -20,7 +20,7 @@ type ListMoviesGridProps = {
 };
 
 export function ListMoviesGrid({
-  tmdbIds,
+  items,
   fromParam,
   listId,
   userEmail,
@@ -28,7 +28,12 @@ export function ListMoviesGrid({
   canDelete = false,
 }: ListMoviesGridProps) {
   const [movies, setMovies] = useState<SimplifiedMovie[]>([]);
-  const [listMovieIds, setListMovieIds] = useState<number[]>(tmdbIds);
+  const [listItems, setListItems] = useState<ListItem[]>(items);
+  const listMovieIds = useMemo(() => listItems.map((item) => item.tmdbId), [listItems]);
+  const mediaTypeMap = useMemo(
+    () => Object.fromEntries(listItems.map((item) => [item.tmdbId, item.mediaType])),
+    [listItems],
+  );
   const [loading, setLoading] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
 
@@ -39,8 +44,8 @@ export function ListMoviesGrid({
   }, [movies]);
 
   useEffect(() => {
-    setListMovieIds(tmdbIds);
-  }, [tmdbIds]);
+    setListItems(items);
+  }, [items]);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,7 +100,9 @@ export function ListMoviesGrid({
 
       async function fetchOne(tmdbId: number) {
         try {
-          const result = await apiFetch<{ detail: SimplifiedMovie }>(`/tmdb/movie/${tmdbId}?lite=true`, {
+          const isShow = mediaTypeMap[tmdbId] === "tv";
+          const endpoint = isShow ? `/tmdb/tv/${tmdbId}` : `/tmdb/movie/${tmdbId}?lite=true`;
+          const result = await apiFetch<{ detail: SimplifiedMovie }>(endpoint, {
             signal: controller.signal,
           });
           if (!result?.detail) return;
@@ -138,7 +145,7 @@ export function ListMoviesGrid({
       cancelled = true;
       controller.abort();
     };
-  }, [listMovieIds]);
+  }, [listMovieIds, mediaTypeMap]);
 
   const displayIds = useMemo(() => listMovieIds, [listMovieIds]);
 
@@ -174,9 +181,9 @@ export function ListMoviesGrid({
       const payload = await apiFetch<{ list: SavedList }>(`/lists/${listId}/items/${tmdbId}`, {
         method: "DELETE",
       });
-      const updatedMovies = Array.isArray(payload.list.movies) ? payload.list.movies : [];
-      setListMovieIds(updatedMovies);
-      updateListCache(updatedMovies);
+      const updatedItems = Array.isArray(payload.list.items) ? payload.list.items : [];
+      setListItems(updatedItems);
+      updateListCache(updatedItems.map((item) => item.tmdbId));
     } catch {
       // ignore errors for now; could surface toast
     } finally {
@@ -214,7 +221,9 @@ export function ListMoviesGrid({
             return (
               <li key={movie.tmdbId} className="w-[calc(50%-6px)] sm:w-[calc(33%-7px)] lg:w-[calc(25%-9px)]">
                 <Link
-                  href={`/movies/${movie.tmdbId}?from=${fromParam}`}
+                  href={movie.mediaType === "tv"
+                    ? `/tv/${movie.tmdbId}`
+                    : `/movies/${movie.tmdbId}?from=${fromParam}`}
                   className="group relative block aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-black-900/40 transition hover:border-black-400"
                 >
                   {(canDelete || isEditing) && (

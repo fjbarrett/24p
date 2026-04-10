@@ -89,8 +89,16 @@ function Header({
         <SignInButton ariaLabel="Sign in with Google" className="mt-4 px-5 py-2 text-sm" />
       ) : null}
       {isSignedIn && (
-        <div className="w-full max-w-[560px]">
+        <div className="w-full max-w-[560px] space-y-3">
           <TmdbSearchBar lists={lists} userEmail={userEmail} />
+          <div className="flex justify-center">
+            <Link
+              href="/streaming"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/72 transition hover:border-white/20 hover:bg-white/[0.04] hover:text-white"
+            >
+              Streaming On
+            </Link>
+          </div>
         </div>
       )}
     </header>

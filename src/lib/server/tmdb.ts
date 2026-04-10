@@ -13,10 +13,12 @@ type TmdbMovie = {
   name?: string | null;
   overview?: string | null;
   release_date?: string | null;
+  first_air_date?: string | null;
   vote_average?: number | null;
   popularity?: number | null;
   vote_count?: number | null;
   poster_path?: string | null;
+  backdrop_path?: string | null;
   runtime?: number | null;
   tagline?: string | null;
   imdb_id?: string | null;
@@ -24,6 +26,17 @@ type TmdbMovie = {
   credits?: {
     cast?: Array<{ id: number; name?: string | null; character?: string | null; order?: number | null }> | null;
     crew?: Array<{ id: number; name?: string | null; job?: string | null; department?: string | null }> | null;
+  } | null;
+  videos?: {
+    results?: Array<{
+      key?: string | null;
+      name?: string | null;
+      official?: boolean | null;
+      published_at?: string | null;
+      site?: string | null;
+      size?: number | null;
+      type?: string | null;
+    }> | null;
   } | null;
 };
 
@@ -39,6 +52,7 @@ type TmdbMovieCredit = {
   title?: string | null;
   release_date?: string | null;
   poster_path?: string | null;
+  backdrop_path?: string | null;
   character?: string | null;
   job?: string | null;
   department?: string | null;
@@ -162,16 +176,18 @@ function toPersonLink(id: number, name?: string | null, role?: string | null): P
   };
 }
 
-function mapMovie(movie: TmdbMovie): SimplifiedMovie {
+function mapMovie(movie: TmdbMovie, mediaType: "movie" | "tv" = "movie"): SimplifiedMovie {
   return {
     tmdbId: movie.id,
     title: normalizeTitle(movie.title ?? movie.name),
+    mediaType,
     overview: movie.overview ?? undefined,
-    releaseYear: parseReleaseYear(movie.release_date),
+    releaseYear: parseReleaseYear(movie.release_date ?? movie.first_air_date),
     rating: typeof movie.vote_average === "number" ? Number(movie.vote_average.toFixed(1)) : undefined,
     popularity: typeof movie.popularity === "number" ? movie.popularity : undefined,
     voteCount: typeof movie.vote_count === "number" ? movie.vote_count : undefined,
     posterUrl: posterUrl(movie.poster_path),
+    backdropUrl: posterUrl(movie.backdrop_path),
     runtime: typeof movie.runtime === "number" ? movie.runtime : undefined,
     tagline: movie.tagline ?? null,
     genres: Array.isArray(movie.genres)
@@ -234,8 +250,13 @@ export async function searchTmdb(query: string) {
     return { results: [], artists: [] };
   }
 
-  const [moviesPayload, peoplePayload] = await Promise.all([
+  const [moviesPayload, tvPayload, peoplePayload] = await Promise.all([
     tmdbFetch<{ results?: TmdbMovie[] }>("/search/movie", {
+      query: trimmed,
+      include_adult: false,
+      page: 1,
+    }),
+    tmdbFetch<{ results?: TmdbMovie[] }>("/search/tv", {
       query: trimmed,
       include_adult: false,
       page: 1,
@@ -247,12 +268,17 @@ export async function searchTmdb(query: string) {
     }),
   ]);
 
-  const results = (moviesPayload.results ?? [])
+  const tagged = [
+    ...(moviesPayload.results ?? []).map((m) => ({ raw: m, mediaType: "movie" as const })),
+    ...(tvPayload.results ?? []).map((m) => ({ raw: m, mediaType: "tv" as const })),
+  ];
+
+  const results = tagged
     .slice()
-    .sort((a, b) => scoreMovieResult(trimmed, b) - scoreMovieResult(trimmed, a))
-    .map(mapMovie)
+    .sort((a, b) => scoreMovieResult(trimmed, b.raw) - scoreMovieResult(trimmed, a.raw))
+    .map(({ raw, mediaType }) => mapMovie(raw, mediaType))
     .filter((movie) => Boolean(movie.posterUrl))
-    .slice(0, 8);
+    .slice(0, 10);
 
   const artists = (peoplePayload.results ?? [])
     .map(mapArtist)
@@ -260,6 +286,20 @@ export async function searchTmdb(query: string) {
     .slice(0, 6);
 
   return { results, artists };
+}
+
+export async function fetchTmdbShow(tmdbId: number): Promise<SimplifiedMovie> {
+  const show = await tmdbFetch<TmdbMovie>(`/tv/${tmdbId}`, {
+    append_to_response: "external_ids",
+  });
+  // external_ids comes back as a nested object when using append_to_response
+  const externalIds = (show as unknown as { external_ids?: { imdb_id?: string | null } }).external_ids;
+  const withImdbId: TmdbMovie = externalIds?.imdb_id ? { ...show, imdb_id: externalIds.imdb_id } : show;
+  const mapped = mapMovie(withImdbId, "tv");
+  if (mapped.imdbId) {
+    mapped.imdbRating = await fetchExternalRatings(mapped.imdbId);
+  }
+  return mapped;
 }
 
 export async function fetchTmdbMovie(tmdbId: number, lite = false): Promise<SimplifiedMovie> {
@@ -304,12 +344,17 @@ export type WatchProviders = {
   justWatchLink: string | null;
 };
 
+export type MovieTrailer = {
+  embedUrl: string | null;
+  source: "youtube" | null;
+};
+
 const APPLE_TV_PLUS_ID = 350;
 const TMDB_LOGO_BASE = "https://image.tmdb.org/t/p/w45";
 
-export async function fetchWatchProviders(tmdbId: number, locale = "US"): Promise<WatchProviders> {
+export async function fetchWatchProviders(tmdbId: number, locale = "US", mediaType: "movie" | "tv" = "movie"): Promise<WatchProviders> {
   try {
-    const data = await tmdbFetch<WatchProvidersResponse>(`/movie/${tmdbId}/watch/providers`);
+    const data = await tmdbFetch<WatchProvidersResponse>(`/${mediaType}/${tmdbId}/watch/providers`);
     const region = data.results?.[locale];
     if (!region) return { providers: [], justWatchLink: null };
 
@@ -330,10 +375,77 @@ export async function fetchWatchProviders(tmdbId: number, locale = "US"): Promis
   }
 }
 
+export async function fetchTmdbTrailerForMovie(tmdbId: number): Promise<MovieTrailer> {
+  try {
+    const data = await tmdbFetch<TmdbMovie>(`/movie/${tmdbId}`, {
+      append_to_response: "videos",
+    });
+
+    const videos = data.videos?.results ?? [];
+    const youtubeVideos = videos.filter((video) => video.site === "YouTube" && video.key);
+    const scored = youtubeVideos
+      .map((video) => ({
+        key: video.key as string,
+        score: scoreTrailer(video),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    const best = scored[0]?.key;
+    if (!best) return { embedUrl: null, source: null };
+
+    return {
+      embedUrl: `https://www.youtube-nocookie.com/embed/${best}?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${best}&enablejsapi=1`,
+      source: "youtube",
+    };
+  } catch {
+    return { embedUrl: null, source: null };
+  }
+}
+
+function scoreTrailer(video: NonNullable<NonNullable<TmdbMovie["videos"]>["results"]>[number]) {
+  let score = 0;
+  if (video.type === "Trailer") score += 100;
+  else if (video.type === "Teaser") score += 70;
+  else if (video.type === "Clip") score += 45;
+  else if (video.type === "Featurette") score += 30;
+  else score += 10;
+  if (video.official) score += 50;
+  if (video.name?.toLowerCase().includes("official")) score += 20;
+  if (video.name?.toLowerCase().includes("trailer")) score += 15;
+  if (video.name?.toLowerCase().includes("teaser")) score += 8;
+  score += video.size ?? 0;
+  if (video.published_at) {
+    const timestamp = Date.parse(video.published_at);
+    if (Number.isFinite(timestamp)) score += timestamp / 1e12;
+  }
+  return score;
+}
+
+type TmdbVideoResult = NonNullable<NonNullable<TmdbMovie["videos"]>["results"]>[number];
+
+export async function fetchTmdbTrailerForShow(tmdbId: number): Promise<MovieTrailer> {
+  try {
+    const data = await tmdbFetch<{ results?: TmdbVideoResult[] }>(`/tv/${tmdbId}/videos`);
+    const videos = data.results ?? [];
+    const youtubeVideos = videos.filter((video) => video.site === "YouTube" && video.key);
+    const scored = youtubeVideos
+      .map((video) => ({ key: video.key as string, score: scoreTrailer(video) }))
+      .sort((a, b) => b.score - a.score);
+    const best = scored[0]?.key;
+    if (!best) return { embedUrl: null, source: null };
+    return {
+      embedUrl: `https://www.youtube-nocookie.com/embed/${best}?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${best}&enablejsapi=1`,
+      source: "youtube",
+    };
+  } catch {
+    return { embedUrl: null, source: null };
+  }
+}
+
 export async function fetchTmdbRecommendationsForMovie(tmdbId: number): Promise<SimplifiedMovie[]> {
   try {
     const data = await tmdbFetch<{ results?: TmdbMovie[] }>(`/movie/${tmdbId}/recommendations`, { page: 1 });
-    return (data.results ?? []).map(mapMovie).filter((movie) => Boolean(movie.posterUrl));
+    return (data.results ?? []).map((m) => mapMovie(m)).filter((movie) => Boolean(movie.posterUrl));
   } catch {
     return [];
   }
@@ -348,7 +460,7 @@ export async function fetchTmdbDiscoverByGenreIds(genreIds: number[]): Promise<S
       "vote_count.gte": 200,
       page: 1,
     });
-    return (data.results ?? []).map(mapMovie).filter((movie) => Boolean(movie.posterUrl));
+    return (data.results ?? []).map((m) => mapMovie(m)).filter((movie) => Boolean(movie.posterUrl));
   } catch {
     return [];
   }
@@ -383,6 +495,7 @@ export async function fetchTmdbPersonWithFilmography(
       title: normalizeTitle(credit.title),
       releaseYear: parseReleaseYear(credit.release_date),
       posterUrl: posterUrl(credit.poster_path),
+      backdropUrl: posterUrl(credit.backdrop_path),
       creditType: credit.character ? ("cast" as const) : ("crew" as const),
       department: credit.department ?? null,
       job: credit.job ?? null,

@@ -1,5 +1,8 @@
 import { normalizeListColor } from "@/lib/list-colors";
 import { apiFetch } from "@/lib/api-client";
+import type { ListItem } from "@/lib/tmdb";
+
+export type { ListItem };
 
 export type SavedList = {
   id: string;
@@ -7,7 +10,8 @@ export type SavedList = {
   slug: string;
   visibility: "public" | "private";
   createdAt: string;
-  movies: number[];
+  items: ListItem[];
+  movies: number[]; // computed from items for backward compat
   color?: string;
   userEmail: string;
   username?: string | null;
@@ -27,7 +31,8 @@ type ApiList = {
   title: string;
   slug: string;
   visibility: string;
-  movies: number[];
+  items: ListItem[];
+  movies?: number[]; // legacy — prefer items
   createdAt: string;
   color?: string | null;
   userEmail: string;
@@ -69,13 +74,17 @@ function slugify(input: string) {
 }
 
 function mapApiList(entry: ApiList): SavedList {
+  const items: ListItem[] = Array.isArray(entry.items)
+    ? entry.items.map((item) => ({ tmdbId: item.tmdbId, mediaType: item.mediaType === "tv" ? "tv" : "movie" }))
+    : (entry.movies ?? []).map((id) => ({ tmdbId: id, mediaType: "movie" as const }));
   return {
     id: entry.id,
     title: entry.title,
     slug: entry.slug,
     visibility: entry.visibility as SavedList["visibility"],
     createdAt: entry.createdAt,
-    movies: Array.isArray(entry.movies) ? entry.movies : [],
+    items,
+    movies: items.map((item) => item.tmdbId),
     color: normalizeListColor(entry.color),
     userEmail: normalizeEmail(entry.userEmail || ""),
     username: entry.username ?? null,
@@ -157,14 +166,19 @@ export async function addList(
   return mapped;
 }
 
-export async function addMovieToList(listId: string, tmdbId: number, userEmail: string): Promise<SavedList> {
+export async function addMovieToList(
+  listId: string,
+  tmdbId: number,
+  userEmail: string,
+  mediaType: "movie" | "tv" = "movie",
+): Promise<SavedList> {
   const email = normalizeEmail(userEmail);
   if (!email) {
     throw new Error("userEmail is required to update a list");
   }
   const data = await apiFetch<{ list: ApiList }>(`/lists/${listId}/items`, {
     method: "POST",
-    body: JSON.stringify({ tmdbId }),
+    body: JSON.stringify({ tmdbId, mediaType }),
   });
   const mapped = mapApiList(data.list);
   cacheSingleList(email, mapped);

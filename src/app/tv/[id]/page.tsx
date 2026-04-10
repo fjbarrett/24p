@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { fetchTmdbMovie } from "@/lib/tmdb-server";
+import { fetchTmdbShow } from "@/lib/server/tmdb";
 import { MovieActions } from "@/components/movie-actions";
 import { BackButton } from "@/components/back-button";
 import { DescriptionExpander } from "@/components/description-expander";
@@ -20,17 +20,17 @@ type PageProps = {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const tmdbId = Number(id);
-  if (Number.isNaN(tmdbId)) return { title: "Movie" };
+  if (Number.isNaN(tmdbId)) return { title: "TV Show" };
 
   try {
-    const movie = await fetchTmdbMovie(tmdbId);
-    const title = typeof movie.releaseYear === "number" ? `${movie.title} (${movie.releaseYear})` : movie.title;
-    const description = movie.overview?.trim() ? movie.overview : `Details for ${movie.title} on 24p.`;
-    const canonical = `/movies/${movie.tmdbId}`;
-    const imageUrl = movie.backdropUrl
-      ? getLargeImage(movie.backdropUrl, "backdrop")
-      : movie.posterUrl
-        ? getLargeImage(movie.posterUrl, "poster")
+    const show = await fetchTmdbShow(tmdbId);
+    const title = typeof show.releaseYear === "number" ? `${show.title} (${show.releaseYear})` : show.title;
+    const description = show.overview?.trim() ? show.overview : `Details for ${show.title} on 24p.`;
+    const canonical = `/tv/${show.tmdbId}`;
+    const imageUrl = show.backdropUrl
+      ? getLargeImage(show.backdropUrl, "backdrop")
+      : show.posterUrl
+        ? getLargeImage(show.posterUrl, "poster")
         : null;
 
     return {
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         title,
         description,
         url: canonical,
-        ...(imageUrl ? { images: [{ url: imageUrl, alt: `${movie.title} poster` }] } : {}),
+        ...(imageUrl ? { images: [{ url: imageUrl, alt: `${show.title} poster` }] } : {}),
       },
       twitter: {
         title,
@@ -51,14 +51,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     };
   } catch {
     return {
-      title: "Movie",
-      alternates: { canonical: `/movies/${tmdbId}` },
+      title: "TV Show",
+      alternates: { canonical: `/tv/${tmdbId}` },
       robots: { index: false, follow: false },
     };
   }
 }
 
-export default async function MovieDetailPage({ params, searchParams }: PageProps) {
+export default async function TvShowDetailPage({ params, searchParams }: PageProps) {
   const [{ id }, resolvedSearchParams, session] = await Promise.all([
     params,
     searchParams,
@@ -69,9 +69,9 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
 
   const typedSession = session as Session | null;
   const userEmail = typedSession?.user?.email?.toLowerCase() ?? "";
-  const movie = await fetchTmdbMovie(tmdbId);
+  const show = await fetchTmdbShow(tmdbId);
   const backHref = getFromParam(resolvedSearchParams) ?? "/";
-  const jsonLd = buildMovieJsonLd(movie);
+  const jsonLd = buildShowJsonLd(show);
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
@@ -88,47 +88,49 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
         </BackButton>
       </div>
 
-      {/* Main content */}
       <div className="mx-auto w-full max-w-[800px] px-6 py-8 sm:px-10">
-        {/* Poster */}
         <MovieTrailerToggle
-          tmdbId={movie.tmdbId}
-          title={movie.title}
-          posterUrl={movie.posterUrl ? getLargeImage(movie.posterUrl, "poster") : null}
-          backdropUrl={movie.backdropUrl ? getLargeImage(movie.backdropUrl, "backdrop") : null}
+          tmdbId={show.tmdbId}
+          title={show.title}
+          posterUrl={show.posterUrl ? getLargeImage(show.posterUrl, "poster") : null}
+          backdropUrl={show.backdropUrl ? getLargeImage(show.backdropUrl, "backdrop") : null}
+          trailerEndpoint={`/tmdb/tv/${show.tmdbId}/trailer`}
         />
 
-        {/* Title */}
-        <h1 className="mt-3 text-center text-2xl text-white">{movie.title}</h1>
+        <h1 className="mt-3 text-center text-2xl text-white">{show.title}</h1>
 
-        {/* Year · Rating */}
-        {(typeof movie.releaseYear === "number" || typeof movie.imdbRating === "number") ? (
+        {(typeof show.releaseYear === "number" || typeof show.imdbRating === "number") ? (
           <p className="mt-1.5 flex items-center justify-center gap-1.5 text-sm text-[#B3B3B3]">
-            {typeof movie.releaseYear === "number" ? <span>{movie.releaseYear}</span> : null}
-            {typeof movie.imdbRating === "number" && movie.imdbId ? (
+            {typeof show.releaseYear === "number" ? <span>{show.releaseYear}</span> : null}
+            {typeof show.imdbRating === "number" && show.imdbId ? (
               <a
-                href={`https://www.imdb.com/title/${movie.imdbId}/`}
+                href={`https://www.imdb.com/title/${show.imdbId}/`}
                 target="_blank"
                 rel="noreferrer"
                 className="ml-2 flex items-center gap-1 transition hover:opacity-70"
               >
                 <Image src="/imdb_logo.svg" alt="IMDb" width={32} height={16} className="h-4 w-auto opacity-90" unoptimized />
-                <span>{movie.imdbRating}</span>
+                <span>{show.imdbRating}</span>
               </a>
             ) : null}
           </p>
         ) : null}
 
-        {/* Description */}
-        {movie.overview ? (
+        {show.overview ? (
           <div className="mt-4 w-full">
-            <DescriptionExpander text={movie.overview} />
+            <DescriptionExpander text={show.overview} />
           </div>
         ) : null}
 
-        {/* Action buttons */}
-        {(userEmail || movie.imdbId) ? (
-          <MovieActions tmdbId={movie.tmdbId} userEmail={userEmail} imdbId={movie.imdbId} title={movie.title} releaseYear={movie.releaseYear} />
+        {(userEmail || show.imdbId) ? (
+          <MovieActions
+            tmdbId={show.tmdbId}
+            userEmail={userEmail}
+            imdbId={show.imdbId}
+            title={show.title}
+            releaseYear={show.releaseYear}
+            mediaType="tv"
+          />
         ) : null}
       </div>
     </div>
@@ -164,7 +166,7 @@ function getLargeImage(url: string, type: "poster" | "backdrop"): string {
   return url.replace("/w185/", type === "backdrop" ? "/w1280/" : "/w780/");
 }
 
-function buildMovieJsonLd(movie: {
+function buildShowJsonLd(show: {
   tmdbId: number;
   title: string;
   overview?: string | null;
@@ -173,24 +175,24 @@ function buildMovieJsonLd(movie: {
   backdropUrl?: string | null;
   imdbId?: string | null;
 }) {
-  const canonicalUrl = new URL(`/movies/${movie.tmdbId}`, getAppUrl()).toString();
-  const imageUrl = movie.backdropUrl
-    ? getLargeImage(movie.backdropUrl, "backdrop")
-    : movie.posterUrl
-      ? getLargeImage(movie.posterUrl, "poster")
+  const canonicalUrl = new URL(`/tv/${show.tmdbId}`, getAppUrl()).toString();
+  const imageUrl = show.backdropUrl
+    ? getLargeImage(show.backdropUrl, "backdrop")
+    : show.posterUrl
+      ? getLargeImage(show.posterUrl, "poster")
       : undefined;
 
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
-    "@type": "Movie",
-    name: movie.title,
-    description: movie.overview ?? undefined,
+    "@type": "TVSeries",
+    name: show.title,
+    description: show.overview ?? undefined,
     image: imageUrl,
-    datePublished: movie.releaseYear ? `${movie.releaseYear}-01-01` : undefined,
+    startDate: show.releaseYear ? `${show.releaseYear}-01-01` : undefined,
     url: canonicalUrl,
   };
-  if (movie.imdbId) {
-    schema.sameAs = `https://www.imdb.com/title/${movie.imdbId}/`;
+  if (show.imdbId) {
+    schema.sameAs = `https://www.imdb.com/title/${show.imdbId}/`;
   }
   return schema;
 }

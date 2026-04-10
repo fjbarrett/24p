@@ -107,7 +107,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
 
   const noLists = !lists.length;
 
-  async function handleAdd(movieId: number) {
+  async function handleAdd(movieId: number, mediaType: "movie" | "tv" = "movie") {
     if (!normalizedEmail) {
       setStatus({ movieId, message: "Sign in to save movies.", tone: "error" });
       return;
@@ -119,7 +119,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
     try {
       setSavingMovieId(movieId);
       setStatus(null);
-      await addMovieToList(selectedListId, movieId, normalizedEmail);
+      await addMovieToList(selectedListId, movieId, normalizedEmail, mediaType);
       setStatus({ movieId, message: "Added to list.", tone: "success" });
       setActiveMovieId(null);
     } catch (err) {
@@ -155,9 +155,9 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
               setQuery(event.target.value);
             }}
             onFocus={() => setPanelDismissed(false)}
-            type="search"
+            type="text"
             placeholder="Search"
-            aria-label="Search movies"
+            aria-label="Search movies and shows"
             aria-controls={resultsId}
             aria-describedby={error ? errorId : undefined}
             className="w-full flex-1 bg-transparent pr-3 text-lg text-black-100 placeholder:text-black-400 focus:outline-none"
@@ -193,11 +193,16 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
             aria-busy={isSearching}
             aria-label="Search results"
           >
-            {displayResults.map((movie) => (
+            {displayResults.map((movie) => {
+              const isShow = movie.mediaType === "tv";
+              const detailHref = isShow
+                ? `/tv/${movie.tmdbId}`
+                : `/movies/${movie.tmdbId}`;
+              return (
               <li key={movie.tmdbId}>
                 <div className="flex items-center gap-3 rounded-3xl bg-black-900/70 p-4 transition hover:bg-black-800/70">
                   <Link
-                    href={`/movies/${movie.tmdbId}`}
+                    href={detailHref}
                     className="flex flex-1 gap-3"
                     aria-label={`${movie.title}${movie.releaseYear ? ` (${movie.releaseYear})` : ""}`}
                   >
@@ -269,7 +274,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
                         <button
                           type="button"
                           className="flex w-full items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
-                          onClick={() => handleAdd(movie.tmdbId)}
+                          onClick={() => handleAdd(movie.tmdbId, isShow ? "tv" : "movie")}
                           disabled={savingMovieId === movie.tmdbId}
                         >
                           {savingMovieId === movie.tmdbId ? "Adding..." : "Add to list"}
@@ -290,7 +295,8 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
                   </p>
                 )}
               </li>
-            ))}
+              );
+            })}
             {displayArtists.length > 0 && (
               <li>
                 <p className="text-[11px] uppercase tracking-[0.4em] text-black-500">Artists</p>

@@ -14,8 +14,9 @@ export async function GET(request: Request) {
   if (!tmdbId || Number.isNaN(tmdbId)) {
     return NextResponse.json({ providers: [], justWatchLink: null });
   }
+  const mediaType = searchParams.get("mediaType") === "tv" ? "tv" : "movie";
 
-  const result = await fetchWatchProviders(tmdbId);
+  const result = await fetchWatchProviders(tmdbId, "US", mediaType);
   return NextResponse.json(result, {
     headers: { "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400" },
   });
