@@ -330,6 +330,15 @@ export async function fetchWatchProviders(tmdbId: number, locale = "US"): Promis
   }
 }
 
+export async function fetchTmdbRecommendationsForMovie(tmdbId: number): Promise<SimplifiedMovie[]> {
+  try {
+    const data = await tmdbFetch<{ results?: TmdbMovie[] }>(`/movie/${tmdbId}/recommendations`, { page: 1 });
+    return (data.results ?? []).map(mapMovie).filter((movie) => Boolean(movie.posterUrl));
+  } catch {
+    return [];
+  }
+}
+
 export async function findTmdbMovieId(title: string, year?: string | null) {
   const response = await tmdbFetch<{ results?: TmdbMovie[] }>("/search/movie", {
     query: title,
