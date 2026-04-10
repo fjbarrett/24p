@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BackButton } from "@/components/back-button";
 import { StreamingCatalogGrid } from "@/components/streaming-catalog-grid";
 import { StreamingDiscoveryControls } from "@/components/streaming-discovery-controls";
 import { fetchStreamingCatalog, listStreamingPlatforms } from "@/lib/server/justwatch";
@@ -45,15 +44,6 @@ export default async function StreamingPage({ searchParams }: StreamingPageProps
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8 px-4 py-6 sm:px-8">
-        <div className="flex items-center justify-between gap-4">
-          <BackButton fallbackHref="/" className="text-sm text-white/70 transition hover:text-white">
-            ← Back
-          </BackButton>
-          <Link href="/" className="text-sm text-white/45 transition hover:text-white/75">
-            24p
-          </Link>
-        </div>
-
         <header className="text-center">
           <h1 className="text-3xl font-semibold text-white sm:text-4xl">Streaming</h1>
         </header>

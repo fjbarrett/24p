@@ -21,7 +21,6 @@ type DirectOffer = {
 type WatchButtonProps = {
   appleTvUrl?: string | null;
   providers: Provider[];
-  justWatchLink: string | null;
   directOffers?: DirectOffer[];
 };
 
@@ -177,21 +176,20 @@ function dedupeProviderKey(href: string | null, providerName: string, providerId
 
 function buildDisplayProviders(
   providers: Provider[],
-  justWatchLink: string | null,
   directOffers: DirectOffer[],
 ): DisplayProvider[] {
   const seen = new Set<string>();
 
   return providers.flatMap((provider) => {
     const directOffer = getDirectOffer(provider, directOffers);
-    const href = directOffer?.url ?? justWatchLink;
+    const href = directOffer?.url ?? null;
 
     // Drop Amazon channel marketplace links for non-Amazon providers.
     if (isAmazonUrl(directOffer?.url ?? null) && !isAmazonProvider(provider.name)) {
       return [];
     }
 
-    if (isPlexProvider(provider) && !directOffer) {
+    if (!href || (isPlexProvider(provider) && !directOffer)) {
       return [];
     }
 
@@ -249,9 +247,9 @@ function ProviderIcon({ provider }: { provider: DisplayProvider }) {
   );
 }
 
-export function WatchButton({ appleTvUrl, providers, justWatchLink, directOffers = [] }: WatchButtonProps) {
+export function WatchButton({ appleTvUrl, providers, directOffers = [] }: WatchButtonProps) {
   const [expanded, setExpanded] = useState(false);
-  const displayProviders = buildDisplayProviders(providers, justWatchLink, directOffers);
+  const displayProviders = buildDisplayProviders(providers, directOffers);
 
   const totalItems = displayProviders.length + (appleTvUrl ? 1 : 0);
   if (totalItems === 0) return null;

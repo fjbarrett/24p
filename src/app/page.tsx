@@ -75,9 +75,7 @@ function Header({
     ? "flex w-full flex-col items-center gap-8 text-center lg:gap-12"
     : "flex w-full flex-col items-center gap-6 text-center";
   return (
-    <header
-      className={`${layoutClass} relative`}
-    >
+    <header className={`${layoutClass} relative`}>
       <div className="space-y-2 text-center">
         <p
           className={`${isSignedIn ? "text-[2.6rem] sm:text-5xl" : "text-6xl sm:text-7xl"} font-semibold leading-none text-white`}
@@ -85,16 +83,16 @@ function Header({
           24p
         </p>
       </div>
-      <div className={`w-full space-y-5 ${isSignedIn ? "max-w-[560px]" : "max-w-[980px]"}`}>
-        <TmdbSearchBar lists={lists} userEmail={userEmail} wide={!isSignedIn} />
-        <div className="flex justify-center">
-          <Link
-            href="/streaming"
-            className="text-sm text-white/62 underline-offset-4 transition hover:text-white hover:underline"
-          >
-            Streaming On
-          </Link>
-        </div>
+      <div className={`w-full ${isSignedIn ? "max-w-[560px]" : "max-w-[480px]"}`}>
+        <TmdbSearchBar lists={lists} userEmail={userEmail} />
+      </div>
+      <div className="flex justify-center">
+        <Link
+          href="/streaming"
+          className="text-sm text-white/62 underline-offset-4 transition hover:text-white hover:underline"
+        >
+          Streaming On
+        </Link>
       </div>
     </header>
   );

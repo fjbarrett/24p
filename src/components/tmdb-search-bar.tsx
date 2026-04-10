@@ -143,7 +143,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
   }
 
   return (
-    <div ref={containerRef} className="relative w-full sm:w-auto sticky top-3 z-50 mx-auto" role="search" aria-label="Movie search">
+    <div ref={containerRef} className="relative w-full sm:w-auto mx-auto" role="search" aria-label="Movie search">
       <div className="flex items-center justify-center gap-2">
         <div className={`relative flex w-full items-center gap-3 overflow-hidden rounded-3xl bg-black-950/70 px-4 py-3 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"}`}>
           <span className="flex items-center justify-center rounded-full p-2 text-white" aria-hidden>
@@ -184,7 +184,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
       )}
       {showResultsPanel && (
         <div
-          className="absolute left-1/2 top-14 z-40 w-[min(90vw,720px)] max-h-[70vh] -translate-x-1/2 space-y-3 overflow-y-auto rounded-3xl bg-black p-4 backdrop-blur"
+          className="search-results-scrollbar absolute left-1/2 top-14 z-40 w-[min(90vw,720px)] max-h-[70vh] -translate-x-1/2 space-y-3 overflow-y-auto rounded-3xl bg-black p-4 backdrop-blur"
           id={panelId}
           aria-label="Search results"
         >

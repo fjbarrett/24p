@@ -1,4 +1,5 @@
 import "server-only";
+import { fetchTmdbArtwork } from "@/lib/server/tmdb";
 
 const JUSTWATCH_GRAPHQL = "https://apis.justwatch.com/graphql";
 const JUSTWATCH_IMAGES = "https://images.justwatch.com";
@@ -13,7 +14,13 @@ const PAGE_STRIDE_MULTIPLIER = 3;
 type JwOffer = {
   standardWebURL: string;
   monetizationType?: string | null;
-  package: { packageId: number; clearName?: string | null; technicalName?: string | null; shortName?: string | null };
+  package: {
+    packageId: number;
+    clearName?: string | null;
+    technicalName?: string | null;
+    shortName?: string | null;
+    icon?: string | null;
+  };
 };
 
 type JwMovie = {
@@ -114,7 +121,39 @@ export type JustWatchOffer = {
   providerShortName: string;
   packageId: number;
   lookupKeys: string[];
+  iconUrl: string | null;
 };
+
+function isJustWatchHostname(hostname: string) {
+  const normalized = hostname.trim().toLowerCase();
+  return normalized === "justwatch.com" || normalized.endsWith(".justwatch.com");
+}
+
+function resolveDirectOfferUrl(rawUrl?: string | null): string | null {
+  if (!rawUrl) return null;
+
+  try {
+    const parsed = new URL(rawUrl);
+    const hostname = parsed.hostname.toLowerCase();
+
+    if (hostname === "click.justwatch.com") {
+      const redirectTarget = parsed.searchParams.get("r");
+      if (!redirectTarget) return null;
+
+      const directTarget = new URL(redirectTarget);
+      if (isJustWatchHostname(directTarget.hostname)) return null;
+      return directTarget.toString();
+    }
+
+    if (isJustWatchHostname(hostname)) {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
 
 const STREAMING_PROVIDER_ALLOWLIST = new Set([
   "nfx",
@@ -179,11 +218,19 @@ const SEARCH_QUERY = `
           objectType
           ... on Movie{
             content(country:$country,language:$lang){ title originalReleaseYear }
-            offers(country:$country,platform:WEB){ standardWebURL package{ packageId clearName technicalName shortName } }
+            offers(country:$country,platform:WEB){
+              standardWebURL
+              monetizationType
+              package{ packageId clearName technicalName shortName icon(profile:S100, format:PNG) }
+            }
           }
           ... on Show{
             content(country:$country,language:$lang){ title originalReleaseYear }
-            offers(country:$country,platform:WEB){ standardWebURL package{ packageId clearName technicalName shortName } }
+            offers(country:$country,platform:WEB){
+              standardWebURL
+              monetizationType
+              package{ packageId clearName technicalName shortName icon(profile:S100, format:PNG) }
+            }
           }
         }
       }
@@ -443,6 +490,7 @@ function getStreamingOffer(movie: JwMovie, providerShortNames?: string[]) {
 function mapCatalogMovie(movie: JwMovie, offer: JwOffer): StreamingCatalogMovie | null {
   const tmdbId = Number(movie.content.externalIds?.tmdbId);
   if (!tmdbId || Number.isNaN(tmdbId)) return null;
+  const directOfferUrl = resolveDirectOfferUrl(offer.standardWebURL);
 
   return {
     justWatchId: movie.id,
@@ -456,7 +504,7 @@ function mapCatalogMovie(movie: JwMovie, offer: JwOffer): StreamingCatalogMovie 
     backdropUrls: (movie.content.backdrops ?? [])
       .map((backdrop) => absoluteImageUrl(backdrop?.backdropUrl))
       .filter((url): url is string => Boolean(url)),
-    primaryOfferUrl: offer.standardWebURL ?? null,
+    primaryOfferUrl: directOfferUrl,
     providerName: offer.package.clearName?.trim() || "Streaming",
     providerShortName: offer.package.shortName?.trim() || "",
     popularity: movie.content.scoring?.tmdbPopularity ?? null,
@@ -489,20 +537,22 @@ export async function fetchJustWatchOffers(
     const seen = new Set<string>();
     for (const offer of match.offers) {
       const accessModel = normalizeAccessModel(offer.monetizationType);
-      if (!accessModel || !offer.standardWebURL) continue;
+      const directUrl = resolveDirectOfferUrl(offer.standardWebURL);
+      if (!accessModel || !directUrl) continue;
 
-      const dedupeKey = `${offer.package.packageId}:${accessModel}:${offer.standardWebURL}`;
+      const dedupeKey = `${offer.package.packageId}:${accessModel}:${directUrl}`;
       if (seen.has(dedupeKey)) continue;
       seen.add(dedupeKey);
 
       offers.push({
-        url: offer.standardWebURL,
+        url: directUrl,
         accessModel,
         monetizationType: offer.monetizationType ?? null,
         providerName: offer.package.clearName?.trim() || "Streaming",
         providerShortName: offer.package.shortName?.trim().toLowerCase() || "",
         packageId: offer.package.packageId,
         lookupKeys: packageLookupKeys(offer.package),
+        iconUrl: offer.package.icon ? `${JUSTWATCH_ICON_IMAGES}${offer.package.icon}` : null,
       });
     }
     return offers;
@@ -589,5 +639,37 @@ export async function fetchStreamingCatalog({
     }
   }
 
-  return Array.from(collected.values()).slice(0, limit);
+  const movies = Array.from(collected.values()).slice(0, limit);
+  const missingArt = movies.filter((movie) => !movie.posterUrl && movie.backdropUrls.length === 0);
+
+  if (!missingArt.length) {
+    return movies;
+  }
+
+  const artworkResults = await Promise.allSettled(
+    missingArt.map((movie) =>
+      fetchTmdbArtwork(movie.tmdbId, movie.contentType === "SHOW" ? "tv" : "movie"),
+    ),
+  );
+
+  return movies.map((movie) => {
+    if (movie.posterUrl || movie.backdropUrls.length > 0) {
+      return movie;
+    }
+
+    const missingIndex = missingArt.findIndex((candidate) => candidate.tmdbId === movie.tmdbId);
+    const artwork = missingIndex >= 0 && artworkResults[missingIndex]?.status === "fulfilled"
+      ? artworkResults[missingIndex].value
+      : null;
+
+    if (!artwork) {
+      return movie;
+    }
+
+    return {
+      ...movie,
+      posterUrl: movie.posterUrl ?? artwork.posterUrl,
+      backdropUrls: movie.backdropUrls.length ? movie.backdropUrls : artwork.backdropUrl ? [artwork.backdropUrl] : [],
+    };
+  });
 }

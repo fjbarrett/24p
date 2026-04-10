@@ -16,6 +16,9 @@ type DirectOffer = {
   providerName: string;
   providerShortName: string;
   lookupKeys: string[];
+  iconUrl?: string | null;
+  presentationType?: string | null;
+  price?: number | null;
 };
 
 type StreamingProviderRowProps = {
@@ -151,10 +154,17 @@ function offerPriority(offer: DirectOffer): number {
   }
 }
 
+function isPlayableOffer(offer: DirectOffer) {
+  return offer.accessModel === "subscription"
+    || offer.accessModel === "free"
+    || offer.accessModel === "ads"
+    || offer.accessModel === "live";
+}
+
 function getDirectOffer(provider: Provider, directOffers: DirectOffer[]): DirectOffer | null {
   const keys = new Set(possibleProviderKeys(provider));
   const matches = directOffers
-    .filter((offer) => offer.lookupKeys.some((key) => keys.has(key)));
+    .filter((offer) => isPlayableOffer(offer) && offer.lookupKeys.some((key) => keys.has(key)));
 
   const filteredMatches = isPlexProvider(provider)
     ? matches.filter((offer) => offer.accessModel === "free")
@@ -172,20 +182,19 @@ function dedupeProviderKey(href: string | null, providerId: number): string {
 
 function buildDisplayProviders(
   providers: Provider[],
-  justWatchLink: string | null,
   directOffers: DirectOffer[],
 ): DisplayProvider[] {
   const seen = new Set<string>();
 
   return providers.flatMap((provider) => {
     const directOffer = getDirectOffer(provider, directOffers);
-    const href = directOffer?.url ?? justWatchLink;
+    const href = directOffer?.url ?? null;
 
     if (isAmazonUrl(directOffer?.url ?? null) && !isAmazonProvider(provider.name)) {
       return [];
     }
 
-    if (isPlexProvider(provider) && !directOffer) return [];
+    if (!href || (isPlexProvider(provider) && !directOffer)) return [];
 
     const override = getBrandOverride(directOffer?.url ?? null);
     const dedupeKey = dedupeProviderKey(href, provider.id);
@@ -201,6 +210,50 @@ function buildDisplayProviders(
       name: override?.name ?? provider.name,
     }];
   });
+}
+
+function buildOfferDisplayProviders(directOffers: DirectOffer[]): DisplayProvider[] {
+  const bestByProvider = new Map<string, DirectOffer>();
+
+  for (const offer of directOffers) {
+    if (!isPlayableOffer(offer)) continue;
+    if (offer.providerShortName === "plx" && offer.accessModel !== "free") continue;
+
+    const key = normalizeProviderKey(offer.providerShortName || offer.providerName);
+    const current = bestByProvider.get(key);
+    if (!current || offerPriority(offer) < offerPriority(current)) {
+      bestByProvider.set(key, offer);
+    }
+  }
+
+  return [...bestByProvider.entries()].flatMap(([key, offer]) => {
+    const override = getBrandOverride(offer.url);
+    if (!override && !offer.iconUrl) {
+      return [];
+    }
+
+    return [{
+      id: `offer:${key}`,
+      href: offer.url,
+      icon: override?.icon,
+      logoUrl: offer.iconUrl ?? "",
+      name: override?.name ?? offer.providerName,
+    }];
+  });
+}
+
+function mergeDisplayProviders(primary: DisplayProvider[], fallback: DisplayProvider[]) {
+  const merged: DisplayProvider[] = [];
+  const seen = new Set<string>();
+
+  for (const provider of [...primary, ...fallback]) {
+    const key = normalizeProviderKey(provider.name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(provider);
+  }
+
+  return merged;
 }
 
 function ProviderIcon({ provider }: { provider: DisplayProvider }) {
@@ -242,7 +295,6 @@ function ProviderIcon({ provider }: { provider: DisplayProvider }) {
 
 export function StreamingProviderRow({ tmdbId, title, imdbId, releaseYear, mediaType = "movie" }: StreamingProviderRowProps) {
   const [providers, setProviders] = useState<Provider[]>([]);
-  const [justWatchLink, setJustWatchLink] = useState<string | null>(null);
   const [directOffers, setDirectOffers] = useState<DirectOffer[]>([]);
   const [appleTvUrl, setAppleTvUrl] = useState<string | null>(null);
 
@@ -254,7 +306,6 @@ export function StreamingProviderRow({ tmdbId, title, imdbId, releaseYear, media
       .then((data) => {
         if (!active || !data) return;
         setProviders(data.providers ?? []);
-        setJustWatchLink(data.justWatchLink ?? null);
       })
       .catch(() => {});
 
@@ -289,32 +340,37 @@ export function StreamingProviderRow({ tmdbId, title, imdbId, releaseYear, media
     ? `https://tv.apple.com/us/search?term=${encodeURIComponent(title)}`
     : null;
   const effectiveAppleTvUrl = appleTvUrl ?? fallbackAppleSearchUrl;
-  const displayProviders = buildDisplayProviders(
+  const tmdbDisplayProviders = buildDisplayProviders(
     providers.filter((provider) => provider.id !== APPLE_TV_PLUS_ID),
-    justWatchLink,
     directOffers,
   );
+  const offerDisplayProviders = buildOfferDisplayProviders(directOffers);
+  const displayProviders = mergeDisplayProviders(tmdbDisplayProviders, offerDisplayProviders);
   if (!displayProviders.length && !effectiveAppleTvUrl) return null;
 
   return (
-    <div className="flex items-center gap-3">
-      {effectiveAppleTvUrl ? (
-        <a
-          href={effectiveAppleTvUrl}
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Watch on Apple TV"
-          title="Apple TV"
-          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-white transition-opacity hover:opacity-75"
-        >
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-black" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-          </svg>
-        </a>
+    <div className="w-full max-w-[720px] py-2">
+      {(effectiveAppleTvUrl || displayProviders.length) ? (
+        <div className="flex items-center justify-center gap-3">
+          {effectiveAppleTvUrl ? (
+            <a
+              href={effectiveAppleTvUrl}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Watch on Apple TV"
+              title="Apple TV"
+              className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-white transition-opacity hover:opacity-75"
+            >
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-black" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+              </svg>
+            </a>
+          ) : null}
+          {displayProviders.map((provider) => (
+            <ProviderIcon key={provider.id} provider={provider} />
+          ))}
+        </div>
       ) : null}
-      {displayProviders.map((provider) => (
-        <ProviderIcon key={provider.id} provider={provider} />
-      ))}
     </div>
   );
 }

@@ -1,23 +1,19 @@
 import Image from "next/image";
 import { fetchTmdbShow } from "@/lib/server/tmdb";
 import { MovieActions } from "@/components/movie-actions";
-import { BackButton } from "@/components/back-button";
 import { DescriptionExpander } from "@/components/description-expander";
 import { MovieTrailerToggle } from "@/components/movie-trailer-toggle";
 import { StreamingProviderRow } from "@/components/streaming-provider-row";
-import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/app-url";
-import { listListsForUser } from "@/lib/server/lists";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined> | URLSearchParams>;
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -61,10 +57,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 }
 
-export default async function TvShowDetailPage({ params, searchParams }: PageProps) {
-  const [{ id }, resolvedSearchParams, session] = await Promise.all([
+export default async function TvShowDetailPage({ params }: PageProps) {
+  const [{ id }, session] = await Promise.all([
     params,
-    searchParams,
     getServerSession(authOptions),
   ]);
   const tmdbId = Number(id);
@@ -73,8 +68,6 @@ export default async function TvShowDetailPage({ params, searchParams }: PagePro
   const typedSession = session as Session | null;
   const userEmail = typedSession?.user?.email?.toLowerCase() ?? "";
   const show = await fetchTmdbShow(tmdbId);
-  const lists = userEmail ? await listListsForUser(userEmail, true) : [];
-  const backHref = getFromParam(resolvedSearchParams) ?? "/";
   const jsonLd = buildShowJsonLd(show);
 
   return (
@@ -83,20 +76,7 @@ export default async function TvShowDetailPage({ params, searchParams }: PagePro
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="mx-auto w-full max-w-[900px] px-6 pt-6 sm:px-8">
-        <BackButton
-          fallbackHref={backHref}
-          className="text-sm text-white/70 transition hover:text-white"
-        >
-          ← Back
-        </BackButton>
-      </div>
-
       <div className="mx-auto w-full max-w-[800px] px-6 py-8 sm:px-10">
-        <div className="mb-6">
-          <TmdbSearchBar lists={lists} userEmail={userEmail} wide />
-        </div>
-
         <MovieTrailerToggle
           tmdbId={show.tmdbId}
           title={show.title}
@@ -105,7 +85,12 @@ export default async function TvShowDetailPage({ params, searchParams }: PagePro
           trailerEndpoint={`/tmdb/tv/${show.tmdbId}/trailer`}
         />
 
-        <h1 className="mt-3 text-center text-2xl text-white">{show.title}</h1>
+        <h1
+          className="mt-3 text-center text-2xl font-semibold tracking-tight !text-white"
+          style={{ color: "#fff", WebkitTextFillColor: "#fff", opacity: 1 }}
+        >
+          {show.title}
+        </h1>
 
         {(typeof show.releaseYear === "number" || typeof show.imdbRating === "number") ? (
           <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-[#B3B3B3]">
@@ -153,30 +138,6 @@ export default async function TvShowDetailPage({ params, searchParams }: PagePro
       </div>
     </div>
   );
-}
-
-function getFromParam(
-  search: Record<string, string | string[] | undefined> | URLSearchParams | undefined,
-) {
-  const raw =
-    search instanceof URLSearchParams
-      ? search.get("from")
-      : (() => {
-          const value = search?.from;
-          return Array.isArray(value) ? value[0] : value;
-        })();
-  if (!raw) return null;
-  const decoded = safeDecode(raw);
-  if (!decoded.startsWith("/") || decoded.startsWith("//")) return null;
-  return decoded;
-}
-
-function safeDecode(value: string) {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
 }
 
 function getLargeImage(url: string, type: "poster" | "backdrop"): string {
