@@ -6,6 +6,7 @@ import type { ListShare, SavedList } from "@/lib/list-store";
 import { addListShare, loadListShares, removeListShare, updateListSharePermission } from "@/lib/list-store";
 import { DEFAULT_LIST_COLOR_ID, normalizeListColor } from "@/lib/list-colors";
 import { apiFetch } from "@/lib/api-client";
+import type { SimplifiedMovie } from "@/lib/tmdb";
 
 export function ListEditor({
   list,
@@ -37,6 +38,9 @@ export function ListEditor({
   const [isSharing, setIsSharing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(startEditing);
+  const [movieIds, setMovieIds] = useState<number[]>(list.movies);
+  const [movieTitles, setMovieTitles] = useState<Map<number, string>>(new Map());
+  const [removingMovieId, setRemovingMovieId] = useState<number | null>(null);
   const router = useRouter();
   const canShare = Boolean(list.username);
 
@@ -65,6 +69,42 @@ export function ListEditor({
       isActive = false;
     };
   }, [isEditing, isOwner, list.id, list.userEmail]);
+
+  useEffect(() => {
+    if (!isEditing || typeof window === "undefined") return;
+    const map = new Map<number, string>();
+    for (const id of list.movies) {
+      try {
+        const raw = window.sessionStorage.getItem(`tmdb:${id}`);
+        if (raw) {
+          const data = JSON.parse(raw) as SimplifiedMovie;
+          if (data.title) map.set(id, data.title);
+        }
+      } catch {
+        // ignore cache errors
+      }
+    }
+    setMovieTitles(map);
+    setMovieIds(list.movies);
+  }, [isEditing, list.movies]);
+
+  async function handleRemoveMovie(tmdbId: number) {
+    if (removingMovieId !== null) return;
+    setRemovingMovieId(tmdbId);
+    try {
+      const payload = await apiFetch<{ list: SavedList }>(`/lists/${list.id}/items/${tmdbId}`, {
+        method: "DELETE",
+      });
+      const updated = Array.isArray(payload.list.movies) ? payload.list.movies : [];
+      setMovieIds(updated);
+      setMovieTitles((prev) => { const next = new Map(prev); next.delete(tmdbId); return next; });
+      router.refresh();
+    } catch {
+      // ignore errors
+    } finally {
+      setRemovingMovieId(null);
+    }
+  }
 
   function formatShareLabel(share: ListShare) {
     if (share.username) return `@${share.username}`;
@@ -275,6 +315,37 @@ export function ListEditor({
           </div>
         </section>
       </div>
+
+      <section className="space-y-2 rounded-[20px] border border-white/8 bg-white/[0.03] p-3 sm:p-4">
+        <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">
+          Films ({movieIds.length})
+        </span>
+        {movieIds.length === 0 ? (
+          <p className="text-[11px] text-black-500">No films yet.</p>
+        ) : (
+          <div className="max-h-44 overflow-y-auto">
+            {movieIds.map((id) => (
+              <div
+                key={id}
+                className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 hover:bg-white/5"
+              >
+                <span className="truncate text-sm text-white/70">
+                  {movieTitles.get(id) ?? `Film #${id}`}
+                </span>
+                <button
+                  type="button"
+                  disabled={removingMovieId === id}
+                  onClick={() => handleRemoveMovie(id)}
+                  aria-label="Remove film"
+                  className="shrink-0 text-lg leading-none text-white/25 transition hover:text-white/70 disabled:opacity-40"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="space-y-3 rounded-[20px] border border-white/8 bg-white/[0.03] p-3 sm:p-4">
         <div className="flex flex-col gap-2 sm:flex-row">
