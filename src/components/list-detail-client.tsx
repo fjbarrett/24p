@@ -54,7 +54,7 @@ export function ListDetailClient({
       {modal}
 
       {isOwner ? (
-        <div className="flex justify-center pb-1">
+        <div className="flex justify-center py-3">
           <button
             type="button"
             onClick={() => setIsEditing(true)}
@@ -67,7 +67,7 @@ export function ListDetailClient({
         </div>
       ) : null}
 
-      <section className="rounded-2xl bg-black-950/60 p-4 sm:p-5">
+      <section className="!mt-0 rounded-2xl bg-black-950/60 p-4 sm:p-5">
         {!isEditing && !isOwner ? (
           <div className="mb-4">
             <ListEditor
