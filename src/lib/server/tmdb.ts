@@ -318,6 +318,17 @@ export async function fetchTmdbMovies(tmdbIds: number[]) {
   return results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
 }
 
+export async function fetchTmdbArtwork(
+  tmdbId: number,
+  mediaType: "movie" | "tv" = "movie",
+): Promise<{ posterUrl: string | null; backdropUrl: string | null }> {
+  const item = await tmdbFetch<TmdbMovie>(`/${mediaType}/${tmdbId}`);
+  return {
+    posterUrl: posterUrl(item.poster_path),
+    backdropUrl: posterUrl(item.backdrop_path),
+  };
+}
+
 type WatchProvider = {
   provider_id: number;
   provider_name: string;

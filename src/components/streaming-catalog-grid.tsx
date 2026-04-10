@@ -37,6 +37,9 @@ function StreamingCatalogCard({
   providerIcon: string | null;
 }) {
   const href = movie.contentType === "SHOW" ? `/tv/${movie.tmdbId}` : `/movies/${movie.tmdbId}`;
+  const imageUrl = movie.posterUrl ?? movie.backdropUrls[0] ?? null;
+  const imageAlt = movie.posterUrl ? `${movie.title} poster` : `${movie.title} artwork`;
+
   return (
     <Link
       href={href}
@@ -44,10 +47,10 @@ function StreamingCatalogCard({
     >
       <div className="pointer-events-none absolute inset-0 z-10 rounded-lg shadow-[inset_0_0_20px_rgba(0,0,0,0.55)] transition-shadow duration-300 group-hover:shadow-[inset_0_0_20px_rgba(255,255,255,0.06)]" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/3 bg-gradient-to-t from-black/70 to-transparent" />
-      {movie.posterUrl ? (
+      {imageUrl ? (
         <Image
-          src={movie.posterUrl}
-          alt={`${movie.title} poster`}
+          src={imageUrl}
+          alt={imageAlt}
           fill
           sizes="(max-width: 1024px) 50vw, 33vw"
           className="object-cover"
