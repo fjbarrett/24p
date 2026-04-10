@@ -193,11 +193,17 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
             aria-busy={isSearching}
             aria-label="Search results"
           >
-            {displayResults.map((movie) => (
+            {displayResults.map((movie) => {
+              const isShow = movie.mediaType === "tv";
+              const detailHref = isShow
+                ? `https://www.themoviedb.org/tv/${movie.tmdbId}`
+                : `/movies/${movie.tmdbId}`;
+              return (
               <li key={movie.tmdbId}>
                 <div className="flex items-center gap-3 rounded-3xl bg-black-900/70 p-4 transition hover:bg-black-800/70">
                   <Link
-                    href={`/movies/${movie.tmdbId}`}
+                    href={detailHref}
+                    {...(isShow ? { target: "_blank", rel: "noreferrer" } : {})}
                     className="flex flex-1 gap-3"
                     aria-label={`${movie.title}${movie.releaseYear ? ` (${movie.releaseYear})` : ""}`}
                   >
@@ -226,12 +232,13 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
                   </Link>
                   <button
                     type="button"
-                    aria-label={`Add ${movie.title} to a list`}
+                    aria-label={isShow ? "Adding TV shows to lists is coming soon" : `Add ${movie.title} to a list`}
                     aria-controls={`add-to-list-${movie.tmdbId}`}
                     aria-expanded={activeMovieId === movie.tmdbId}
-                    disabled={noLists || !normalizedEmail}
+                    disabled={isShow || noLists || !normalizedEmail}
+                    title={isShow ? "Adding TV shows to lists is coming soon" : undefined}
                     onClick={() => {
-                      if (noLists || !normalizedEmail) return;
+                      if (isShow || noLists || !normalizedEmail) return;
                       setActiveMovieId((current) => (current === movie.tmdbId ? null : movie.tmdbId));
                       setSelectedListId((current) => (current || lists[0]?.id) ?? "");
                       setStatus(null);
@@ -290,7 +297,8 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
                   </p>
                 )}
               </li>
-            ))}
+              );
+            })}
             {displayArtists.length > 0 && (
               <li>
                 <p className="text-[11px] uppercase tracking-[0.4em] text-black-500">Artists</p>

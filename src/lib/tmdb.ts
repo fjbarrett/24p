@@ -17,6 +17,7 @@ export type TmdbMovieSearchResult = {
 export type SimplifiedMovie = {
   tmdbId: number;
   title: string;
+  mediaType?: "movie" | "tv";
   overview?: string;
   releaseYear?: number;
   rating?: number;
@@ -25,6 +26,7 @@ export type SimplifiedMovie = {
   imdbRating?: number;
   imdbId?: string | null;
   posterUrl?: string | null;
+  backdropUrl?: string | null;
   runtime?: number;
   genres?: string[];
   tagline?: string | null;
@@ -53,6 +55,7 @@ export type FilmographyEntry = {
   title: string;
   releaseYear?: number;
   posterUrl?: string | null;
+  backdropUrl?: string | null;
   creditType?: "cast" | "crew";
   department?: string | null;
   job?: string | null;
