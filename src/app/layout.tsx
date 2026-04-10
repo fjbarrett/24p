@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { AuthProvider } from "@/components/providers/session-provider";
 import { getAppUrl } from "@/lib/app-url";
 import { ScrollRestoration } from "@/components/scroll-restoration";
+import { GlobalSearchHeader } from "@/components/global-search-header";
 import { Suspense } from "react";
 
 const appUrl = getAppUrl();
@@ -104,7 +105,12 @@ gtag('config', '${googleAnalyticsMeasurementId}');`}
           <Suspense fallback={null}>
             <ScrollRestoration />
           </Suspense>
-          <div className="mx-auto w-full max-w-[1000px]">{children}</div>
+          <div className="mx-auto w-full max-w-[1000px]">
+            <div className="sticky top-0 z-40 bg-black/80 backdrop-blur-sm">
+              <GlobalSearchHeader />
+            </div>
+            {children}
+          </div>
         </AuthProvider>
       </body>
     </html>

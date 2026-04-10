@@ -1,23 +1,19 @@
 import Image from "next/image";
 import { fetchTmdbMovie } from "@/lib/tmdb-server";
 import { MovieActions } from "@/components/movie-actions";
-import { BackButton } from "@/components/back-button";
 import { DescriptionExpander } from "@/components/description-expander";
 import { MovieTrailerToggle } from "@/components/movie-trailer-toggle";
 import { StreamingProviderRow } from "@/components/streaming-provider-row";
-import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/app-url";
-import { listListsForUser } from "@/lib/server/lists";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined> | URLSearchParams>;
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -61,10 +57,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 }
 
-export default async function MovieDetailPage({ params, searchParams }: PageProps) {
-  const [{ id }, resolvedSearchParams, session] = await Promise.all([
+export default async function MovieDetailPage({ params }: PageProps) {
+  const [{ id }, session] = await Promise.all([
     params,
-    searchParams,
     getServerSession(authOptions),
   ]);
   const tmdbId = Number(id);
@@ -73,8 +68,6 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
   const typedSession = session as Session | null;
   const userEmail = typedSession?.user?.email?.toLowerCase() ?? "";
   const movie = await fetchTmdbMovie(tmdbId);
-  const lists = userEmail ? await listListsForUser(userEmail, true) : [];
-  const backHref = getFromParam(resolvedSearchParams) ?? "/";
   const jsonLd = buildMovieJsonLd(movie);
 
   return (
@@ -83,21 +76,7 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="mx-auto w-full max-w-[900px] px-6 pt-6 sm:px-8">
-        <BackButton
-          fallbackHref={backHref}
-          className="text-sm text-white/70 transition hover:text-white"
-        >
-          ← Back
-        </BackButton>
-      </div>
-
-      {/* Main content */}
       <div className="mx-auto w-full max-w-[800px] px-6 py-8 sm:px-10">
-        <div className="mb-6">
-          <TmdbSearchBar lists={lists} userEmail={userEmail} wide />
-        </div>
-
         {/* Poster */}
         <MovieTrailerToggle
           tmdbId={movie.tmdbId}
@@ -107,7 +86,12 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
         />
 
         {/* Title */}
-        <h1 className="mt-3 text-center text-2xl text-white">{movie.title}</h1>
+        <h1
+          className="mt-3 text-center text-2xl font-semibold tracking-tight !text-white"
+          style={{ color: "#fff", WebkitTextFillColor: "#fff", opacity: 1 }}
+        >
+          {movie.title}
+        </h1>
 
         {/* Year · Rating */}
         {(typeof movie.releaseYear === "number" || typeof movie.imdbRating === "number") ? (
@@ -150,30 +134,6 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
       </div>
     </div>
   );
-}
-
-function getFromParam(
-  search: Record<string, string | string[] | undefined> | URLSearchParams | undefined,
-) {
-  const raw =
-    search instanceof URLSearchParams
-      ? search.get("from")
-      : (() => {
-          const value = search?.from;
-          return Array.isArray(value) ? value[0] : value;
-        })();
-  if (!raw) return null;
-  const decoded = safeDecode(raw);
-  if (!decoded.startsWith("/") || decoded.startsWith("//")) return null;
-  return decoded;
-}
-
-function safeDecode(value: string) {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
 }
 
 function getLargeImage(url: string, type: "poster" | "backdrop"): string {

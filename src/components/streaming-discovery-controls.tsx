@@ -143,7 +143,7 @@ export function StreamingDiscoveryControls({
       <select
         value={selectedSort}
         onChange={(event) => updateQuery(selectedProviders, event.target.value, Date.now().toString())}
-        className="rounded-2xl bg-white/[0.06] px-3 py-2 text-sm text-white outline-none transition hover:bg-white/10"
+        className="rounded-2xl bg-transparent px-3 py-2 text-sm text-white outline-none transition hover:bg-white/10"
       >
         <option value="popularity">Popularity</option>
         <option value="rating">IMDb Rating</option>
