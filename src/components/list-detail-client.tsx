@@ -54,7 +54,7 @@ export function ListDetailClient({
       {modal}
 
       {isOwner ? (
-        <div className="flex justify-center pb-1 pt-2">
+        <div className="flex justify-center pb-1">
           <button
             type="button"
             onClick={() => setIsEditing(true)}
