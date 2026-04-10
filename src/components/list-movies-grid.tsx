@@ -16,6 +16,7 @@ type ListMoviesGridProps = {
   listId?: string;
   userEmail?: string | null;
   isEditing?: boolean;
+  canDelete?: boolean;
 };
 
 export function ListMoviesGrid({
@@ -24,6 +25,7 @@ export function ListMoviesGrid({
   listId,
   userEmail,
   isEditing = false,
+  canDelete = false,
 }: ListMoviesGridProps) {
   const [movies, setMovies] = useState<SimplifiedMovie[]>([]);
   const [listMovieIds, setListMovieIds] = useState<number[]>(tmdbIds);
@@ -215,7 +217,7 @@ export function ListMoviesGrid({
                   href={`/movies/${movie.tmdbId}?from=${fromParam}`}
                   className="group relative block aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-black-900/40 transition hover:border-black-400"
                 >
-                  {isEditing && (
+                  {(canDelete || isEditing) && (
                     <button
                       type="button"
                       onClick={(event) => {
@@ -223,10 +225,12 @@ export function ListMoviesGrid({
                         handleRemove(movie.tmdbId);
                       }}
                       disabled={removingId === movie.tmdbId}
-                      className="absolute right-1 top-1 z-10 rounded-full bg-white px-2 py-1 text-[11px] font-bold text-black shadow transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
                       aria-label="Remove from list"
+                      className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-white hover:text-black disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100"
                     >
-                      ×
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+                        <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                      </svg>
                     </button>
                   )}
                   {movie.posterUrl ? (

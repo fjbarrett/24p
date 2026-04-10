@@ -1,11 +1,19 @@
 import "server-only";
 
+import Anthropic from "@anthropic-ai/sdk";
 import type { SimplifiedMovie } from "@/lib/tmdb";
-import { listListsForUser, loadFavoritesForUser } from "@/lib/server/lists";
-import { fetchTmdbMovies, fetchTmdbRecommendationsForMovie } from "@/lib/server/tmdb";
+import { listListsForUser, loadFavoritesForUser, getListByIdForEditor } from "@/lib/server/lists";
+import { fetchTmdbMovies, fetchTmdbRecommendationsForMovie, findTmdbMovieId } from "@/lib/server/tmdb";
 
 const MAX_SEEDS = 10;
 const MAX_RESULTS = 24;
+const LIST_SUGGEST_COUNT = 18;
+
+function getAnthropicClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
+  return new Anthropic({ apiKey });
+}
 
 export async function getRecommendationsForUser(userEmail: string): Promise<SimplifiedMovie[]> {
   const [ownLists, favoritedLists] = await Promise.all([
@@ -57,4 +65,67 @@ export async function getRecommendationsForUser(userEmail: string): Promise<Simp
     .map(([id]) => id);
 
   return fetchTmdbMovies(topIds);
+}
+
+export async function getRecommendationsForList(listId: string, userEmail: string): Promise<SimplifiedMovie[]> {
+  const list = await getListByIdForEditor(listId, userEmail);
+  if (!list || list.movies.length === 0) return [];
+
+  // Fetch titles for all movies in the list so Claude has human-readable context
+  const listMovies = await fetchTmdbMovies(list.movies);
+  const knownIds = new Set<number>(listMovies.map((m) => m.tmdbId));
+  const movieLines = listMovies
+    .map((m) => (m.releaseYear ? `${m.title} (${m.releaseYear})` : m.title))
+    .join("\n");
+
+  // Ask Haiku to suggest films that would fit this list
+  const client = getAnthropicClient();
+  const message = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 512,
+    messages: [
+      {
+        role: "user",
+        content: `You are a film recommendation engine. Given a list name and its current films, suggest ${LIST_SUGGEST_COUNT} other films that would fit well in the list.
+
+List name: "${list.title}"
+
+Current films:
+${movieLines}
+
+Rules:
+- Do NOT suggest any film already in the list
+- Suggest films that share thematic, stylistic, tonal, or genre qualities with the existing films, informed by the list name
+- Return ONLY a JSON array of objects with "title" and "year" (number) fields — no prose, no markdown, no explanation
+- Example format: [{"title":"Blade Runner","year":1982},{"title":"Alien","year":1979}]`,
+      },
+    ],
+  });
+
+  // Parse Claude's response
+  const raw = message.content[0]?.type === "text" ? message.content[0].text.trim() : "";
+  let suggestions: Array<{ title: string; year?: number }> = [];
+  try {
+    // Strip any accidental markdown code fences
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    suggestions = JSON.parse(cleaned) as Array<{ title: string; year?: number }>;
+  } catch {
+    return [];
+  }
+
+  if (!Array.isArray(suggestions) || suggestions.length === 0) return [];
+
+  // Resolve each suggestion to a TMDB ID, filter already-known films, fetch full data
+  const resolved = await Promise.allSettled(
+    suggestions.map(async ({ title, year }) => {
+      const tmdbId = await findTmdbMovieId(title, year ? String(year) : undefined);
+      return tmdbId && !knownIds.has(tmdbId) ? tmdbId : null;
+    }),
+  );
+
+  const tmdbIds = resolved
+    .flatMap((r) => (r.status === "fulfilled" && r.value !== null ? [r.value] : []))
+    .filter((id, idx, arr) => arr.indexOf(id) === idx); // dedupe
+
+  return fetchTmdbMovies(tmdbIds);
 }
