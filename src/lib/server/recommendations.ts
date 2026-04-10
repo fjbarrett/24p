@@ -1,51 +1,18 @@
 import "server-only";
 
+import Anthropic from "@anthropic-ai/sdk";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 import { listListsForUser, loadFavoritesForUser, getListByIdForEditor } from "@/lib/server/lists";
-import { fetchTmdbMovies, fetchTmdbRecommendationsForMovie, fetchTmdbDiscoverByGenreIds } from "@/lib/server/tmdb";
+import { fetchTmdbMovies, fetchTmdbRecommendationsForMovie, findTmdbMovieId } from "@/lib/server/tmdb";
 
 const MAX_SEEDS = 10;
 const MAX_RESULTS = 24;
-const LIST_MAX_SEEDS = 8;
-const LIST_MAX_RESULTS = 18;
+const LIST_SUGGEST_COUNT = 18;
 
-// Maps genre keywords (lower-case) → TMDB genre IDs
-const GENRE_KEYWORD_MAP: Record<string, number> = {
-  action: 28,
-  adventure: 12,
-  animation: 16,
-  animated: 16,
-  comedy: 35,
-  comedies: 35,
-  crime: 80,
-  documentary: 99,
-  documentaries: 99,
-  drama: 18,
-  family: 10751,
-  fantasy: 14,
-  history: 36,
-  historical: 36,
-  horror: 27,
-  music: 10402,
-  musical: 10402,
-  mystery: 9648,
-  romance: 10749,
-  romantic: 10749,
-  "science fiction": 878,
-  "sci-fi": 878,
-  scifi: 878,
-  thriller: 53,
-  war: 10752,
-  western: 37,
-};
-
-function detectGenreIds(title: string): number[] {
-  const lower = title.toLowerCase();
-  const found = new Set<number>();
-  for (const [keyword, id] of Object.entries(GENRE_KEYWORD_MAP)) {
-    if (lower.includes(keyword)) found.add(id);
-  }
-  return [...found];
+function getAnthropicClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
+  return new Anthropic({ apiKey });
 }
 
 export async function getRecommendationsForUser(userEmail: string): Promise<SimplifiedMovie[]> {
@@ -104,48 +71,61 @@ export async function getRecommendationsForList(listId: string, userEmail: strin
   const list = await getListByIdForEditor(listId, userEmail);
   if (!list || list.movies.length === 0) return [];
 
-  const knownIds = new Set<number>(list.movies);
-  const seeds = list.movies.slice(0, LIST_MAX_SEEDS);
-  const genreIds = detectGenreIds(list.title);
+  // Fetch titles for all movies in the list so Claude has human-readable context
+  const listMovies = await fetchTmdbMovies(list.movies);
+  const knownIds = new Set<number>(listMovies.map((m) => m.tmdbId));
+  const movieLines = listMovies
+    .map((m) => (m.releaseYear ? `${m.title} (${m.releaseYear})` : m.title))
+    .join("\n");
 
-  const [resultSets, discoverResults] = await Promise.all([
-    Promise.all(seeds.map((id) => fetchTmdbRecommendationsForMovie(id))),
-    fetchTmdbDiscoverByGenreIds(genreIds),
-  ]);
+  // Ask Haiku to suggest films that would fit this list
+  const client = getAnthropicClient();
+  const message = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 512,
+    messages: [
+      {
+        role: "user",
+        content: `You are a film recommendation engine. Given a list name and its current films, suggest ${LIST_SUGGEST_COUNT} other films that would fit well in the list.
 
-  // Score by frequency across seeds
-  const frequency = new Map<number, number>();
-  for (const results of resultSets) {
-    for (const movie of results) {
-      if (!knownIds.has(movie.tmdbId)) {
-        frequency.set(movie.tmdbId, (frequency.get(movie.tmdbId) ?? 0) + 1);
-      }
-    }
+List name: "${list.title}"
+
+Current films:
+${movieLines}
+
+Rules:
+- Do NOT suggest any film already in the list
+- Suggest films that share thematic, stylistic, tonal, or genre qualities with the existing films, informed by the list name
+- Return ONLY a JSON array of objects with "title" and "year" (number) fields — no prose, no markdown, no explanation
+- Example format: [{"title":"Blade Runner","year":1982},{"title":"Alien","year":1979}]`,
+      },
+    ],
+  });
+
+  // Parse Claude's response
+  const raw = message.content[0]?.type === "text" ? message.content[0].text.trim() : "";
+  let suggestions: Array<{ title: string; year?: number }> = [];
+  try {
+    // Strip any accidental markdown code fences
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    suggestions = JSON.parse(cleaned) as Array<{ title: string; year?: number }>;
+  } catch {
+    return [];
   }
-  // Genre-discover gets a half-point boost as a secondary signal
-  for (const movie of discoverResults) {
-    if (!knownIds.has(movie.tmdbId)) {
-      frequency.set(movie.tmdbId, (frequency.get(movie.tmdbId) ?? 0) + 0.5);
-    }
-  }
 
-  if (frequency.size === 0) return [];
+  if (!Array.isArray(suggestions) || suggestions.length === 0) return [];
 
-  const topIds = [...frequency.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, LIST_MAX_RESULTS)
-    .map(([id]) => id);
+  // Resolve each suggestion to a TMDB ID, filter already-known films, fetch full data
+  const resolved = await Promise.allSettled(
+    suggestions.map(async ({ title, year }) => {
+      const tmdbId = await findTmdbMovieId(title, year ? String(year) : undefined);
+      return tmdbId && !knownIds.has(tmdbId) ? tmdbId : null;
+    }),
+  );
 
-  // Build a movie lookup from all fetched data (no extra round-trips needed)
-  const movieLookup = new Map<number, SimplifiedMovie>();
-  for (const results of resultSets) {
-    for (const movie of results) movieLookup.set(movie.tmdbId, movie);
-  }
-  for (const movie of discoverResults) {
-    if (!movieLookup.has(movie.tmdbId)) movieLookup.set(movie.tmdbId, movie);
-  }
+  const tmdbIds = resolved
+    .flatMap((r) => (r.status === "fulfilled" && r.value !== null ? [r.value] : []))
+    .filter((id, idx, arr) => arr.indexOf(id) === idx); // dedupe
 
-  return topIds
-    .map((id) => movieLookup.get(id))
-    .filter((m): m is SimplifiedMovie => Boolean(m));
+  return fetchTmdbMovies(tmdbIds);
 }
