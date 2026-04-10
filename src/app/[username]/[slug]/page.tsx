@@ -67,7 +67,6 @@ export default async function ListDetail({
   const isFavorite = favorites.some((entry) => entry.id === list.id);
   const fromParam = encodeURIComponent(`/${ownerUsername}/${list.slug}`);
   const canFavorite = !!viewerEmail && viewerEmail !== list.userEmail;
-  const isOwner = !!viewerEmail && viewerEmail === list.userEmail;
 
   return (
     <div className="min-h-screen text-black-100">
