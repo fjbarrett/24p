@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Pencil } from "lucide-react";
 import type { SavedList } from "@/lib/list-store";
 import { ListEditor } from "@/components/list-editor";
@@ -22,23 +23,35 @@ export function ListDetailClient({
   fromParam,
 }: ListDetailClientProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const normalizedViewerEmail = viewerEmail?.trim().toLowerCase() ?? "";
   const isOwner = Boolean(normalizedViewerEmail && normalizedViewerEmail === list.userEmail);
 
+  // Ensure we're client-side before portalling
+  if (!mounted && typeof window !== "undefined") {
+    setMounted(true);
+  }
+
+  const modal =
+    isEditing && mounted
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 px-3 py-3 sm:px-4 sm:py-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit list"
+          >
+            <section className="relative max-h-[calc(100dvh-24px)] w-full max-w-[820px] overflow-y-auto rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,26,26,0.98),rgba(13,13,13,1))] shadow-[0_36px_120px_rgba(0,0,0,0.72)] ring-1 ring-white/5 sm:max-h-[calc(100dvh-32px)]">
+              <ListEditor list={list} viewerEmail={viewerEmail} canEdit={list.canEdit} onEditingChange={setIsEditing} startEditing />
+            </section>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div className="mx-auto w-full max-w-[760px] space-y-5">
-      {isEditing ? (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/90 px-3 py-3 sm:px-4 sm:py-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Edit list"
-        >
-          <section className="relative max-h-[calc(100dvh-24px)] w-full max-w-[820px] overflow-y-auto rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,26,26,0.98),rgba(13,13,13,1))] shadow-[0_36px_120px_rgba(0,0,0,0.72)] ring-1 ring-white/5 sm:max-h-[calc(100dvh-32px)]">
-            <ListEditor list={list} viewerEmail={viewerEmail} canEdit={list.canEdit} onEditingChange={setIsEditing} startEditing />
-          </section>
-        </div>
-      ) : null}
+      {modal}
 
       <section className="rounded-2xl bg-black-950/60 p-4 sm:p-5">
         {isOwner ? (
