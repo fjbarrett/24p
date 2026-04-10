@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StreamingCatalogGrid } from "@/components/streaming-catalog-grid";
 import { StreamingDiscoveryControls } from "@/components/streaming-discovery-controls";
-import { fetchStreamingCatalog, listStreamingPlatforms } from "@/lib/server/justwatch";
+import { fetchStreamingCatalog, fetchStreamingCatalogAll, listStreamingPlatforms } from "@/lib/server/justwatch";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +27,26 @@ export default async function StreamingPage({ searchParams }: StreamingPageProps
   // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe here
   const seed = readQueryValue(resolvedSearchParams.seed) ?? Date.now().toString();
   const page = parsePage(readQueryValue(resolvedSearchParams.page));
-  const movies = sortStreamingMovies(await fetchStreamingCatalog({
-    providerShortNames: selectedProviders,
-    seed,
-    page,
-  }), sortParam);
+
+  let movies: Awaited<ReturnType<typeof fetchStreamingCatalog>>;
+  let hasNextPage: boolean;
+
+  if (sortParam === "rating") {
+    // Fetch the full pool, sort globally, then slice to the requested page.
+    const allMovies = sortStreamingMovies(
+      await fetchStreamingCatalogAll({ providerShortNames: selectedProviders }),
+      "rating",
+    );
+    movies = allMovies.slice((page - 1) * 24, page * 24);
+    hasNextPage = allMovies.length > page * 24;
+  } else {
+    movies = sortStreamingMovies(
+      await fetchStreamingCatalog({ providerShortNames: selectedProviders, seed, page }),
+      "popularity",
+    );
+    hasNextPage = movies.length === 24;
+  }
+
   const providerIcons = Object.fromEntries(
     providers
       .filter((provider) => Boolean(provider.iconUrl))
@@ -39,7 +54,7 @@ export default async function StreamingPage({ searchParams }: StreamingPageProps
   );
 
   const previousHref = page > 1 ? buildStreamingHref(selectedProviders, sortParam, seed, page - 1) : null;
-  const nextHref = movies.length === 24 ? buildStreamingHref(selectedProviders, sortParam, seed, page + 1) : null;
+  const nextHref = hasNextPage ? buildStreamingHref(selectedProviders, sortParam, seed, page + 1) : null;
 
   return (
     <div className="min-h-screen bg-black text-white">
