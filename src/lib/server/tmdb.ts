@@ -471,6 +471,21 @@ export async function fetchTmdbDiscoverByGenreIds(genreIds: number[]): Promise<S
   }
 }
 
+export async function fetchTmdbDiscoverByGenreIds(genreIds: number[]): Promise<SimplifiedMovie[]> {
+  if (!genreIds.length) return [];
+  try {
+    const data = await tmdbFetch<{ results?: TmdbMovie[] }>("/discover/movie", {
+      with_genres: genreIds.join(","),
+      sort_by: "vote_count.desc",
+      "vote_count.gte": 200,
+      page: 1,
+    });
+    return (data.results ?? []).map(mapMovie).filter((movie) => Boolean(movie.posterUrl));
+  } catch {
+    return [];
+  }
+}
+
 export async function findTmdbMovieId(title: string, year?: string | null) {
   const response = await tmdbFetch<{ results?: TmdbMovie[] }>("/search/movie", {
     query: title,
