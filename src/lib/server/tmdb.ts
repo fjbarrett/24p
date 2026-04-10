@@ -352,9 +352,9 @@ export type MovieTrailer = {
 const APPLE_TV_PLUS_ID = 350;
 const TMDB_LOGO_BASE = "https://image.tmdb.org/t/p/w45";
 
-export async function fetchWatchProviders(tmdbId: number, locale = "US"): Promise<WatchProviders> {
+export async function fetchWatchProviders(tmdbId: number, locale = "US", mediaType: "movie" | "tv" = "movie"): Promise<WatchProviders> {
   try {
-    const data = await tmdbFetch<WatchProvidersResponse>(`/movie/${tmdbId}/watch/providers`);
+    const data = await tmdbFetch<WatchProvidersResponse>(`/${mediaType}/${tmdbId}/watch/providers`);
     const region = data.results?.[locale];
     if (!region) return { providers: [], justWatchLink: null };
 

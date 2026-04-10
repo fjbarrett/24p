@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { fetchTmdbShow } from "@/lib/server/tmdb";
-import { AddToListButton } from "@/components/add-to-list-loader";
+import { MovieActions } from "@/components/movie-actions";
 import { BackButton } from "@/components/back-button";
 import { DescriptionExpander } from "@/components/description-expander";
 import { MovieTrailerToggle } from "@/components/movie-trailer-toggle";
@@ -122,10 +122,15 @@ export default async function TvShowDetailPage({ params, searchParams }: PagePro
           </div>
         ) : null}
 
-        {userEmail ? (
-          <div className="mt-3 flex justify-center">
-            <AddToListButton tmdbId={show.tmdbId} userEmail={userEmail} mediaType="tv" />
-          </div>
+        {(userEmail || show.imdbId) ? (
+          <MovieActions
+            tmdbId={show.tmdbId}
+            userEmail={userEmail}
+            imdbId={show.imdbId}
+            title={show.title}
+            releaseYear={show.releaseYear}
+            mediaType="tv"
+          />
         ) : null}
       </div>
     </div>
