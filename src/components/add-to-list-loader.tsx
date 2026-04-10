@@ -60,9 +60,10 @@ export function AddToListLoader({ tmdbId, userEmail }: AddToListLoaderProps) {
 type AddToListButtonProps = AddToListLoaderProps & {
   onExpandChange?: (expanded: boolean) => void;
   appleTvSlot?: ReactNode;
+  mediaType?: "movie" | "tv";
 };
 
-export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot }: AddToListButtonProps) {
+export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot, mediaType = "movie" }: AddToListButtonProps) {
   const [expanded, setExpanded] = useState(false);
   const [lists, setLists] = useState<SavedList[]>([]);
   const [loadingLists, setLoadingLists] = useState(false);
@@ -110,7 +111,7 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
         setMessage(null);
         await apiFetch(`/lists/${selectedListId}/items`, {
           method: "POST",
-          body: JSON.stringify({ tmdbId }),
+          body: JSON.stringify({ tmdbId, mediaType }),
         });
         setInList(true);
         collapse();

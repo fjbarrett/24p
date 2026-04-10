@@ -222,9 +222,8 @@ export function ListMoviesGrid({
               <li key={movie.tmdbId} className="w-[calc(50%-6px)] sm:w-[calc(33%-7px)] lg:w-[calc(25%-9px)]">
                 <Link
                   href={movie.mediaType === "tv"
-                    ? `https://www.themoviedb.org/tv/${movie.tmdbId}`
+                    ? `/tv/${movie.tmdbId}`
                     : `/movies/${movie.tmdbId}?from=${fromParam}`}
-                  {...(movie.mediaType === "tv" ? { target: "_blank", rel: "noreferrer" } : {})}
                   className="group relative block aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-black-900/40 transition hover:border-black-400"
                 >
                   {(canDelete || isEditing) && (

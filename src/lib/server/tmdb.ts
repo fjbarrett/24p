@@ -421,6 +421,27 @@ function scoreTrailer(video: NonNullable<NonNullable<TmdbMovie["videos"]>["resul
   return score;
 }
 
+type TmdbVideoResult = NonNullable<NonNullable<TmdbMovie["videos"]>["results"]>[number];
+
+export async function fetchTmdbTrailerForShow(tmdbId: number): Promise<MovieTrailer> {
+  try {
+    const data = await tmdbFetch<{ results?: TmdbVideoResult[] }>(`/tv/${tmdbId}/videos`);
+    const videos = data.results ?? [];
+    const youtubeVideos = videos.filter((video) => video.site === "YouTube" && video.key);
+    const scored = youtubeVideos
+      .map((video) => ({ key: video.key as string, score: scoreTrailer(video) }))
+      .sort((a, b) => b.score - a.score);
+    const best = scored[0]?.key;
+    if (!best) return { embedUrl: null, source: null };
+    return {
+      embedUrl: `https://www.youtube-nocookie.com/embed/${best}?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${best}&enablejsapi=1`,
+      source: "youtube",
+    };
+  } catch {
+    return { embedUrl: null, source: null };
+  }
+}
+
 export async function fetchTmdbRecommendationsForMovie(tmdbId: number): Promise<SimplifiedMovie[]> {
   try {
     const data = await tmdbFetch<{ results?: TmdbMovie[] }>(`/movie/${tmdbId}/recommendations`, { page: 1 });

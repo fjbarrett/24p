@@ -155,9 +155,9 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
               setQuery(event.target.value);
             }}
             onFocus={() => setPanelDismissed(false)}
-            type="search"
+            type="text"
             placeholder="Search"
-            aria-label="Search movies"
+            aria-label="Search movies and shows"
             aria-controls={resultsId}
             aria-describedby={error ? errorId : undefined}
             className="w-full flex-1 bg-transparent pr-3 text-lg text-black-100 placeholder:text-black-400 focus:outline-none"
@@ -196,14 +196,13 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
             {displayResults.map((movie) => {
               const isShow = movie.mediaType === "tv";
               const detailHref = isShow
-                ? `https://www.themoviedb.org/tv/${movie.tmdbId}`
+                ? `/tv/${movie.tmdbId}`
                 : `/movies/${movie.tmdbId}`;
               return (
               <li key={movie.tmdbId}>
                 <div className="flex items-center gap-3 rounded-3xl bg-black-900/70 p-4 transition hover:bg-black-800/70">
                   <Link
                     href={detailHref}
-                    {...(isShow ? { target: "_blank", rel: "noreferrer" } : {})}
                     className="flex flex-1 gap-3"
                     aria-label={`${movie.title}${movie.releaseYear ? ` (${movie.releaseYear})` : ""}`}
                   >

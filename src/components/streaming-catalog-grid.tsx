@@ -19,7 +19,7 @@ export function StreamingCatalogGrid({ movies, providerIcons }: StreamingCatalog
   }
 
   return (
-    <ul className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5 sm:gap-3">
+    <ul className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-4 sm:gap-5">
       {movies.map((movie) => (
         <li key={movie.tmdbId}>
           <StreamingCatalogCard movie={movie} providerIcon={providerIcons[movie.providerShortName] ?? null} />
@@ -36,12 +36,10 @@ function StreamingCatalogCard({
   movie: StreamingCatalogMovie;
   providerIcon: string | null;
 }) {
-  const href = movie.contentType === "SHOW" ? (movie.primaryOfferUrl ?? "#") : `/movies/${movie.tmdbId}`;
-  const isExternal = movie.contentType === "SHOW";
+  const href = movie.contentType === "SHOW" ? `/tv/${movie.tmdbId}` : `/movies/${movie.tmdbId}`;
   return (
     <Link
       href={href}
-      {...(isExternal ? { target: "_blank", rel: "noreferrer" } : {})}
       className="group relative block aspect-[2/3] w-full overflow-hidden rounded-lg bg-neutral-900"
     >
       <div className="pointer-events-none absolute inset-0 z-10 rounded-lg shadow-[inset_0_0_20px_rgba(0,0,0,0.55)] transition-shadow duration-300 group-hover:shadow-[inset_0_0_20px_rgba(255,255,255,0.06)]" />
@@ -65,7 +63,7 @@ function StreamingCatalogCard({
           target="_blank"
           rel="noreferrer"
           aria-label={`Watch ${movie.title} on ${movie.providerName}`}
-          className="absolute bottom-1.5 left-1.5 z-20 rounded-lg bg-black/70 p-1 backdrop-blur-sm"
+          className="absolute bottom-1.5 left-1.5 z-20 rounded-lg bg-black/70 p-1 backdrop-blur-sm opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100"
           onClick={(e) => e.stopPropagation()}
         >
           <Image

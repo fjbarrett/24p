@@ -12,7 +12,7 @@ import { fetchStreamingCatalog, listStreamingPlatforms } from "@/lib/server/just
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Streaming in 24p — 24p",
+  title: { absolute: "Streaming in 24p" },
   robots: { index: false, follow: false },
 };
 

@@ -10,9 +10,11 @@ type MovieTrailerToggleProps = {
   title: string;
   posterUrl: string | null;
   backdropUrl: string | null;
+  trailerEndpoint?: string;
 };
 
-export function MovieTrailerToggle({ tmdbId, title, posterUrl, backdropUrl }: MovieTrailerToggleProps) {
+export function MovieTrailerToggle({ tmdbId, title, posterUrl, backdropUrl, trailerEndpoint }: MovieTrailerToggleProps) {
+  const endpoint = trailerEndpoint ?? `/tmdb/movie/${tmdbId}/trailer`;
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null);
   const [hasTrailer, setHasTrailer] = useState<boolean | null>(null);
   const [active, setActive] = useState(false);
@@ -22,13 +24,13 @@ export function MovieTrailerToggle({ tmdbId, title, posterUrl, backdropUrl }: Mo
 
   useEffect(() => {
     // Pre-check if trailer exists
-    apiFetch<{ embedUrl: string | null }>(`/tmdb/movie/${tmdbId}/trailer`)
+    apiFetch<{ embedUrl: string | null }>(endpoint)
       .then(res => {
         setHasTrailer(!!res.embedUrl);
         if (res.embedUrl) setTrailerUrl(res.embedUrl);
       })
       .catch(() => setHasTrailer(false));
-  }, [tmdbId]);
+  }, [endpoint]);
 
   async function handleToggle() {
     if (active || visible) {
@@ -51,7 +53,7 @@ export function MovieTrailerToggle({ tmdbId, title, posterUrl, backdropUrl }: Mo
 
     setLoading(true);
     try {
-      const trailer = await apiFetch<{ embedUrl: string | null }>(`/tmdb/movie/${tmdbId}/trailer`);
+      const trailer = await apiFetch<{ embedUrl: string | null }>(endpoint);
       if (!trailer.embedUrl) {
         setHasTrailer(false);
         return;
@@ -70,17 +72,6 @@ export function MovieTrailerToggle({ tmdbId, title, posterUrl, backdropUrl }: Mo
 
   return (
     <div className="flex w-full flex-col items-center">
-      <button
-        type="button"
-        onClick={() => void handleToggle()}
-        className="mb-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/12 bg-black/68 text-white/88 backdrop-blur-sm transition hover:border-white/20 hover:bg-black/82 disabled:opacity-30"
-        aria-label={active ? `Hide trailer for ${title}` : `Show trailer for ${title}`}
-        title={active ? "Hide trailer" : "Show trailer"}
-        disabled={loading || hasTrailer === false}
-      >
-        <Clapperboard className="h-5 w-5" strokeWidth={2.1} />
-      </button>
-
       <div className={`relative w-full overflow-hidden rounded-2xl bg-neutral-900 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] ${active ? "aspect-video max-w-[800px]" : "aspect-[2/3] max-w-[220px]"}`}>
         
         {/* Backdrop background for transition */}
@@ -113,11 +104,12 @@ export function MovieTrailerToggle({ tmdbId, title, posterUrl, backdropUrl }: Mo
                 type="button"
                 onClick={() => void handleToggle()}
                 disabled={loading}
-                className="absolute inset-0 bg-black/0 transition-colors hover:bg-black/10 group flex items-center justify-center"
+                aria-label={`Play trailer for ${title}`}
+                className="group absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-300 hover:bg-black/40"
               >
-                 <div className="rounded-full bg-white/10 p-4 opacity-0 backdrop-blur-md transition-all group-hover:scale-110 group-hover:opacity-100">
-                    <Clapperboard className="h-8 w-8 text-white" />
-                 </div>
+                <div className="rounded-full bg-white/10 p-4 opacity-0 backdrop-blur-md transition-all duration-300 group-hover:scale-110 group-hover:opacity-100">
+                  <Clapperboard className="h-8 w-8 text-white" />
+                </div>
               </button>
             )}
           </div>
