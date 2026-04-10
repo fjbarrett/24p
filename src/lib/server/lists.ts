@@ -198,6 +198,15 @@ async function insertList(title: string, movies: number[], color: string | null,
   return mapList({ ...created, can_edit: true });
 }
 
+export async function getListByIdForEditor(listId: string, userEmail: string) {
+  const row = await fetchListById(listId);
+  if (!row) return null;
+  const canEdit =
+    normalizeEmail(row.user_email) === userEmail || (await isListSharedWithEdit(listId, userEmail));
+  if (!canEdit) return null;
+  return mapList({ ...row, can_edit: canEdit });
+}
+
 export async function listListsForUser(userEmail: string, includeShared = false) {
   const pool = getPool();
   const query = includeShared

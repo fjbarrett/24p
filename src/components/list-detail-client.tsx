@@ -5,6 +5,7 @@ import type { SavedList } from "@/lib/list-store";
 import { ListEditor } from "@/components/list-editor";
 import { ListExportButton } from "@/components/list-export-button";
 import { ListMoviesGrid } from "@/components/list-movies-grid";
+import { ListSuggestionsPanel } from "@/components/list-suggestions-panel";
 
 type ListDetailClientProps = {
   list: SavedList;
@@ -63,6 +64,8 @@ export function ListDetailClient({
           isEditing={isEditing}
         />
       </section>
+      {isOwner ? <ListSuggestionsPanel listId={list.id} /> : null}
+
       <div className="flex justify-center">
         <ListExportButton
           tmdbIds={list.movies}
