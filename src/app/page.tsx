@@ -16,27 +16,26 @@ export default async function Home() {
   const session = (await getServerSession(authOptions)) as Session | null;
   const userEmail = session?.user?.email?.toLowerCase() ?? "";
   const lists = userEmail ? await listListsForUser(userEmail, true) : [];
-
-  if (!session) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-4 py-10 text-black-100 sm:px-8 lg:px-16">
-        <div className="flex w-full flex-col items-center justify-center gap-10">
-          <Header isSignedIn={false} centered lists={[]} userEmail="" />
-        </div>
-      </div>
-    );
-  }
+  const isSignedIn = Boolean(session);
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-8 text-black-100 sm:px-6">
-      <div className="mx-auto flex w-full max-w-[900px] flex-col items-center">
-        <Header isSignedIn lists={lists} userEmail={userEmail} />
+    <div className="relative flex min-h-screen items-center justify-center px-4 py-8 text-black-100 sm:px-6">
+      {!isSignedIn ? (
+        <div className="absolute right-4 top-8 z-10 sm:right-6">
+          <SignInButton ariaLabel="Sign in with Google" className="px-5 py-2 text-sm" />
+        </div>
+      ) : null}
+      <div className={`mx-auto flex w-full flex-col items-center ${isSignedIn ? "max-w-[900px]" : "max-w-[1280px] -translate-y-6"}`}>
+        <Header isSignedIn={isSignedIn} centered={!session} lists={lists} userEmail={userEmail} />
 
-        <main className="mt-0 w-full max-w-[760px] space-y-10">
-          <ListsSection lists={lists} userEmail={userEmail} />
-        </main>
+        {session ? (
+          <main className="mt-0 w-full max-w-[760px] space-y-10">
+            <ListsSection lists={lists} userEmail={userEmail} />
+          </main>
+        ) : null}
 
-        <footer className="mb-6 mt-10 flex items-center justify-center gap-3">
+        {session ? (
+          <footer className="mb-6 mt-10 flex items-center justify-center gap-3">
             <Link
               href="/profile"
               aria-label="Profile"
@@ -53,8 +52,9 @@ export default async function Home() {
             >
               <Settings className="h-4 w-4" strokeWidth={2.25} />
             </Link>
-          <SignOutIconButton />
-        </footer>
+            <SignOutIconButton />
+          </footer>
+        ) : null}
       </div>
     </div>
   );
@@ -72,35 +72,30 @@ function Header({
   userEmail: string;
 }) {
   const layoutClass = centered
-    ? "flex flex-col items-center gap-3 text-center"
-    : "flex w-full flex-col items-center gap-4 text-center";
+    ? "flex w-full flex-col items-center gap-8 text-center lg:gap-12"
+    : "flex w-full flex-col items-center gap-6 text-center";
   return (
     <header
       className={`${layoutClass} relative`}
     >
-      <div className="space-y-1 text-center">
+      <div className="space-y-2 text-center">
         <p
           className={`${isSignedIn ? "text-[2.6rem] sm:text-5xl" : "text-6xl sm:text-7xl"} font-semibold leading-none text-white`}
         >
           24p
         </p>
       </div>
-      {!isSignedIn ? (
-        <SignInButton ariaLabel="Sign in with Google" className="mt-4 px-5 py-2 text-sm" />
-      ) : null}
-      {isSignedIn && (
-        <div className="w-full max-w-[560px] space-y-3">
-          <TmdbSearchBar lists={lists} userEmail={userEmail} />
-          <div className="flex justify-center">
-            <Link
-              href="/streaming"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/72 transition hover:border-white/20 hover:bg-white/[0.04] hover:text-white"
-            >
-              Streaming On
-            </Link>
-          </div>
+      <div className={`w-full space-y-5 ${isSignedIn ? "max-w-[560px]" : "max-w-[980px]"}`}>
+        <TmdbSearchBar lists={lists} userEmail={userEmail} wide={!isSignedIn} />
+        <div className="flex justify-center">
+          <Link
+            href="/streaming"
+            className="text-sm text-white/62 underline-offset-4 transition hover:text-white hover:underline"
+          >
+            Streaming On
+          </Link>
         </div>
-      )}
+      </div>
     </header>
   );
 }

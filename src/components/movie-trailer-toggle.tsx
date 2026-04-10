@@ -47,7 +47,7 @@ export function MovieTrailerToggle({ tmdbId, title, posterUrl, backdropUrl, trai
       setActive(true);
       window.setTimeout(() => {
         setVisible(true);
-      }, 150);
+      }, 350);
       return;
     }
 
@@ -64,7 +64,7 @@ export function MovieTrailerToggle({ tmdbId, title, posterUrl, backdropUrl, trai
       setActive(true);
       window.setTimeout(() => {
         setVisible(true);
-      }, 150);
+      }, 350);
     } finally {
       setLoading(false);
     }
@@ -74,22 +74,14 @@ export function MovieTrailerToggle({ tmdbId, title, posterUrl, backdropUrl, trai
     <div className="flex w-full flex-col items-center">
       <div className={`relative w-full overflow-hidden rounded-2xl bg-neutral-900 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] ${active ? "aspect-video max-w-[800px]" : "aspect-[2/3] max-w-[220px]"}`}>
         
-        {/* Backdrop background for transition */}
-        {(active || transitioning) && (backdropUrl || posterUrl) && (
-          <div className="absolute inset-0">
-             <Image
-              src={backdropUrl || posterUrl!}
-              alt={`${title} backdrop`}
-              fill
-              className="object-cover opacity-40 blur-sm"
-              priority
-            />
-          </div>
+        {/* Instant black fill — appears on click so poster fades into darkness */}
+        {(active || transitioning) && (
+          <div className="absolute inset-0 bg-black" />
         )}
 
         {/* Poster (Standard View) */}
         {posterUrl && (
-          <div className={`absolute inset-0 transition-all duration-700 ${active ? "pointer-events-none scale-110 opacity-0 blur-xl" : "opacity-100"}`}>
+          <div className={`absolute inset-0 transition-opacity duration-300 ${active ? "pointer-events-none opacity-0" : "opacity-100"}`}>
             <Image
               src={posterUrl}
               alt={`${title} poster`}
@@ -121,7 +113,7 @@ export function MovieTrailerToggle({ tmdbId, title, posterUrl, backdropUrl, trai
 
         {/* Trailer Iframe */}
         {active && trailerUrl && (
-          <div className={`absolute inset-0 bg-black transition-opacity duration-700 ${visible ? "opacity-100" : "opacity-0"}`}>
+          <div className={`absolute inset-0 bg-black transition-opacity duration-500 ${visible ? "opacity-100" : "opacity-0"}`}>
             <iframe
               src={trailerUrl}
               title={`${title} trailer`}

@@ -97,6 +97,25 @@ export type StreamingCatalogMovie = {
   chartRank: number | null;
 };
 
+export type JustWatchAccessModel =
+  | "subscription"
+  | "free"
+  | "ads"
+  | "live"
+  | "rent"
+  | "buy"
+  | "cinema";
+
+export type JustWatchOffer = {
+  url: string;
+  accessModel: JustWatchAccessModel;
+  monetizationType: string | null;
+  providerName: string;
+  providerShortName: string;
+  packageId: number;
+  lookupKeys: string[];
+};
+
 const STREAMING_PROVIDER_ALLOWLIST = new Set([
   "nfx",
   "amp",
@@ -108,6 +127,8 @@ const STREAMING_PROVIDER_ALLOWLIST = new Set([
   "ppe",
   "pct",
   "cru",
+  "plx",
+  "ptv",
   "tbv",
   "fuv",
   "szh",
@@ -117,6 +138,32 @@ const STREAMING_PROVIDER_ALLOWLIST = new Set([
   "shm",
 ]);
 
+const STREAMING_PROVIDER_NAME_ALLOWLIST = new Set([
+  "plex",
+  "tubi tv",
+  "tubitv",
+  "pluto tv",
+  "plutotv",
+]);
+
+const DEFAULT_DISCOVERY_MONETIZATION_TYPES = new Set([
+  "FLATRATE",
+]);
+
+const FILTERED_DISCOVERY_MONETIZATION_TYPES = [
+  "FLATRATE",
+  "ADS",
+  "FREE",
+  "FAST",
+  "RENT",
+] as const;
+
+const PROVIDER_FAMILY_ALIASES: Record<string, string[]> = {
+  plx: ["pxp", "plc"],
+  ptv: ["ptv"],
+  tbv: ["tbv"],
+};
+
 const SEARCH_QUERY = `
   query($q:String!,$country:Country!,$lang:Language!){
     searchTitles(
@@ -124,14 +171,19 @@ const SEARCH_QUERY = `
       country:$country
       language:$lang
       first:5
-      filter:{objectTypes:[MOVIE],searchQuery:$q}
+      filter:{objectTypes:[MOVIE,SHOW],searchQuery:$q}
     ){
       edges{
         node{
           id
+          objectType
           ... on Movie{
             content(country:$country,language:$lang){ title originalReleaseYear }
-            offers(country:$country,platform:WEB){ standardWebURL package{ packageId } }
+            offers(country:$country,platform:WEB){ standardWebURL package{ packageId clearName technicalName shortName } }
+          }
+          ... on Show{
+            content(country:$country,language:$lang){ title originalReleaseYear }
+            offers(country:$country,platform:WEB){ standardWebURL package{ packageId clearName technicalName shortName } }
           }
         }
       }
@@ -218,7 +270,7 @@ const POPULAR_TITLES_QUERY = `
   }
 `;
 
-function bestMatch(nodes: JwMovie[], title: string, year?: number): JwMovie | null {
+function bestMatch(nodes: JwMovie[], title: string, year?: number, mediaType?: "movie" | "tv"): JwMovie | null {
   const normalizedTitle = title.trim().toLowerCase();
   const scored = nodes.map((node) => {
     const t = node.content.title.trim().toLowerCase();
@@ -226,6 +278,8 @@ function bestMatch(nodes: JwMovie[], title: string, year?: number): JwMovie | nu
     if (t === normalizedTitle) score += 100;
     else if (t.startsWith(normalizedTitle)) score += 50;
     if (year && node.content.originalReleaseYear === year) score += 40;
+    if (mediaType === "movie" && node.objectType === "MOVIE") score += 80;
+    if (mediaType === "tv" && node.objectType === "SHOW") score += 80;
     return { node, score };
   });
   scored.sort((a, b) => b.score - a.score);
@@ -235,6 +289,75 @@ function bestMatch(nodes: JwMovie[], title: string, year?: number): JwMovie | nu
 function absoluteImageUrl(path?: string | null) {
   if (!path) return null;
   return path.startsWith("http") ? path : `${JUSTWATCH_IMAGES}${path}`;
+}
+
+function normalizeProviderKey(value?: string | number | null) {
+  if (value === null || value === undefined) return null;
+  const normalized = String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return normalized || null;
+}
+
+function isAllowedProviderPackage(pkg: {
+  shortName?: string | null;
+  clearName?: string | null;
+  technicalName?: string | null;
+}) {
+  const shortName = pkg.shortName?.trim().toLowerCase();
+  if (shortName && STREAMING_PROVIDER_ALLOWLIST.has(shortName)) return true;
+
+  const clearName = pkg.clearName?.trim().toLowerCase();
+  if (clearName && STREAMING_PROVIDER_NAME_ALLOWLIST.has(clearName)) return true;
+
+  const technicalName = pkg.technicalName?.trim().toLowerCase();
+  if (technicalName && STREAMING_PROVIDER_NAME_ALLOWLIST.has(technicalName)) return true;
+
+  return false;
+}
+
+function packageLookupKeys(pkg: JwOffer["package"]) {
+  const keys = new Set<string>();
+  const push = (value?: string | number | null) => {
+    const normalized = normalizeProviderKey(value);
+    if (normalized) keys.add(normalized);
+  };
+
+  push(pkg.packageId);
+  push(pkg.clearName);
+  push(pkg.technicalName);
+  push(pkg.shortName);
+
+  if (pkg.shortName?.toLowerCase() === "amp") {
+    push("Amazon Prime Video");
+    push("Prime Video");
+    push("Amazon");
+  }
+
+  if (pkg.shortName?.toLowerCase() === "hlu") {
+    push("Hulu");
+  }
+
+  return [...keys];
+}
+
+function normalizeAccessModel(monetizationType?: string | null): JustWatchAccessModel | null {
+  switch ((monetizationType ?? "").toUpperCase()) {
+    case "FLATRATE":
+      return "subscription";
+    case "FREE":
+      return "free";
+    case "ADS":
+      return "ads";
+    case "FAST":
+      return "live";
+    case "RENT":
+      return "rent";
+    case "BUY":
+      return "buy";
+    case "CINEMA":
+      return "cinema";
+    default:
+      return null;
+  }
 }
 
 async function postJustWatch<T>(query: string, variables: Record<string, unknown>): Promise<T | null> {
@@ -265,24 +388,53 @@ function scoreSeed(seed: string) {
   return hash;
 }
 
+function expandProviderShortNames(providerShortNames?: string[]) {
+  const expanded = new Set<string>();
+
+  for (const provider of providerShortNames ?? []) {
+    const normalized = provider.trim().toLowerCase();
+    if (!normalized) continue;
+    expanded.add(normalized);
+    for (const alias of PROVIDER_FAMILY_ALIASES[normalized] ?? []) {
+      expanded.add(alias);
+    }
+  }
+
+  return [...expanded];
+}
+
+function offerPriority(offer: JwOffer) {
+  const type = offer.monetizationType ?? "";
+  const index = FILTERED_DISCOVERY_MONETIZATION_TYPES.indexOf(
+    type as (typeof FILTERED_DISCOVERY_MONETIZATION_TYPES)[number],
+  );
+  return index === -1 ? Number.POSITIVE_INFINITY : index;
+}
+
 function getStreamingOffer(movie: JwMovie, providerShortNames?: string[]) {
   const offers = movie.offers ?? [];
 
   if (providerShortNames?.length) {
-    const allowedProviders = new Set(providerShortNames.map((value) => value.toLowerCase()));
-    return (
-      offers.find((offer) => {
-        const shortName = offer.package.shortName?.toLowerCase();
-        return offer.monetizationType === "FLATRATE" && !!shortName && allowedProviders.has(shortName);
-      }) ?? null
-    );
+    const allowedProviders = new Set(expandProviderShortNames(providerShortNames));
+    const matchingOffers = offers
+      .filter((offer) => {
+        const packageKeys = packageLookupKeys(offer.package);
+        const matchesProvider = packageKeys.some((key) => allowedProviders.has(key));
+        if (!matchesProvider || offerPriority(offer) === Number.POSITIVE_INFINITY) return false;
+
+        // Plex should only surface when JustWatch marks it as free/watchable, not rent-only.
+        if (packageKeys.includes("plx")) return false;
+
+        return true;
+      })
+      .sort((a, b) => offerPriority(a) - offerPriority(b));
+    return matchingOffers[0] ?? null;
   }
 
   return (
     offers.find(
       (offer) => {
-        const shortName = offer.package.shortName?.toLowerCase();
-        return offer.monetizationType === "FLATRATE" && !!shortName && STREAMING_PROVIDER_ALLOWLIST.has(shortName);
+        return DEFAULT_DISCOVERY_MONETIZATION_TYPES.has(offer.monetizationType ?? "") && isAllowedProviderPackage(offer.package);
       },
     ) ?? null
   );
@@ -314,33 +466,48 @@ function mapCatalogMovie(movie: JwMovie, offer: JwOffer): StreamingCatalogMovie 
   };
 }
 
-export async function fetchJustWatchLinks(
+export async function fetchJustWatchOffers(
   title: string,
   year?: number,
   locale = DEFAULT_LOCALE,
-): Promise<Record<number, string>> {
+  mediaType?: "movie" | "tv",
+): Promise<JustWatchOffer[]> {
   try {
     const data = await postJustWatch<JwSearchResult>(SEARCH_QUERY, {
       q: title,
       country: locale,
       lang: DEFAULT_LANGUAGE,
     });
-    if (!data) return {};
+    if (!data) return [];
     const nodes = data.data.searchTitles.edges.map((e) => e.node);
-    if (!nodes.length) return {};
+    if (!nodes.length) return [];
 
-    const match = bestMatch(nodes, title, year);
-    if (!match?.offers?.length) return {};
+    const match = bestMatch(nodes, title, year, mediaType);
+    if (!match?.offers?.length) return [];
 
-    // De-duplicate: keep first URL per packageId
-    const map: Record<number, string> = {};
+    const offers: JustWatchOffer[] = [];
+    const seen = new Set<string>();
     for (const offer of match.offers) {
-      const id = offer.package.packageId;
-      if (!map[id]) map[id] = offer.standardWebURL;
+      const accessModel = normalizeAccessModel(offer.monetizationType);
+      if (!accessModel || !offer.standardWebURL) continue;
+
+      const dedupeKey = `${offer.package.packageId}:${accessModel}:${offer.standardWebURL}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+
+      offers.push({
+        url: offer.standardWebURL,
+        accessModel,
+        monetizationType: offer.monetizationType ?? null,
+        providerName: offer.package.clearName?.trim() || "Streaming",
+        providerShortName: offer.package.shortName?.trim().toLowerCase() || "",
+        packageId: offer.package.packageId,
+        lookupKeys: packageLookupKeys(offer.package),
+      });
     }
-    return map;
+    return offers;
   } catch {
-    return {};
+    return [];
   }
 }
 
@@ -353,7 +520,7 @@ export async function listStreamingPlatforms(locale = DEFAULT_LOCALE): Promise<S
 
   const packages = (data?.data?.packages ?? [])
     .filter((pkg): pkg is JwPackage => Boolean(pkg?.shortName && pkg.clearName && pkg.technicalName))
-    .filter((pkg) => STREAMING_PROVIDER_ALLOWLIST.has(pkg.shortName.toLowerCase()))
+    .filter((pkg) => isAllowedProviderPackage(pkg))
     .sort((a, b) => a.clearName.localeCompare(b.clearName));
 
   return packages.map((pkg) => ({
@@ -378,9 +545,12 @@ export async function fetchStreamingCatalog({
   limit?: number;
   page?: number;
 }): Promise<StreamingCatalogMovie[]> {
-  const normalizedProviders = (providerShortNames ?? [])
-    .map((value) => value.trim().toLowerCase())
-    .filter((value) => STREAMING_PROVIDER_ALLOWLIST.has(value));
+  const normalizedProviders = [...new Set(
+    (providerShortNames ?? [])
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean),
+  )];
+  const queryProviders = expandProviderShortNames(normalizedProviders);
   const collected = new Map<number, StreamingCatalogMovie>();
   const pageNumber = Math.max(1, Math.floor(page));
   const offsetBase =
@@ -395,7 +565,7 @@ export async function fetchStreamingCatalog({
       offset: offsetBase + batch * limit,
       popularTitlesFilter: {
         objectTypes: ["MOVIE", "SHOW"],
-        ...(normalizedProviders.length ? { packages: normalizedProviders } : {}),
+        ...(queryProviders.length ? { packages: queryProviders } : {}),
       },
       formatPoster: "JPG",
       profile: "S718",

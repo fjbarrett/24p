@@ -4,11 +4,14 @@ import { MovieActions } from "@/components/movie-actions";
 import { BackButton } from "@/components/back-button";
 import { DescriptionExpander } from "@/components/description-expander";
 import { MovieTrailerToggle } from "@/components/movie-trailer-toggle";
+import { StreamingProviderRow } from "@/components/streaming-provider-row";
+import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/app-url";
+import { listListsForUser } from "@/lib/server/lists";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +73,7 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
   const typedSession = session as Session | null;
   const userEmail = typedSession?.user?.email?.toLowerCase() ?? "";
   const movie = await fetchTmdbMovie(tmdbId);
+  const lists = userEmail ? await listListsForUser(userEmail, true) : [];
   const backHref = getFromParam(resolvedSearchParams) ?? "/";
   const jsonLd = buildMovieJsonLd(movie);
 
@@ -90,6 +94,10 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
 
       {/* Main content */}
       <div className="mx-auto w-full max-w-[800px] px-6 py-8 sm:px-10">
+        <div className="mb-6">
+          <TmdbSearchBar lists={lists} userEmail={userEmail} wide />
+        </div>
+
         {/* Poster */}
         <MovieTrailerToggle
           tmdbId={movie.tmdbId}
@@ -103,7 +111,7 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
 
         {/* Year · Rating */}
         {(typeof movie.releaseYear === "number" || typeof movie.imdbRating === "number") ? (
-          <p className="mt-1.5 flex items-center justify-center gap-1.5 text-sm text-[#B3B3B3]">
+          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-[#B3B3B3]">
             {typeof movie.releaseYear === "number" ? <span>{movie.releaseYear}</span> : null}
             {typeof movie.imdbRating === "number" && movie.imdbId ? (
               <a
@@ -116,8 +124,17 @@ export default async function MovieDetailPage({ params, searchParams }: PageProp
                 <span>{movie.imdbRating}</span>
               </a>
             ) : null}
-          </p>
+          </div>
         ) : null}
+
+        <div className="mt-3 flex justify-center">
+          <StreamingProviderRow
+            tmdbId={movie.tmdbId}
+            title={movie.title}
+            imdbId={movie.imdbId}
+            releaseYear={movie.releaseYear}
+          />
+        </div>
 
         {/* Description */}
         {movie.overview ? (

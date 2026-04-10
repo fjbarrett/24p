@@ -11,6 +11,13 @@ type StreamingDiscoveryControlsProps = {
   selectedSort: string;
 };
 
+const STREAMING_PREFERENCES_KEY = "streaming:preferences";
+
+type StreamingPreferences = {
+  providers: string[];
+  sort: string;
+};
+
 export function StreamingDiscoveryControls({
   providers,
   selectedProviders,
@@ -39,36 +46,50 @@ export function StreamingDiscoveryControls({
 
   useEffect(() => {
     try {
-      window.localStorage.setItem("streaming:selectedProviders", JSON.stringify(selectedProviders));
+      const payload: StreamingPreferences = {
+        providers: selectedProviders,
+        sort: selectedSort,
+      };
+      window.localStorage.setItem(STREAMING_PREFERENCES_KEY, JSON.stringify(payload));
     } catch {
       // ignore storage errors
     }
-  }, [selectedProviders]);
+  }, [selectedProviders, selectedSort]);
 
   useEffect(() => {
-    if (selectedProviders.length > 0) return;
-    if (searchParams.has("provider")) return;
+    const hasProviderParam = searchParams.has("provider");
+    const hasSortParam = searchParams.has("sort");
+    if (hasProviderParam && hasSortParam) return;
 
     try {
-      const raw = window.localStorage.getItem("streaming:selectedProviders");
+      const raw = window.localStorage.getItem(STREAMING_PREFERENCES_KEY);
       if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return;
+      const parsed = JSON.parse(raw) as Partial<StreamingPreferences> | string[];
+      const parsedProviders = Array.isArray(parsed) ? parsed : parsed.providers;
+      const parsedSort = Array.isArray(parsed) ? null : parsed.sort;
+      if (!Array.isArray(parsedProviders)) return;
 
       const allowed = new Set(providers.map((provider) => provider.shortName));
-      const restored = parsed.filter(
+      const restoredProviders = parsedProviders.filter(
         (value, index) =>
           typeof value === "string" &&
           allowed.has(value) &&
-          parsed.indexOf(value) === index,
+          parsedProviders.indexOf(value) === index,
       ) as string[];
+      const restoredSort = parsedSort === "rating" ? "rating" : "popularity";
 
-      if (!restored.length) return;
-      updateQuery(restored, selectedSort, searchParams.get("seed") ?? Date.now().toString());
+      const nextProviders = hasProviderParam ? selectedProviders : restoredProviders;
+      const nextSort = hasSortParam ? selectedSort : restoredSort;
+      const providersChanged = nextProviders.join(",") !== selectedProviders.join(",");
+      const sortChanged = nextSort !== selectedSort;
+
+      if (!providersChanged && !sortChanged) return;
+      updateQuery(nextProviders, nextSort, searchParams.get("seed") ?? Date.now().toString());
     } catch {
       // ignore storage errors
     }
-  }, [providerKey, providers, searchParams, selectedProviders.length, selectedSort]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- restore only when URL/provider state changes, not on every function recreation
+  }, [providerKey, providers, searchParams, selectedProviders, selectedSort]);
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-2">

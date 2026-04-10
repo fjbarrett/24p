@@ -6,6 +6,7 @@
 ## Current State
 Active development. Rust service removed from the runtime path; app data now flows through Next `/api/*`, PostgreSQL, and server-side TMDB helpers.
 Signed-in users now have a `/streaming` page that surfaces popularity-sorted JustWatch catalog titles, supports provider filtering, and links back into TMDB movie detail pages.
+Watch-provider action rows now pass `mediaType` through the JustWatch direct-link lookup so TV pages can resolve provider-specific outbound URLs instead of falling back to TMDB's generic watch page.
 Docker Compose is the server runtime path; `scripts/server/bootstrap-vbox.sh` prepares a VBox Ubuntu host but does not deploy app config or secrets by itself.
 `24p-dev.actual.company` is routed to the VBox host through Cloudflare Tunnel; the VM env now points at that hostname, but the running GHCR image appears older than the current repo and should be redeployed to pick up recent runtime/header behavior.
 

@@ -11,9 +11,10 @@ import { Plus, Search, X } from "lucide-react";
 type TmdbSearchBarProps = {
   lists: SavedList[];
   userEmail: string;
+  wide?: boolean;
 };
 
-export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
+export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SimplifiedMovie[]>([]);
   const [artists, setArtists] = useState<SimplifiedArtist[]>([]);
@@ -106,6 +107,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
   const showResultsPanel = !panelDismissed && (query.trim().length >= 2 || isSearching || !!error);
 
   const noLists = !lists.length;
+  const canManageLists = Boolean(normalizedEmail);
 
   async function handleAdd(movieId: number, mediaType: "movie" | "tv" = "movie") {
     if (!normalizedEmail) {
@@ -143,7 +145,7 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
   return (
     <div ref={containerRef} className="relative w-full sm:w-auto sticky top-3 z-50 mx-auto" role="search" aria-label="Movie search">
       <div className="flex items-center justify-center gap-2">
-        <div className="relative flex w-full max-w-[480px] items-center gap-3 overflow-hidden rounded-3xl bg-black-950/70 px-4 py-3 shadow-inner transition">
+        <div className={`relative flex w-full items-center gap-3 overflow-hidden rounded-3xl bg-black-950/70 px-4 py-3 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"}`}>
           <span className="flex items-center justify-center rounded-full p-2 text-white" aria-hidden>
             <Search className="h-5 w-5" />
           </span>
@@ -229,22 +231,24 @@ export function TmdbSearchBar({ lists, userEmail }: TmdbSearchBarProps) {
                       ) : null}
                     </div>
                   </Link>
-                  <button
-                    type="button"
-                    aria-label={`Add ${movie.title} to a list`}
-                    aria-controls={`add-to-list-${movie.tmdbId}`}
-                    aria-expanded={activeMovieId === movie.tmdbId}
-                    disabled={noLists || !normalizedEmail}
-                    onClick={() => {
-                      if (noLists || !normalizedEmail) return;
-                      setActiveMovieId((current) => (current === movie.tmdbId ? null : movie.tmdbId));
-                      setSelectedListId((current) => (current || lists[0]?.id) ?? "");
-                      setStatus(null);
-                    }}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-40"
-                  >
-                    <Plus className="h-5 w-5" />
-                  </button>
+                  {canManageLists ? (
+                    <button
+                      type="button"
+                      aria-label={`Add ${movie.title} to a list`}
+                      aria-controls={`add-to-list-${movie.tmdbId}`}
+                      aria-expanded={activeMovieId === movie.tmdbId}
+                      disabled={noLists}
+                      onClick={() => {
+                        if (noLists) return;
+                        setActiveMovieId((current) => (current === movie.tmdbId ? null : movie.tmdbId));
+                        setSelectedListId((current) => (current || lists[0]?.id) ?? "");
+                        setStatus(null);
+                      }}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-40"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </button>
+                  ) : null}
                 </div>
 
                 {activeMovieId === movie.tmdbId && (

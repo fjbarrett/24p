@@ -1,9 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getServerSession } from "next-auth/next";
-import type { Session } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { BackButton } from "@/components/back-button";
 import { StreamingCatalogGrid } from "@/components/streaming-catalog-grid";
 import { StreamingDiscoveryControls } from "@/components/streaming-discovery-controls";
@@ -12,7 +8,7 @@ import { fetchStreamingCatalog, listStreamingPlatforms } from "@/lib/server/just
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: { absolute: "Streaming in 24p" },
+  title: { absolute: "Streaming" },
   robots: { index: false, follow: false },
 };
 
@@ -21,16 +17,11 @@ type StreamingPageProps = {
 };
 
 export default async function StreamingPage({ searchParams }: StreamingPageProps) {
-  const [session, rawSearchParams, providers] = await Promise.all([
-    getServerSession(authOptions),
+  const [rawSearchParams, providers] = await Promise.all([
     searchParams ?? Promise.resolve({}),
     listStreamingPlatforms(),
   ]);
   const resolvedSearchParams = rawSearchParams as Record<string, string | string[] | undefined>;
-
-  const typedSession = session as Session | null;
-  const userEmail = typedSession?.user?.email?.toLowerCase() ?? "";
-  if (!userEmail) redirect("/");
 
   const selectedProviders = parseProviders(readQueryValue(resolvedSearchParams.provider), providers);
   const sortParam = readQueryValue(resolvedSearchParams.sort)?.toLowerCase() === "rating" ? "rating" : "popularity";
@@ -64,7 +55,7 @@ export default async function StreamingPage({ searchParams }: StreamingPageProps
         </div>
 
         <header className="text-center">
-          <h1 className="text-3xl font-semibold text-white sm:text-4xl">Streaming in 24p</h1>
+          <h1 className="text-3xl font-semibold text-white sm:text-4xl">Streaming</h1>
         </header>
 
         <StreamingDiscoveryControls providers={providers} selectedProviders={selectedProviders} selectedSort={sortParam} />
