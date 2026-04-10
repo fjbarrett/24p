@@ -4,11 +4,14 @@ import { MovieActions } from "@/components/movie-actions";
 import { BackButton } from "@/components/back-button";
 import { DescriptionExpander } from "@/components/description-expander";
 import { MovieTrailerToggle } from "@/components/movie-trailer-toggle";
+import { StreamingProviderRow } from "@/components/streaming-provider-row";
+import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/app-url";
+import { listListsForUser } from "@/lib/server/lists";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +73,7 @@ export default async function TvShowDetailPage({ params, searchParams }: PagePro
   const typedSession = session as Session | null;
   const userEmail = typedSession?.user?.email?.toLowerCase() ?? "";
   const show = await fetchTmdbShow(tmdbId);
+  const lists = userEmail ? await listListsForUser(userEmail, true) : [];
   const backHref = getFromParam(resolvedSearchParams) ?? "/";
   const jsonLd = buildShowJsonLd(show);
 
@@ -89,6 +93,10 @@ export default async function TvShowDetailPage({ params, searchParams }: PagePro
       </div>
 
       <div className="mx-auto w-full max-w-[800px] px-6 py-8 sm:px-10">
+        <div className="mb-6">
+          <TmdbSearchBar lists={lists} userEmail={userEmail} wide />
+        </div>
+
         <MovieTrailerToggle
           tmdbId={show.tmdbId}
           title={show.title}
@@ -100,7 +108,7 @@ export default async function TvShowDetailPage({ params, searchParams }: PagePro
         <h1 className="mt-3 text-center text-2xl text-white">{show.title}</h1>
 
         {(typeof show.releaseYear === "number" || typeof show.imdbRating === "number") ? (
-          <p className="mt-1.5 flex items-center justify-center gap-1.5 text-sm text-[#B3B3B3]">
+          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-[#B3B3B3]">
             {typeof show.releaseYear === "number" ? <span>{show.releaseYear}</span> : null}
             {typeof show.imdbRating === "number" && show.imdbId ? (
               <a
@@ -113,8 +121,18 @@ export default async function TvShowDetailPage({ params, searchParams }: PagePro
                 <span>{show.imdbRating}</span>
               </a>
             ) : null}
-          </p>
+          </div>
         ) : null}
+
+        <div className="mt-3 flex justify-center">
+          <StreamingProviderRow
+            tmdbId={show.tmdbId}
+            title={show.title}
+            imdbId={show.imdbId}
+            releaseYear={show.releaseYear}
+            mediaType="tv"
+          />
+        </div>
 
         {show.overview ? (
           <div className="mt-4 w-full">

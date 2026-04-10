@@ -19,3 +19,11 @@
 | 2026-04-10 | Claude | Fixed JSX parse errors in movies/[id]/page.tsx and movie-trailer-toggle.tsx |
 | 2026-04-10 | Claude | Overhauled /streaming: poster-only grid, vignette+gradient, IMDb rating, provider icon, centered filter row |
 | 2026-04-10 | Claude | Researched TV show support path: streaming catalog → search → lists (not yet started) |
+| 2026-04-10 | Codex | Fixed TV watch-provider direct links so show pages like House resolve Hulu/Prime URLs instead of TMDB fallback pages |
+| 2026-04-10 | Codex | Fixed Prime Video watch links by matching JustWatch direct URLs to TMDb providers via normalized provider names instead of mismatched IDs |
+| 2026-04-10 | Codex | Renamed the /streaming page title and heading from "Streaming in 24p" to "Streaming" |
+| 2026-04-10 | Codex | Re-centered the signed-out homepage content so the landing layout sits mid-screen again |
+| 2026-04-10 | Codex | Kept the signed-out Google button pinned top-right while centering the homepage content block |
+| 2026-04-10 | Codex | Nudged the signed-out homepage content slightly upward while keeping the Google button fixed |
+| 2026-04-10 | Codex | Restyled the homepage Streaming On CTA to read like a text link instead of a pill button |
+| 2026-04-10 | Codex | Saved /streaming selections in local storage and normalized JustWatch offers so Plex only shows free links while Pluto/Tubi keep working |

@@ -17,8 +17,10 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Collapsed the backend architecture into the Next app, updated deployment/docs accordingly, and restored IMDb rating enrichment through the server TMDB helper.
 - Tightened detail-view alignment, improved list edit dialog behavior on mobile, and adjusted homepage/list-detail presentation polish.
 - Hardened site-wide response headers and kept no-index environments from publishing sitemap entries.
+- Reworked streaming discovery to persist selected providers/sort locally, simplify the homepage entry point, and normalize JustWatch deep-link handling across movie and TV watch surfaces.
 ### Fixed
 - Swapped middleware nonce generation to an Edge-safe Web Crypto path so deployed hosts no longer crash on every request.
+- Fixed watch-provider deep links for TV titles, restored working Pluto TV and Tubi outbound links, and limited Plex links to free/watchable offers instead of rent-only listings.
 
 ## [0.1.0] - YYYY-MM-DD
 ### Added
