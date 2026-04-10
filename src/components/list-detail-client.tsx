@@ -86,6 +86,7 @@ export function ListDetailClient({
           listId={list.id}
           userEmail={viewerEmail}
           isEditing={isEditing && !isOwner}
+          canDelete={isOwner}
         />
       </section>
       {isOwner ? <ListSuggestionsPanel listId={list.id} /> : null}
