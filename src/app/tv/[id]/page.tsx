@@ -71,7 +71,7 @@ export default async function TvShowDetailPage({ params }: PageProps) {
   const jsonLd = buildShowJsonLd(show);
 
   return (
-    <div className="flex min-h-screen flex-col bg-black text-white">
+    <div className="flex min-h-screen flex-col items-center bg-black text-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

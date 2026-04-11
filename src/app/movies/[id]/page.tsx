@@ -71,7 +71,7 @@ export default async function MovieDetailPage({ params }: PageProps) {
   const jsonLd = buildMovieJsonLd(movie);
 
   return (
-    <div className="flex min-h-screen flex-col bg-black text-white">
+    <div className="flex min-h-screen flex-col items-center bg-black text-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

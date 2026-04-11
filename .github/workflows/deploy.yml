@@ -3,20 +3,33 @@ name: Deploy
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/24p-web
 
 jobs:
-  build-and-push:
-    name: Build and push image
+  build:
+    name: Build image
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
     steps:
       - uses: actions/checkout@v6
+
+      - name: Resolve image tag
+        id: meta
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "tag=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
@@ -28,41 +41,102 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build and push web image
+      - name: Build and push
         uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
           push: true
-          tags: ${{ env.IMAGE_WEB }}:latest
+          tags: ${{ env.IMAGE_WEB }}:${{ steps.meta.outputs.tag }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 
-  deploy:
-    name: Deploy to production
+  deploy-prod:
+    name: Deploy to prod (24p.mov)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: build
     steps:
       - uses: actions/checkout@v6
 
-      - name: Copy compose file to production
+      - name: Write env file
+        run: |
+          cat > .env <<'EOF'
+          IMAGE_TAG=latest
+          NEXTAUTH_SECRET=${{ secrets.PROD_NEXTAUTH_SECRET }}
+          NEXTAUTH_URL=https://24p.mov
+          NEXT_PUBLIC_APP_URL=https://24p.mov
+          NEXT_PUBLIC_AUTH_CALLBACK_URL=https://24p.mov
+          GOOGLE_CLIENT_ID=${{ secrets.PROD_GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.PROD_GOOGLE_CLIENT_SECRET }}
+          TMDB_API_KEY=${{ secrets.PROD_TMDB_API_KEY }}
+          DATABASE_URL=${{ secrets.PROD_DATABASE_URL }}
+          POSTGRES_USER=${{ secrets.PROD_POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.PROD_POSTGRES_PASSWORD }}
+          POSTGRES_DB=${{ secrets.PROD_POSTGRES_DB }}
+          EOF
+          chmod 600 .env
+
+      - name: Copy files to prod server
         uses: appleboy/scp-action@v1
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
+          host: ${{ secrets.PROD_DEPLOY_HOST }}
           username: deploy
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "docker-compose.yml"
+          key: ${{ secrets.PROD_DEPLOY_SSH_KEY }}
+          source: "docker-compose.yml,.env"
           target: /opt/24p/
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
+          host: ${{ secrets.PROD_DEPLOY_HOST }}
           username: deploy
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          key: ${{ secrets.PROD_DEPLOY_SSH_KEY }}
           script: |
             cd /opt/24p
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
             docker system prune -f
+
+  deploy-dev:
+    name: Deploy to dev (24p-dev.actual.company)
+    if: github.event_name == 'pull_request'
+    runs-on: [self-hosted, linux, x64, 24p-dev]
+    needs: build
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write env file
+        working-directory: ${{ github.workspace }}
+        run: |
+          cat > .env <<'EOF'
+          IMAGE_TAG=pr-${{ github.event.pull_request.number }}
+          NEXTAUTH_SECRET=${{ secrets.DEV_NEXTAUTH_SECRET }}
+          NEXTAUTH_URL=https://24p-dev.actual.company
+          NEXT_PUBLIC_APP_URL=https://24p-dev.actual.company
+          NEXT_PUBLIC_AUTH_CALLBACK_URL=https://24p-dev.actual.company
+          GOOGLE_CLIENT_ID=${{ secrets.DEV_GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.DEV_GOOGLE_CLIENT_SECRET }}
+          TMDB_API_KEY=${{ secrets.DEV_TMDB_API_KEY }}
+          DATABASE_URL=${{ secrets.DEV_DATABASE_URL }}
+          POSTGRES_USER=${{ secrets.DEV_POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.DEV_POSTGRES_PASSWORD }}
+          POSTGRES_DB=${{ secrets.DEV_POSTGRES_DB }}
+          NEXT_PUBLIC_NO_INDEX=true
+          EOF
+          chmod 600 .env
+
+      - name: Deploy stack
+        working-directory: ${{ github.workspace }}
+        run: |
+          docker compose --profile local pull
+          docker compose --profile local up -d --remove-orphans
+          docker system prune -f
