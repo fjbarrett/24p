@@ -151,7 +151,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
   return (
     <div ref={containerRef} className="relative w-full" role="search" aria-label="Movie search">
       <div className="flex items-center gap-2">
-        <div className={`relative flex w-full items-center gap-3 overflow-hidden rounded-3xl bg-black-950/70 px-4 py-3 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"}`}>
+        <div className={`relative mx-auto flex w-full items-center gap-3 overflow-hidden rounded-3xl bg-black-950/70 px-4 py-3 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"}`}>
           <span className="flex items-center justify-center rounded-full p-2 text-white" aria-hidden>
             <Search className="h-5 w-5" />
           </span>
