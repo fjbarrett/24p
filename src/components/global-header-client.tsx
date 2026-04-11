@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 
-const DETAIL_PATHS = ["/movies/", "/tv/", "/artists/"];
 const subscribe = () => () => {};
 
 export function GlobalHeaderClient({ children }: { children: ReactNode }) {
@@ -13,10 +12,10 @@ export function GlobalHeaderClient({ children }: { children: ReactNode }) {
 
   if (pathname === "/") return null;
 
-  const isDetailPage = DETAIL_PATHS.some((p) => pathname.startsWith(p));
+  const isDetailPage = pathname.split("/").filter(Boolean).length >= 2;
 
   return (
-    <header className="flex items-center gap-3 px-4 pt-4 sm:px-6">
+    <header className="flex min-h-[64px] items-center gap-3 px-4 py-4 sm:px-6">
       {isDetailPage ? <BackControl /> : <BrandLink />}
       <div className="min-w-0 flex-1">{children}</div>
     </header>
@@ -36,7 +35,7 @@ function BackControl() {
   return (
     <button
       onClick={() => router.back()}
-      className="shrink-0 whitespace-nowrap text-sm text-white/70 transition hover:text-white"
+      className="shrink-0 whitespace-nowrap text-base text-white/70 transition hover:text-white"
     >
       ← Back
     </button>
