@@ -10,6 +10,8 @@ import type { Metadata } from "next";
 import { getPublicProfileByUsername } from "@/lib/server/profiles";
 import { getRatingsMapForUser } from "@/lib/server/ratings";
 import { getListByUsernameSlugForViewer, loadFavoritesForUser } from "@/lib/server/lists";
+import { serializeJsonLd } from "@/lib/json-ld";
+import { getAppUrl } from "@/lib/app-url";
 
 export const dynamic = "force-dynamic";
 
@@ -67,8 +69,19 @@ export default async function ListDetail({
   const fromParam = encodeURIComponent(`/${ownerUsername}/${list.slug}`);
   const canFavorite = !!viewerEmail && viewerEmail !== list.userEmail;
 
+  const canonical = `/${encodeURIComponent(ownerUsername)}/${encodeURIComponent(list.slug)}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: list.title,
+    description: `${list.movies.length} films curated by @${ownerUsername} on 24p.`,
+    url: new URL(canonical, getAppUrl()).toString(),
+    numberOfItems: list.movies.length,
+  };
+
   return (
     <div className="min-h-screen text-black-100">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       <article className="mx-auto w-full max-w-[900px] space-y-6 rounded-[28px] bg-black-900/70 p-4 shadow-2xl backdrop-blur sm:p-6 lg:p-8 mt-4">
         <div className="relative mb-2 overflow-hidden rounded-[28px] bg-black-950">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black-900/60 via-black-950/70 to-black-950" />

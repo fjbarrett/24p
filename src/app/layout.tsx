@@ -59,11 +59,13 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "24p",
     url: "/",
+    images: [{ url: "/apple-touch-icon.png", width: 180, height: 180, alt: "24p" }],
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "24p",
     description,
+    images: ["/apple-touch-icon.png"],
   },
 };
 
