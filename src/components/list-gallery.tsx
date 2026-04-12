@@ -6,14 +6,23 @@ import { apiFetch } from "@/lib/api-client";
 import type { SavedList } from "@/lib/list-store";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 
-// Poster dimensions and layout
-const POSTER_W = 54;
-const POSTER_H = 80;
-const POSTER_STRIDE = 38; // horizontal offset per poster (creates ~16px overlap)
-const MAX_POSTERS = 5;
+// How long the backdrop is visible before cycling to the next one
+const VISIBLE_MS = 5000;
+// Fade durations
+const FADE_IN_MS = 1200;
+const FADE_OUT_MS = 700;
+// Brief pause at black between images
+const BLACK_PAUSE_MS = 150;
 
-// Three phases: posters waiting off-right → visible (snap in) → flying off-left
-type Phase = "idle-right" | "visible" | "idle-left";
+/** Swap any TMDB image size to w300 — fast enough for a darkened card bg */
+function toCardBackdrop(url: string): string {
+  return url.replace(/\/t\/p\/\w+\//, "/t/p/w300/");
+}
+
+function pickRandom(urls: string[], exclude?: string | null): string {
+  const pool = urls.length > 1 ? urls.filter((u) => u !== exclude) : urls;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 type ListCardProps = {
   list: SavedList;
@@ -21,33 +30,37 @@ type ListCardProps = {
 };
 
 function ListCard({ list, showOwner }: ListCardProps) {
-  const [phase, setPhase] = useState<Phase>("idle-right");
-  const [posterUrls, setPosterUrls] = useState<string[]>([]);
-  const fetchedRef = useRef(false);
+  const [activeUrl, setActiveUrl] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
   const mountedRef = useRef(true);
-  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fetchedRef = useRef(false);
+  const urlsRef = useRef<string[]>([]);
+  const isHoveredRef = useRef(false);
+  const cycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentUrlRef = useRef<string | null>(null);
+  // Ref that holds the latest scheduleCycle — lets the function call itself
+  // without creating a circular useCallback dependency.
+  const scheduleCycleRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
+      if (cycleTimerRef.current) clearTimeout(cycleTimerRef.current);
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
     };
   }, []);
 
-  // TMDB supports several fixed widths. w92 loads fast and is more than
-  // enough for a 54px-wide thumbnail at 2× retina.
-  const toLowQuality = (url: string) => url.replace("/w185/", "/w92/");
-
-  const fetchPosters = useCallback(async () => {
-    if (fetchedRef.current) return;
+  const fetchBackdrops = useCallback(async (): Promise<string[]> => {
+    if (fetchedRef.current) return urlsRef.current;
     fetchedRef.current = true;
 
-    const items = list.items.slice(0, MAX_POSTERS);
+    const items = list.items.slice(0, 12); // look at up to 12 films for variety
     const urls: string[] = [];
 
     for (const item of items) {
-      // Prefer sessionStorage cache (shared with ListMoviesGrid)
       const cached =
         typeof window !== "undefined"
           ? window.sessionStorage.getItem(`tmdb:${item.tmdbId}`)
@@ -56,8 +69,8 @@ function ListCard({ list, showOwner }: ListCardProps) {
       if (cached) {
         try {
           const movie = JSON.parse(cached) as SimplifiedMovie;
-          if (movie.posterUrl) {
-            urls.push(toLowQuality(movie.posterUrl));
+          if (movie.backdropUrl) {
+            urls.push(toCardBackdrop(movie.backdropUrl));
             continue;
           }
         } catch {
@@ -71,43 +84,104 @@ function ListCard({ list, showOwner }: ListCardProps) {
           ? `/tmdb/tv/${item.tmdbId}`
           : `/tmdb/movie/${item.tmdbId}?lite=true`;
         const result = await apiFetch<{ detail: SimplifiedMovie }>(endpoint);
-        if (result?.detail?.posterUrl) {
-          urls.push(toLowQuality(result.detail.posterUrl));
+        if (result?.detail) {
           try {
             window.sessionStorage.setItem(
               `tmdb:${item.tmdbId}`,
               JSON.stringify(result.detail),
             );
           } catch {
-            // ignore
+            // ignore quota errors
+          }
+          if (result.detail.backdropUrl) {
+            urls.push(toCardBackdrop(result.detail.backdropUrl));
           }
         }
       } catch {
-        // individual fetch failures are silently skipped
+        // silently skip individual failures
       }
     }
 
-    if (mountedRef.current && urls.length > 0) {
-      setPosterUrls(urls);
+    urlsRef.current = urls;
+
+    // Kick off preloading in the background so subsequent crossfades are instant
+    if (typeof window !== "undefined") {
+      for (const url of urls) {
+        const img = new window.Image();
+        img.src = url;
+      }
     }
+
+    return urls;
   }, [list.items]);
 
-  const handleMouseEnter = useCallback(() => {
-    if (leaveTimerRef.current) {
-      clearTimeout(leaveTimerRef.current);
-      leaveTimerRef.current = null;
-    }
-    fetchPosters();
-    setPhase("visible");
-  }, [fetchPosters]);
+  /** Schedule the next fade-out → swap → fade-in cycle */
+  const scheduleCycle = useCallback(() => {
+    if (cycleTimerRef.current) clearTimeout(cycleTimerRef.current);
+
+    cycleTimerRef.current = setTimeout(() => {
+      if (!mountedRef.current || !isHoveredRef.current) return;
+
+      // Fade out
+      setIsVisible(false);
+
+      fadeTimerRef.current = setTimeout(() => {
+        if (!mountedRef.current || !isHoveredRef.current) return;
+
+        // Pick a new backdrop (not the same one) while invisible
+        const next = pickRandom(urlsRef.current, currentUrlRef.current);
+        currentUrlRef.current = next;
+        setActiveUrl(next);
+
+        // One rAF to let the DOM paint the new src, then trigger fade-in
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (!mountedRef.current || !isHoveredRef.current) return;
+            setIsVisible(true);
+            // Call through ref to avoid circular useCallback dependency
+            scheduleCycleRef.current();
+          });
+        });
+      }, FADE_OUT_MS + BLACK_PAUSE_MS);
+    }, VISIBLE_MS);
+  }, []);
+
+  // Keep the ref in sync so the recursive call always uses the latest closure
+  useEffect(() => {
+    scheduleCycleRef.current = scheduleCycle;
+  }, [scheduleCycle]);
+
+  const handleMouseEnter = useCallback(async () => {
+    isHoveredRef.current = true;
+
+    const urls = await fetchBackdrops();
+    if (!urls.length || !mountedRef.current || !isHoveredRef.current) return;
+
+    const first = pickRandom(urls);
+    currentUrlRef.current = first;
+    setActiveUrl(first);
+
+    // Double rAF: first frame sets the src, second frame starts the transition
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!mountedRef.current || !isHoveredRef.current) return;
+        setIsVisible(true);
+        scheduleCycle();
+      });
+    });
+  }, [fetchBackdrops, scheduleCycle]);
 
   const handleMouseLeave = useCallback(() => {
-    setPhase("idle-left");
-    // After the exit animation completes, reset to idle-right (instant, no transition)
-    // so the next hover always enters from the right.
-    leaveTimerRef.current = setTimeout(() => {
-      if (mountedRef.current) setPhase("idle-right");
-    }, 320);
+    isHoveredRef.current = false;
+    if (cycleTimerRef.current) {
+      clearTimeout(cycleTimerRef.current);
+      cycleTimerRef.current = null;
+    }
+    if (fadeTimerRef.current) {
+      clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = null;
+    }
+    setIsVisible(false);
   }, []);
 
   const href = list.username ? `/${list.username}/${list.slug}` : null;
@@ -129,93 +203,64 @@ function ListCard({ list, showOwner }: ListCardProps) {
           />
         )}
 
-        {/* Two-zone layout: poster area above, text footer below */}
-        <div className="flex h-full flex-col gap-2 p-4">
-          {/* Poster zone — flex-1 so it fills the space above the title.
-              overflow-hidden clips the fly-in/out animation at the zone boundary. */}
-          <div className="pointer-events-none relative flex-1 overflow-hidden">
-            {posterUrls.map((url, i) => {
-              const leftPx = i * POSTER_STRIDE;
-
-              let tx: string;
-              let duration: string;
-              let easing: string;
-              let delay: string;
-
-              if (phase === "visible") {
-                tx = "0px";
-                duration = "380ms";
-                easing = "cubic-bezier(0.22, 1.42, 0.36, 1)";
-                delay = `${i * 55}ms`;
-              } else if (phase === "idle-left") {
-                tx = "-420px";
-                duration = "240ms";
-                easing = "cubic-bezier(0.4, 0, 0.8, 0.2)";
-                delay = "0ms";
-              } else {
-                // idle-right: instant (no transition) so next entry always
-                // flies in from the right
-                tx = "500px";
-                duration = "0ms";
-                easing = "linear";
-                delay = "0ms";
-              }
-
-              return (
-                <div
-                  key={i}
-                  style={{
-                    position: "absolute",
-                    left: `${leftPx}px`,
-                    // Vertically centre inside the poster zone without needing
-                    // a JS measurement — top: 50% + marginTop pulls it up by
-                    // half its own height.
-                    top: "50%",
-                    marginTop: `-${POSTER_H / 2}px`,
-                    width: `${POSTER_W}px`,
-                    height: `${POSTER_H}px`,
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                    transform: `translateX(${tx})`,
-                    transition: `transform ${duration} ${easing} ${delay}`,
-                    boxShadow: "2px 6px 20px rgba(0,0,0,0.75)",
-                    willChange: "transform",
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
-                    alt=""
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                </div>
-              );
-            })}
+        {/* Backdrop — fades in/out over the dark card background */}
+        {activeUrl && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 0,
+              opacity: isVisible ? 1 : 0,
+              transition: isVisible
+                ? `opacity ${FADE_IN_MS}ms ease-in`
+                : `opacity ${FADE_OUT_MS}ms ease-out`,
+            }}
+          >
+            {/* The film still */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                backgroundImage: `url(${activeUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center 30%",
+              }}
+            />
+            {/* Gradient darkens the image so title text stays legible */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.72) 100%)",
+              }}
+            />
           </div>
+        )}
 
-          {/* Text footer — always visible, always below the poster zone */}
-          <div className="shrink-0">
-            {showOwner && list.username && ownerHref ? (
-              <Link
-                href={ownerHref}
-                className="relative z-20 mb-1 block text-[11px] uppercase tracking-[0.4em] text-white/40 hover:text-white"
-              >
-                @{list.username}
-              </Link>
-            ) : null}
-            <h3 className="text-xl font-semibold text-white">{list.title}</h3>
-            {typeof list.movies?.length === "number" && (
-              <p className="mt-0.5 text-xs text-white/50">
-                {list.movies.length}{" "}
-                {list.movies.length === 1 ? "film" : "films"}
-              </p>
-            )}
-            {!href && (
-              <p className="mt-0.5 text-xs text-white/40">
-                Set a username to share this list.
-              </p>
-            )}
-          </div>
+        {/* Text content */}
+        <div className="relative z-10 flex h-full flex-col justify-end p-4">
+          {showOwner && list.username && ownerHref ? (
+            <Link
+              href={ownerHref}
+              className="relative z-20 mb-1 self-start text-[11px] uppercase tracking-[0.4em] text-white/40 hover:text-white"
+            >
+              @{list.username}
+            </Link>
+          ) : null}
+          <h3 className="text-xl font-semibold text-white">{list.title}</h3>
+          {typeof list.movies?.length === "number" && (
+            <p className="mt-0.5 text-xs text-white/50">
+              {list.movies.length}{" "}
+              {list.movies.length === 1 ? "film" : "films"}
+            </p>
+          )}
+          {!href && (
+            <p className="mt-0.5 text-xs text-white/40">
+              Set a username to share this list.
+            </p>
+          )}
         </div>
       </div>
     </div>
