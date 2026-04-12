@@ -5,6 +5,8 @@ import type { FilmographyEntry, SimplifiedArtist } from "@/lib/tmdb";
 import { FilmographyRoleFilter } from "./filmography-role-filter";
 import type { Metadata } from "next";
 import { fetchTmdbPersonWithFilmography } from "@/lib/server/tmdb";
+import { serializeJsonLd } from "@/lib/json-ld";
+import { getAppUrl } from "@/lib/app-url";
 
 export const dynamic = "force-dynamic";
 
@@ -73,8 +75,17 @@ export default async function ArtistPage({ params }: { params: Promise<{ id: str
 
   const { person, filmography } = payload;
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: person.name,
+    url: new URL(`/artists/${personId}`, getAppUrl()).toString(),
+    ...(person.profileUrl ? { image: person.profileUrl } : {}),
+  };
+
   return (
     <div className="min-h-screen px-4 py-8 text-black-100 sm:px-8 lg:px-16">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       <div className="mx-auto w-full max-w-[1000px] space-y-8">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">

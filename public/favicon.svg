@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="104" fill="#111827"/>
+  <!-- Top perforations (3 rectangles, centred) -->
+  <rect x="140" y="36" width="44" height="32" rx="7" fill="white" opacity="0.35"/>
+  <rect x="234" y="36" width="44" height="32" rx="7" fill="white" opacity="0.35"/>
+  <rect x="328" y="36" width="44" height="32" rx="7" fill="white" opacity="0.35"/>
+  <!-- Bottom perforations -->
+  <rect x="140" y="444" width="44" height="32" rx="7" fill="white" opacity="0.35"/>
+  <rect x="234" y="444" width="44" height="32" rx="7" fill="white" opacity="0.35"/>
+  <rect x="328" y="444" width="44" height="32" rx="7" fill="white" opacity="0.35"/>
+  <!-- "24" numeral -->
+  <text
+    x="256" y="352"
+    font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+    font-weight="800"
+    font-size="264"
+    fill="white"
+    text-anchor="middle"
+    letter-spacing="-8"
+  >24</text>
+</svg>

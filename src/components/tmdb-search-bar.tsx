@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import type { SimplifiedArtist, SimplifiedMovie } from "@/lib/tmdb";
 import { apiFetch } from "@/lib/api-client";
 import { addMovieToList, type SavedList } from "@/lib/list-store";
@@ -31,6 +32,11 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const normalizedEmail = userEmail.trim().toLowerCase();
+  const pathname = usePathname();
+  useEffect(() => {
+    setPanelDismissed(true);
+  }, [pathname]);
+
   useEffect(() => {
     if (lists.length && !selectedListId) {
       setSelectedListId(lists[0]?.id ?? "");
@@ -143,9 +149,9 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
   }
 
   return (
-    <div ref={containerRef} className="relative w-full sm:w-auto mx-auto" role="search" aria-label="Movie search">
-      <div className="flex items-center justify-center gap-2">
-        <div className={`relative flex w-full items-center gap-3 overflow-hidden rounded-3xl bg-black-950/70 px-4 py-3 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"}`}>
+    <div ref={containerRef} className="relative w-full" role="search" aria-label="Movie search">
+      <div className="flex items-center gap-2">
+        <div className={`relative mx-auto flex w-full items-center gap-3 overflow-hidden rounded-3xl bg-black-950/70 px-4 py-3 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"}`}>
           <span className="flex items-center justify-center rounded-full p-2 text-white" aria-hidden>
             <Search className="h-5 w-5" />
           </span>

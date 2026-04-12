@@ -12,7 +12,8 @@ fi
 RUNNER_VERSION="${RUNNER_VERSION:-2.329.0}"
 RUNNER_USER="${RUNNER_USER:-deploy}"
 RUNNER_HOME="${RUNNER_HOME:-/opt/actions-runner}"
-RUNNER_LABELS="${RUNNER_LABELS:-24p-vbox}"
+RUNNER_LABELS="${RUNNER_LABELS:-24p-dev}"
+RUNNER_NAME="${RUNNER_NAME:-$(hostname)-${RUNNER_LABELS}}"
 
 install -d -o "${RUNNER_USER}" -g "${RUNNER_USER}" -m 0755 "${RUNNER_HOME}"
 
@@ -29,7 +30,7 @@ sudo -u "${RUNNER_USER}" ./config.sh \
   --url "${GH_RUNNER_URL}" \
   --token "${GH_RUNNER_TOKEN}" \
   --labels "${RUNNER_LABELS}" \
-  --name "$(hostname)-24p-vbox" \
+  --name "${RUNNER_NAME}" \
   --work "_work"
 
 ./svc.sh install "${RUNNER_USER}"

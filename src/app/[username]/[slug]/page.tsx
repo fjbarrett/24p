@@ -7,10 +7,11 @@ import { authOptions } from "@/lib/auth";
 import { ListDetailClient } from "@/components/list-detail-client";
 import { FavoriteToggle } from "@/components/favorite-toggle";
 import type { Metadata } from "next";
-import { BackButton } from "@/components/back-button";
 import { getPublicProfileByUsername } from "@/lib/server/profiles";
 import { getRatingsMapForUser } from "@/lib/server/ratings";
 import { getListByUsernameSlugForViewer, loadFavoritesForUser } from "@/lib/server/lists";
+import { serializeJsonLd } from "@/lib/json-ld";
+import { getAppUrl } from "@/lib/app-url";
 
 export const dynamic = "force-dynamic";
 
@@ -68,25 +69,23 @@ export default async function ListDetail({
   const fromParam = encodeURIComponent(`/${ownerUsername}/${list.slug}`);
   const canFavorite = !!viewerEmail && viewerEmail !== list.userEmail;
 
+  const canonical = `/${encodeURIComponent(ownerUsername)}/${encodeURIComponent(list.slug)}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: list.title,
+    description: `${list.movies.length} films curated by @${ownerUsername} on 24p.`,
+    url: new URL(canonical, getAppUrl()).toString(),
+    numberOfItems: list.movies.length,
+  };
+
   return (
     <div className="min-h-screen text-black-100">
-      <div className="mx-auto w-full max-w-[900px] px-6 pt-6 sm:px-8">
-        <div className="flex items-center justify-between">
-          {viewerEmail ? (
-            <BackButton
-              fallbackHref="/"
-              className="text-sm text-white/70 transition hover:text-white"
-            >
-              ← Back
-            </BackButton>
-          ) : <div />}
-          {canFavorite && <FavoriteToggle listId={list.id} userEmail={viewerEmail} initialFavorite={isFavorite} />}
-        </div>
-      </div>
-      <article className="mx-auto w-full max-w-[900px] space-y-6 rounded-[28px] bg-black-900/70 p-4 shadow-2xl backdrop-blur sm:p-6 lg:p-8 mt-3">
-        <div className="relative overflow-hidden rounded-[28px] bg-black-950">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
+      <article className="mx-auto w-full max-w-[900px] space-y-6 rounded-[28px] bg-black-900/70 p-4 shadow-2xl backdrop-blur sm:p-6 lg:p-8 mt-4">
+        <div className="relative mb-2 overflow-hidden rounded-[28px] bg-black-950">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black-900/60 via-black-950/70 to-black-950" />
-          <div className="relative z-10 space-y-3 px-5 pb-0 pt-6 text-center sm:px-6 sm:pt-7">
+          <div className="relative z-10 space-y-3 px-5 pb-0 pt-3 text-center sm:px-6 sm:pt-4">
             <h1 className="text-4xl font-semibold leading-[1.05] text-white sm:text-5xl">{list.title}</h1>
             <div className="mb-1 flex flex-wrap items-center justify-center gap-1.5 text-sm text-black-400">
               {ownerIsPublic ? (
@@ -113,6 +112,11 @@ export default async function ListDetail({
                 </span>
               ) : null}
             </div>
+            {canFavorite && (
+              <div className="flex justify-center pb-4">
+                <FavoriteToggle listId={list.id} userEmail={viewerEmail} initialFavorite={isFavorite} />
+              </div>
+            )}
           </div>
         </div>
         <div className="!mt-0">
