@@ -15,8 +15,8 @@ export function GlobalHeaderClient({ children }: { children: ReactNode }) {
   const isDetailPage = pathname.split("/").filter(Boolean).length >= 2;
 
   return (
-    <header className="flex min-h-[64px] items-center gap-3 px-4 py-4 sm:px-6">
-      <div className="min-w-[3.5rem] shrink-0">
+    <header className="flex min-h-[44px] items-center gap-2.5 px-4 py-1.5 sm:px-6">
+      <div className="min-w-[3rem] shrink-0">
         {isDetailPage ? <BackControl /> : <BrandLink />}
       </div>
       <div className="min-w-0 flex-1">{children}</div>
@@ -37,7 +37,7 @@ function BackControl() {
   return (
     <button
       onClick={() => router.back()}
-      className="shrink-0 whitespace-nowrap text-base text-white/70 transition hover:text-white"
+      className="shrink-0 whitespace-nowrap text-sm text-white/70 transition hover:text-white"
     >
       ← Back
     </button>
@@ -46,7 +46,7 @@ function BackControl() {
 
 function BrandLink() {
   return (
-    <Link href="/" className="shrink-0 text-base font-semibold text-white">
+    <Link href="/" className="shrink-0 text-sm font-semibold text-white">
       24p
     </Link>
   );

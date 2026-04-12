@@ -19,6 +19,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1,
     },
+    {
+      url: absolute("/changelog"),
+      changeFrequency: "weekly",
+      priority: 0.55,
+    },
   ];
 
   let lists: Awaited<ReturnType<typeof loadPublicLists>> = [];

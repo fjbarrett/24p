@@ -109,7 +109,7 @@ gtag('config', '${googleAnalyticsMeasurementId}');`}
             <ScrollRestoration />
           </Suspense>
           <div className="mx-auto w-full max-w-[1000px]">
-            <div className="sticky top-0 z-40 bg-black/80 backdrop-blur-sm">
+            <div className="sticky top-0 z-40 bg-black/80 pt-2 backdrop-blur-sm">
               <GlobalSearchHeader />
             </div>
             {children}

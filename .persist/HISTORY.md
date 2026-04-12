@@ -2,10 +2,6 @@
 
 | Date | Agent | Action |
 |------|-------|--------|
-| 2026-04-09 | Claude | Added /recommendations page with content-based film suggestions from user lists (PR #47) |
-| 2026-04-09 | Claude | Added per-list suggestions panel with one-tap add + Claude Haiku-backed recommendations (PR #48) |
-| 2026-04-09 | Codex | Added a signed-in /streaming discovery page backed by JustWatch provider-filtered popular titles |
-| 2026-04-10 | Claude | Fixed JSX parse errors in movies/[id]/page.tsx and movie-trailer-toggle.tsx |
 | 2026-04-10 | Claude | Overhauled /streaming: poster-only grid, vignette+gradient, IMDb rating, provider icon, centered filter row |
 | 2026-04-10 | Claude | Researched TV show support path: streaming catalog → search → lists (not yet started) |
 | 2026-04-10 | Codex | Fixed TV watch-provider direct links so show pages like House resolve Hulu/Prime URLs instead of TMDB fallback pages |
@@ -24,3 +20,5 @@
 | 2026-04-11 | Codex | Updated repo-owned domain references for prod `24p.mov` and dev `24p.actual.company` and documented required secret changes |
 | 2026-04-11 | Codex | Ran a security/reliability audit: upgraded Next, pinned patched preact, escaped JSON-LD, added TMDB timeouts, and fixed ratings timestamps |
 | 2026-04-11 | Codex | Finalized the pending tvOS + runtime hardening changes for commit, push, and merge |
+| 2026-04-11 | Codex | Added a user-facing changelog page and linked it from the signed-in home footer |
+| 2026-04-11 | Codex | Matched the changelog to a GitHub-style layout, made filters clickable, slimmed the sticky header, and fixed forward/detail-page scroll resets |
