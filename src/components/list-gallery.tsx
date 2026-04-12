@@ -7,11 +7,9 @@ import type { SavedList } from "@/lib/list-store";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 
 // Poster dimensions and layout
-const POSTER_W = 56;
-const POSTER_H = 84;
-const POSTER_STRIDE = 40; // horizontal offset per poster (creates ~16px overlap)
-const POSTER_BOTTOM = 12;
-const POSTER_LEFT_OFFSET = 16;
+const POSTER_W = 54;
+const POSTER_H = 80;
+const POSTER_STRIDE = 38; // horizontal offset per poster (creates ~16px overlap)
 const MAX_POSTERS = 5;
 
 // Three phases: posters waiting off-right → visible (snap in) → flying off-left
@@ -37,6 +35,10 @@ function ListCard({ list, showOwner }: ListCardProps) {
     };
   }, []);
 
+  // TMDB supports several fixed widths. w92 loads fast and is more than
+  // enough for a 54px-wide thumbnail at 2× retina.
+  const toLowQuality = (url: string) => url.replace("/w185/", "/w92/");
+
   const fetchPosters = useCallback(async () => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
@@ -55,7 +57,7 @@ function ListCard({ list, showOwner }: ListCardProps) {
         try {
           const movie = JSON.parse(cached) as SimplifiedMovie;
           if (movie.posterUrl) {
-            urls.push(movie.posterUrl);
+            urls.push(toLowQuality(movie.posterUrl));
             continue;
           }
         } catch {
@@ -70,7 +72,7 @@ function ListCard({ list, showOwner }: ListCardProps) {
           : `/tmdb/movie/${item.tmdbId}?lite=true`;
         const result = await apiFetch<{ detail: SimplifiedMovie }>(endpoint);
         if (result?.detail?.posterUrl) {
-          urls.push(result.detail.posterUrl);
+          urls.push(toLowQuality(result.detail.posterUrl));
           try {
             window.sessionStorage.setItem(
               `tmdb:${item.tmdbId}`,
@@ -127,33 +129,33 @@ function ListCard({ list, showOwner }: ListCardProps) {
           />
         )}
 
-        {/* Poster strip — flies in from right on hover, exits left on leave */}
-        {posterUrls.length > 0 && (
-          <div className="pointer-events-none absolute inset-0 z-10">
+        {/* Two-zone layout: poster area above, text footer below */}
+        <div className="flex h-full flex-col gap-2 p-4">
+          {/* Poster zone — flex-1 so it fills the space above the title.
+              overflow-hidden clips the fly-in/out animation at the zone boundary. */}
+          <div className="pointer-events-none relative flex-1 overflow-hidden">
             {posterUrls.map((url, i) => {
-              const leftPx = POSTER_LEFT_OFFSET + i * POSTER_STRIDE;
+              const leftPx = i * POSTER_STRIDE;
 
-              let transform: string;
+              let tx: string;
               let duration: string;
               let easing: string;
               let delay: string;
 
               if (phase === "visible") {
-                // Snap in from right with spring overshoot
-                transform = "translateX(0)";
+                tx = "0px";
                 duration = "380ms";
                 easing = "cubic-bezier(0.22, 1.42, 0.36, 1)";
                 delay = `${i * 55}ms`;
               } else if (phase === "idle-left") {
-                // All fly left together — natural visual stagger as rightmost
-                // posters take longer to cross the card boundary
-                transform = "translateX(-420px)";
+                tx = "-420px";
                 duration = "240ms";
                 easing = "cubic-bezier(0.4, 0, 0.8, 0.2)";
                 delay = "0ms";
               } else {
-                // idle-right: instant reset, no animation
-                transform = `translateX(500px)`;
+                // idle-right: instant (no transition) so next entry always
+                // flies in from the right
+                tx = "500px";
                 duration = "0ms";
                 easing = "linear";
                 delay = "0ms";
@@ -165,12 +167,16 @@ function ListCard({ list, showOwner }: ListCardProps) {
                   style={{
                     position: "absolute",
                     left: `${leftPx}px`,
-                    bottom: `${POSTER_BOTTOM}px`,
+                    // Vertically centre inside the poster zone without needing
+                    // a JS measurement — top: 50% + marginTop pulls it up by
+                    // half its own height.
+                    top: "50%",
+                    marginTop: `-${POSTER_H / 2}px`,
                     width: `${POSTER_W}px`,
                     height: `${POSTER_H}px`,
                     borderRadius: "4px",
                     overflow: "hidden",
-                    transform,
+                    transform: `translateX(${tx})`,
                     transition: `transform ${duration} ${easing} ${delay}`,
                     boxShadow: "2px 6px 20px rgba(0,0,0,0.75)",
                     willChange: "transform",
@@ -186,30 +192,30 @@ function ListCard({ list, showOwner }: ListCardProps) {
               );
             })}
           </div>
-        )}
 
-        {/* Text content */}
-        <div className="relative z-0 flex h-full flex-col justify-end p-4">
-          {showOwner && list.username && ownerHref ? (
-            <Link
-              href={ownerHref}
-              className="relative z-20 mb-1 self-start text-[11px] uppercase tracking-[0.4em] text-white/40 hover:text-white"
-            >
-              @{list.username}
-            </Link>
-          ) : null}
-          <h3 className="text-xl font-semibold text-white">{list.title}</h3>
-          {typeof list.movies?.length === "number" && (
-            <p className="mt-0.5 text-xs text-white/50">
-              {list.movies.length}{" "}
-              {list.movies.length === 1 ? "film" : "films"}
-            </p>
-          )}
-          {!href && (
-            <p className="mt-0.5 text-xs text-white/40">
-              Set a username to share this list.
-            </p>
-          )}
+          {/* Text footer — always visible, always below the poster zone */}
+          <div className="shrink-0">
+            {showOwner && list.username && ownerHref ? (
+              <Link
+                href={ownerHref}
+                className="relative z-20 mb-1 block text-[11px] uppercase tracking-[0.4em] text-white/40 hover:text-white"
+              >
+                @{list.username}
+              </Link>
+            ) : null}
+            <h3 className="text-xl font-semibold text-white">{list.title}</h3>
+            {typeof list.movies?.length === "number" && (
+              <p className="mt-0.5 text-xs text-white/50">
+                {list.movies.length}{" "}
+                {list.movies.length === 1 ? "film" : "films"}
+              </p>
+            )}
+            {!href && (
+              <p className="mt-0.5 text-xs text-white/40">
+                Set a username to share this list.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
