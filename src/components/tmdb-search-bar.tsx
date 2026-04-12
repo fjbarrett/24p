@@ -151,9 +151,9 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
   return (
     <div ref={containerRef} className="relative w-full" role="search" aria-label="Movie search">
       <div className="flex items-center gap-2">
-        <div className={`relative mx-auto flex w-full items-center gap-3 overflow-hidden rounded-3xl bg-black-950/70 px-4 py-3 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"}`}>
-          <span className="flex items-center justify-center rounded-full p-2 text-white" aria-hidden>
-            <Search className="h-5 w-5" />
+        <div className={`relative mx-auto flex w-full items-center gap-2 overflow-hidden rounded-3xl bg-black-950/70 px-3.5 py-2 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"}`}>
+          <span className="flex items-center justify-center rounded-full p-1.5 text-white" aria-hidden>
+            <Search className="h-4.5 w-4.5" />
           </span>
           <input
             ref={inputRef}
@@ -168,16 +168,16 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
             aria-label="Search movies and shows"
             aria-controls={resultsId}
             aria-describedby={error ? errorId : undefined}
-            className="w-full flex-1 bg-transparent pr-3 text-lg text-black-100 placeholder:text-black-400 focus:outline-none"
+            className="w-full flex-1 bg-transparent pr-2 text-[15px] text-black-100 placeholder:text-black-400 focus:outline-none"
           />
           {query ? (
             <button
               type="button"
               onClick={clearSearch}
               aria-label="Clear search"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white/55 transition hover:text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-white/55 transition hover:text-white"
             >
-              <X className="h-4 w-4" strokeWidth={2.25} />
+              <X className="h-3.5 w-3.5" strokeWidth={2.25} />
             </button>
           ) : null}
         </div>
@@ -190,7 +190,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
       )}
       {showResultsPanel && (
         <div
-          className="search-results-scrollbar absolute left-1/2 top-14 z-40 w-[min(90vw,720px)] max-h-[70vh] -translate-x-1/2 space-y-3 overflow-y-auto rounded-3xl bg-black p-4 backdrop-blur"
+          className="search-results-scrollbar absolute left-1/2 top-12 z-40 w-[min(90vw,720px)] max-h-[70vh] -translate-x-1/2 space-y-3 overflow-y-auto rounded-3xl bg-black p-4 backdrop-blur"
           id={panelId}
           aria-label="Search results"
         >

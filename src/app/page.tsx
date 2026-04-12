@@ -5,7 +5,7 @@ import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import type { SavedList } from "@/lib/list-store";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
-import { Settings, User } from "lucide-react";
+import { NotebookText, Settings, User } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 import { listListsForUser } from "@/lib/server/lists";
@@ -36,6 +36,15 @@ export default async function Home() {
 
         {session ? (
           <footer className="mb-6 mt-10 flex items-center justify-center gap-3">
+            <Link
+              href="/changelog"
+              aria-label="Changelog"
+              title="Changelog"
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 text-sm text-white/75 transition hover:bg-white/10 hover:text-white active:scale-[0.98]"
+            >
+              <NotebookText className="h-4 w-4" strokeWidth={2.1} />
+              <span>Changelog</span>
+            </Link>
             <Link
               href="/profile"
               aria-label="Profile"

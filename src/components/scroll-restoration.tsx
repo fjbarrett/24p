@@ -5,6 +5,14 @@ import { usePathname } from "next/navigation";
 
 const STORAGE_PREFIX = "scroll:";
 
+function shouldPersistScroll(pathname: string): boolean {
+  return !(
+    pathname.startsWith("/movies/") ||
+    pathname.startsWith("/tv/") ||
+    pathname.startsWith("/artists/")
+  );
+}
+
 function readSavedScroll(pathname: string): number {
   try {
     const raw = sessionStorage.getItem(`${STORAGE_PREFIX}${pathname}`);
@@ -27,10 +35,29 @@ function saveScroll(pathname: string, y: number) {
   }
 }
 
+function clearSavedScroll(pathname: string) {
+  try {
+    sessionStorage.removeItem(`${STORAGE_PREFIX}${pathname}`);
+  } catch {
+    // ignore
+  }
+}
+
 export function ScrollRestoration() {
   const pathname = usePathname();
   const isBackNav = useRef(false);
   const scrollY = useRef(0);
+
+  // Keep the browser from restoring scroll on its own; we manage both forward
+  // resets and back/forward restores explicitly below.
+  useEffect(() => {
+    if (!("scrollRestoration" in window.history)) return;
+    const previous = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    return () => {
+      window.history.scrollRestoration = previous;
+    };
+  }, []);
 
   // Mark the next navigation as back/forward before the URL changes.
   useEffect(() => {
@@ -51,10 +78,12 @@ export function ScrollRestoration() {
 
   // Second line of defence + back-nav restoration + scroll tracking.
   useEffect(() => {
+    const shouldRestore = shouldPersistScroll(pathname);
+
     if (isBackNav.current) {
       // Back/forward navigation — restore whatever was saved (0 is valid).
       isBackNav.current = false;
-      const pos = readSavedScroll(pathname);
+      const pos = shouldRestore ? readSavedScroll(pathname) : 0;
       requestAnimationFrame(() =>
         requestAnimationFrame(() => {
           window.scrollTo(0, pos);
@@ -74,7 +103,11 @@ export function ScrollRestoration() {
 
     return () => {
       window.removeEventListener("scroll", onScroll);
-      saveScroll(pathname, scrollY.current);
+      if (shouldPersistScroll(pathname)) {
+        saveScroll(pathname, scrollY.current);
+      } else {
+        clearSavedScroll(pathname);
+      }
     };
   }, [pathname]);
 
