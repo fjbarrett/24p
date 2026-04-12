@@ -36,6 +36,9 @@ export function ScrollRestoration() {
   const shouldRestoreOnNextPath = useRef(false);
   const lastScrollY = useRef(0);
   const scrollRaf = useRef<number | null>(null);
+  // Track the previous pathname so we can distinguish a real page change
+  // (needs scroll-to-top) from a search-param-only update (preserve scroll).
+  const prevPathnameRef = useRef(pathname);
 
   const key = useMemo(() => {
     const search = searchParams.toString();
@@ -51,6 +54,9 @@ export function ScrollRestoration() {
   }, []);
 
   useEffect(() => {
+    const pathnameChanged = prevPathnameRef.current !== pathname;
+    prevPathnameRef.current = pathname;
+
     lastScrollY.current = window.scrollY;
 
     const handleScroll = () => {
@@ -64,6 +70,7 @@ export function ScrollRestoration() {
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     if (shouldRestoreOnNextPath.current) {
+      // Back/forward browser navigation — restore the saved position.
       shouldRestoreOnNextPath.current = false;
       const stored = readScroll(key);
       if (typeof stored === "number") {
@@ -73,6 +80,10 @@ export function ScrollRestoration() {
           });
         });
       }
+    } else if (pathnameChanged) {
+      // Forward navigation to a new page — always start at the top.
+      // (Search-param-only updates on the same path are left alone.)
+      window.scrollTo(0, 0);
     }
 
     return () => {
@@ -83,7 +94,7 @@ export function ScrollRestoration() {
       }
       writeScroll(key, lastScrollY.current);
     };
-  }, [key]);
+  }, [key, pathname]);
 
   return null;
 }
