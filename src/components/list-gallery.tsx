@@ -6,13 +6,10 @@ import { apiFetch } from "@/lib/api-client";
 import type { SavedList } from "@/lib/list-store";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 
-// How long the backdrop is visible before cycling to the next one
+// How long each backdrop is visible before crossfading to the next one
 const VISIBLE_MS = 5000;
-// Fade durations
-const FADE_IN_MS = 1200;
-const FADE_OUT_MS = 700;
-// Brief pause at black between images
-const BLACK_PAUSE_MS = 150;
+// Duration of the crossfade between backdrops (and the initial fade-in)
+const CROSSFADE_MS = 900;
 
 /** Swap any TMDB image size to w300 — fast enough for a darkened card bg */
 function toCardBackdrop(url: string): string {
@@ -29,17 +26,21 @@ type ListCardProps = {
   showOwner?: boolean;
 };
 
+// Two-layer state for A/B crossfade
+type Layer = { url: string | null; on: boolean };
+
 function ListCard({ list, showOwner }: ListCardProps) {
-  const [activeUrl, setActiveUrl] = useState<string | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  // A and B layers sit on top of each other; we alternate which is "on"
+  const [layerA, setLayerA] = useState<Layer>({ url: null, on: false });
+  const [layerB, setLayerB] = useState<Layer>({ url: null, on: false });
 
   const mountedRef = useRef(true);
   const fetchedRef = useRef(false);
   const urlsRef = useRef<string[]>([]);
   const isHoveredRef = useRef(false);
   const cycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentUrlRef = useRef<string | null>(null);
+  const activeLayerRef = useRef<"a" | "b">("a");
   // Ref that holds the latest scheduleCycle — lets the function call itself
   // without creating a circular useCallback dependency.
   const scheduleCycleRef = useRef<() => void>(() => {});
@@ -49,7 +50,6 @@ function ListCard({ list, showOwner }: ListCardProps) {
     return () => {
       mountedRef.current = false;
       if (cycleTimerRef.current) clearTimeout(cycleTimerRef.current);
-      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
     };
   }, []);
 
@@ -115,36 +115,43 @@ function ListCard({ list, showOwner }: ListCardProps) {
     return urls;
   }, [list.items]);
 
-  /** Schedule the next fade-out → swap → fade-in cycle */
+  /** Crossfade to a new backdrop URL using the inactive A/B layer. */
+  const crossfadeTo = useCallback((url: string) => {
+    const next = activeLayerRef.current === "a" ? "b" : "a";
+
+    // Paint the URL into the inactive (hidden) layer first
+    if (next === "a") setLayerA({ url, on: false });
+    else setLayerB({ url, on: false });
+
+    // Double rAF: first frame applies the new URL, second triggers the
+    // opacity transition so both layers animate simultaneously.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!mountedRef.current || !isHoveredRef.current) return;
+        // Fade in the new layer, fade out the old one — true crossfade
+        if (next === "a") {
+          setLayerA((prev) => ({ ...prev, on: true }));
+          setLayerB((prev) => ({ ...prev, on: false }));
+        } else {
+          setLayerB((prev) => ({ ...prev, on: true }));
+          setLayerA((prev) => ({ ...prev, on: false }));
+        }
+        activeLayerRef.current = next;
+        scheduleCycleRef.current();
+      });
+    });
+  }, []);
+
+  /** Wait VISIBLE_MS then pick a new backdrop and crossfade to it. */
   const scheduleCycle = useCallback(() => {
     if (cycleTimerRef.current) clearTimeout(cycleTimerRef.current);
-
     cycleTimerRef.current = setTimeout(() => {
       if (!mountedRef.current || !isHoveredRef.current) return;
-
-      // Fade out
-      setIsVisible(false);
-
-      fadeTimerRef.current = setTimeout(() => {
-        if (!mountedRef.current || !isHoveredRef.current) return;
-
-        // Pick a new backdrop (not the same one) while invisible
-        const next = pickRandom(urlsRef.current, currentUrlRef.current);
-        currentUrlRef.current = next;
-        setActiveUrl(next);
-
-        // One rAF to let the DOM paint the new src, then trigger fade-in
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (!mountedRef.current || !isHoveredRef.current) return;
-            setIsVisible(true);
-            // Call through ref to avoid circular useCallback dependency
-            scheduleCycleRef.current();
-          });
-        });
-      }, FADE_OUT_MS + BLACK_PAUSE_MS);
+      const next = pickRandom(urlsRef.current, currentUrlRef.current);
+      currentUrlRef.current = next;
+      crossfadeTo(next);
     }, VISIBLE_MS);
-  }, []);
+  }, [crossfadeTo]);
 
   // Keep the ref in sync so the recursive call always uses the latest closure
   useEffect(() => {
@@ -159,13 +166,16 @@ function ListCard({ list, showOwner }: ListCardProps) {
 
     const first = pickRandom(urls);
     currentUrlRef.current = first;
-    setActiveUrl(first);
+    activeLayerRef.current = "a";
 
-    // Double rAF: first frame sets the src, second frame starts the transition
+    // Load into layer A while hidden, then fade it in
+    setLayerA({ url: first, on: false });
+    setLayerB({ url: null, on: false });
+
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (!mountedRef.current || !isHoveredRef.current) return;
-        setIsVisible(true);
+        setLayerA((prev) => ({ ...prev, on: true }));
         scheduleCycle();
       });
     });
@@ -177,11 +187,9 @@ function ListCard({ list, showOwner }: ListCardProps) {
       clearTimeout(cycleTimerRef.current);
       cycleTimerRef.current = null;
     }
-    if (fadeTimerRef.current) {
-      clearTimeout(fadeTimerRef.current);
-      fadeTimerRef.current = null;
-    }
-    setIsVisible(false);
+    // Fade out whichever layer is currently showing
+    setLayerA((prev) => ({ ...prev, on: false }));
+    setLayerB((prev) => ({ ...prev, on: false }));
   }, []);
 
   const href = list.username ? `/${list.username}/${list.slug}` : null;
@@ -203,40 +211,40 @@ function ListCard({ list, showOwner }: ListCardProps) {
           />
         )}
 
-        {/* Backdrop — fades in/out over the dark card background */}
-        {activeUrl && (
-          <div
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              inset: 0,
-              zIndex: 0,
-              opacity: isVisible ? 1 : 0,
-              transition: isVisible
-                ? `opacity ${FADE_IN_MS}ms ease-in`
-                : `opacity ${FADE_OUT_MS}ms ease-out`,
-            }}
-          >
-            {/* The film still */}
+        {/* A/B backdrop layers — crossfade by swapping opacity simultaneously */}
+        {[layerA, layerB].map((layer, i) =>
+          layer.url ? (
             <div
+              key={i}
+              aria-hidden="true"
               style={{
                 position: "absolute",
                 inset: 0,
-                backgroundImage: `url(${activeUrl})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center 30%",
+                zIndex: 0,
+                opacity: layer.on ? 1 : 0,
+                transition: `opacity ${CROSSFADE_MS}ms ease-in-out`,
               }}
-            />
-            {/* Gradient darkens the image so title text stays legible */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background:
-                  "linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.72) 100%)",
-              }}
-            />
-          </div>
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  backgroundImage: `url(${layer.url})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center 30%",
+                }}
+              />
+              {/* Gradient darkens the image so title text stays legible */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.72) 100%)",
+                }}
+              />
+            </div>
+          ) : null,
         )}
 
         {/* Text content */}
