@@ -54,12 +54,12 @@ export function ListDetailClient({
       {modal}
 
       {isOwner ? (
-        <div className="flex justify-center py-3">
+        <div className="flex justify-center">
           <button
             type="button"
             onClick={() => setIsEditing(true)}
             aria-label="Edit list"
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-white/40 transition hover:bg-white/8 hover:text-white/70"
+            className="flex items-center gap-1.5 rounded-full text-xs text-white/40 transition hover:bg-white/8 hover:text-white/70"
           >
             <Pencil className="h-3 w-3" strokeWidth={2.25} />
             Edit
