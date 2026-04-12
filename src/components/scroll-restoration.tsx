@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+
+// useLayoutEffect on the server emits a warning; this silences it while
+// preserving synchronous behaviour on the client (where it matters).
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 const STORAGE_PREFIX = "scroll:";
 
@@ -53,8 +58,17 @@ export function ScrollRestoration() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  // Scroll to top synchronously (before paint) on forward navigation so the
+  // new page never briefly appears at the previous page's scroll position.
+  // Back/forward browser navigation is excluded — the useEffect below will
+  // restore the saved position for those instead.
+  useIsomorphicLayoutEffect(() => {
+    if (!shouldRestoreOnNextPath.current) {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname]);
+
   useEffect(() => {
-    const pathnameChanged = prevPathnameRef.current !== pathname;
     prevPathnameRef.current = pathname;
 
     lastScrollY.current = window.scrollY;
@@ -80,10 +94,6 @@ export function ScrollRestoration() {
           });
         });
       }
-    } else if (pathnameChanged) {
-      // Forward navigation to a new page — always start at the top.
-      // (Search-param-only updates on the same path are left alone.)
-      window.scrollTo(0, 0);
     }
 
     return () => {
