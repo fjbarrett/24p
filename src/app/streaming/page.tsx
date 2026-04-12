@@ -7,7 +7,7 @@ import { fetchStreamingCatalog, fetchStreamingCatalogAll, listStreamingPlatforms
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: { absolute: "Streaming" },
+  title: "Streaming",
   robots: { index: false, follow: false },
 };
 
