@@ -25,7 +25,7 @@ Open `Sources/Networking/APIClient.swift` and set `kBaseURL`:
 // Local dev server:
 let kBaseURL = "http://localhost:3000"
 
-// Deployed dev environment:
+// Deployed app:
 let kBaseURL = "https://24p.mov"
 ```
 
