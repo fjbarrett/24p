@@ -16,7 +16,9 @@ export function GlobalHeaderClient({ children }: { children: ReactNode }) {
 
   return (
     <header className="flex min-h-[64px] items-center gap-3 px-4 py-4 sm:px-6">
-      {isDetailPage ? <BackControl /> : <BrandLink />}
+      <div className="min-w-[3.5rem] shrink-0">
+        {isDetailPage ? <BackControl /> : <BrandLink />}
+      </div>
       <div className="min-w-0 flex-1">{children}</div>
     </header>
   );
