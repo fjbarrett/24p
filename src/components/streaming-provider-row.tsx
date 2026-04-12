@@ -349,9 +349,9 @@ export function StreamingProviderRow({ tmdbId, title, imdbId, releaseYear, media
   if (!displayProviders.length && !effectiveAppleTvUrl) return null;
 
   return (
-    <div className="w-full max-w-[720px] py-2">
+    <div className="w-full max-w-[720px] overflow-x-auto scrollbar-none py-2">
       {(effectiveAppleTvUrl || displayProviders.length) ? (
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex w-max items-center gap-3 sm:w-full sm:justify-center">
           {effectiveAppleTvUrl ? (
             <a
               href={effectiveAppleTvUrl}
