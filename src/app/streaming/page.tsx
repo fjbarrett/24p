@@ -59,10 +59,6 @@ export default async function StreamingPage({ searchParams }: StreamingPageProps
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8 px-4 py-6 sm:px-8">
-        <header className="text-center">
-          <h1 className="text-3xl font-semibold text-white sm:text-4xl">Streaming</h1>
-        </header>
-
         <StreamingDiscoveryControls providers={providers} selectedProviders={selectedProviders} selectedSort={sortParam} />
 
         <StreamingCatalogGrid movies={movies} providerIcons={providerIcons} />
