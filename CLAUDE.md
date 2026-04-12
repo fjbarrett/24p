@@ -49,7 +49,7 @@ If the project directory contains a `.git` repo:
 - Create a new branch before making any code changes. Name branches descriptively: `<type>/<short-description>` (e.g., `feat/add-auth`, `fix/null-pointer`, `refactor/split-pipeline`).
 - Commit messages must follow Conventional Commits: `<type>(<scope>): <summary>` with a body explaining _why_, not just _what_.
 - One logical change per commit — do not bundle unrelated edits.
-- When work is complete, open a pull request. **Do not merge immediately.** Opening the PR triggers an automatic deploy to https://24p-dev.actual.company — wait for that deploy to succeed, then ask the user to verify the change on dev before merging.
+- When work is complete, open a pull request. **Do not merge immediately.** Opening the PR should be validated against the dev environment at https://24p.actual.company before merging.
 - Only merge once the user has confirmed the behaviour on dev looks correct, or explicitly instructs you to merge without testing.
 - Do not leave changes on a branch or push directly to main.
 - Never force-push, reset --hard, or rewrite history on shared branches without explicit user instruction.

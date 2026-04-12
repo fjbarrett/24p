@@ -7,6 +7,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 ## [Unreleased]
 ### Added
 - Added Next route handlers and server-side Postgres/TMDB modules so the app no longer depends on a separate Rust service at runtime.
+- Added a `apple-tv/` tvOS SwiftUI client for browsing public lists, searching titles, and viewing provider-backed detail pages against the existing 24p API.
 ### Changed
 - Unified app action buttons and button-style links to use the sign-out button's white background and black text styling.
 - Refined movie and list detail views with clearer action placement, stronger section alignment, and more consistent control sizing.
@@ -18,9 +19,11 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Tightened detail-view alignment, improved list edit dialog behavior on mobile, and adjusted homepage/list-detail presentation polish.
 - Hardened site-wide response headers and kept no-index environments from publishing sitemap entries.
 - Reworked streaming discovery to persist selected providers/sort locally, simplify the homepage entry point, and normalize JustWatch deep-link handling across movie and TV watch surfaces.
+- Updated the documented dev hostname to `https://24p.actual.company` and aligned project notes and PR guidance with the current prod/dev domain split.
 ### Fixed
 - Swapped middleware nonce generation to an Edge-safe Web Crypto path so deployed hosts no longer crash on every request.
 - Fixed watch-provider deep links for TV titles, restored working Pluto TV and Tubi outbound links, and limited Plex links to free/watchable offers instead of rent-only listings.
+- Upgraded Next.js to 16.2.3, pinned patched `preact` 10.29.1, escaped JSON-LD on movie/TV detail pages, added TMDB/Strawberry fetch timeouts, and returned persisted `updatedAt` values from `/api/ratings`.
 
 ## [0.1.0] - YYYY-MM-DD
 ### Added

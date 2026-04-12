@@ -8,6 +8,13 @@ type RatingInput = {
   source: string;
 };
 
+type UserRatingRow = {
+  tmdb_id: number;
+  rating: number;
+  source: string;
+  updated_at: string;
+};
+
 export async function saveRatingsForUser(userEmail: string, ratings: RatingInput[]) {
   const pool = getPool();
   for (const entry of ratings) {
@@ -32,14 +39,28 @@ export async function saveRatingsForUser(userEmail: string, ratings: RatingInput
 
 export async function getRatingsMapForUser(userEmail: string) {
   const pool = getPool();
-  const result = await pool.query<{ tmdb_id: number; rating: number }>(
-    "SELECT tmdb_id, rating FROM user_ratings WHERE user_email = $1 ORDER BY updated_at DESC",
+  const result = await pool.query<UserRatingRow>(
+    "SELECT tmdb_id, rating, source, updated_at FROM user_ratings WHERE user_email = $1 ORDER BY updated_at DESC",
     [userEmail],
   );
   return result.rows.reduce<Record<number, number>>((map, row) => {
     map[row.tmdb_id] = row.rating;
     return map;
   }, {});
+}
+
+export async function getRatingsForUser(userEmail: string) {
+  const pool = getPool();
+  const result = await pool.query<UserRatingRow>(
+    "SELECT tmdb_id, rating, source, updated_at FROM user_ratings WHERE user_email = $1 ORDER BY updated_at DESC",
+    [userEmail],
+  );
+  return result.rows.map((row) => ({
+    tmdbId: row.tmdb_id,
+    rating: row.rating,
+    source: row.source,
+    updatedAt: new Date(row.updated_at).toISOString(),
+  }));
 }
 
 export async function getRatingForUser(userEmail: string, tmdbId: number) {
