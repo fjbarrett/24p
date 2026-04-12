@@ -5,12 +5,34 @@ import { usePathname } from "next/navigation";
 
 const STORAGE_PREFIX = "scroll:";
 
+function readSavedScroll(pathname: string): number {
+  try {
+    const raw = sessionStorage.getItem(`${STORAGE_PREFIX}${pathname}`);
+    if (!raw) return 0;
+    const pos = Number.parseInt(raw, 10);
+    return Number.isFinite(pos) && pos >= 0 ? pos : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveScroll(pathname: string, y: number) {
+  try {
+    sessionStorage.setItem(
+      `${STORAGE_PREFIX}${pathname}`,
+      String(Math.floor(y)),
+    );
+  } catch {
+    // ignore
+  }
+}
+
 export function ScrollRestoration() {
   const pathname = usePathname();
   const isBackNav = useRef(false);
   const scrollY = useRef(0);
 
-  // Mark the next navigation as a back/forward event before the URL changes.
+  // Mark the next navigation as back/forward before the URL changes.
   useEffect(() => {
     const onPopState = () => {
       isBackNav.current = true;
@@ -19,55 +41,40 @@ export function ScrollRestoration() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  // Scroll to top synchronously (before paint) on every forward navigation.
-  // Skipped for back/forward — the effect below restores the saved position.
+  // First line of defence: reset scroll synchronously before paint on forward
+  // navigation so the new page is never briefly visible at the old position.
   useLayoutEffect(() => {
     if (!isBackNav.current) {
       window.scrollTo(0, 0);
     }
   }, [pathname]);
 
-  // Track the current scroll position, save it on leave, and restore it on
-  // back/forward navigation.
+  // Second line of defence + back-nav restoration + scroll tracking.
   useEffect(() => {
-    const key = `${STORAGE_PREFIX}${pathname}`;
+    if (isBackNav.current) {
+      // Back/forward navigation — restore whatever was saved (0 is valid).
+      isBackNav.current = false;
+      const pos = readSavedScroll(pathname);
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          window.scrollTo(0, pos);
+        }),
+      );
+    } else {
+      // Forward navigation fallback in case useLayoutEffect missed it.
+      window.scrollTo(0, 0);
+    }
 
-    // Sync the ref in case useLayoutEffect already reset to 0.
+    // Track scroll position continuously so we can save it on leave.
     scrollY.current = window.scrollY;
-
     const onScroll = () => {
       scrollY.current = window.scrollY;
     };
     window.addEventListener("scroll", onScroll, { passive: true });
 
-    if (isBackNav.current) {
-      isBackNav.current = false;
-      try {
-        const raw = sessionStorage.getItem(key);
-        if (raw) {
-          const pos = Number.parseInt(raw, 10);
-          if (Number.isFinite(pos) && pos > 0) {
-            // Double rAF gives the page a chance to paint content before
-            // jumping to the saved position.
-            requestAnimationFrame(() =>
-              requestAnimationFrame(() => {
-                window.scrollTo(0, pos);
-              }),
-            );
-          }
-        }
-      } catch {
-        // ignore sessionStorage errors
-      }
-    }
-
     return () => {
       window.removeEventListener("scroll", onScroll);
-      try {
-        sessionStorage.setItem(key, String(Math.floor(scrollY.current)));
-      } catch {
-        // ignore
-      }
+      saveScroll(pathname, scrollY.current);
     };
   }, [pathname]);
 
