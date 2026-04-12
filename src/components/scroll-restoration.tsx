@@ -1,89 +1,82 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 const STORAGE_PREFIX = "scroll:";
 
-function buildKey(pathname: string, search: string) {
-  if (!search) return `${STORAGE_PREFIX}${pathname}`;
-  return `${STORAGE_PREFIX}${pathname}?${search}`;
-}
-
-function readScroll(key: string): number | null {
+function readSavedScroll(pathname: string): number {
   try {
-    const raw = window.sessionStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = Number.parseInt(raw, 10);
-    if (!Number.isFinite(parsed) || parsed < 0) return null;
-    return parsed;
+    const raw = sessionStorage.getItem(`${STORAGE_PREFIX}${pathname}`);
+    if (!raw) return 0;
+    const pos = Number.parseInt(raw, 10);
+    return Number.isFinite(pos) && pos >= 0 ? pos : 0;
   } catch {
-    return null;
+    return 0;
   }
 }
 
-function writeScroll(key: string, value: number) {
+function saveScroll(pathname: string, y: number) {
   try {
-    window.sessionStorage.setItem(key, String(Math.max(0, Math.floor(value))));
+    sessionStorage.setItem(
+      `${STORAGE_PREFIX}${pathname}`,
+      String(Math.floor(y)),
+    );
   } catch {
-    // ignore sessionStorage write failures (Safari private mode, quota, etc)
+    // ignore
   }
 }
 
 export function ScrollRestoration() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const shouldRestoreOnNextPath = useRef(false);
-  const lastScrollY = useRef(0);
-  const scrollRaf = useRef<number | null>(null);
+  const isBackNav = useRef(false);
+  const scrollY = useRef(0);
 
-  const key = useMemo(() => {
-    const search = searchParams.toString();
-    return buildKey(pathname, search);
-  }, [pathname, searchParams]);
-
+  // Mark the next navigation as back/forward before the URL changes.
   useEffect(() => {
-    const handlePopState = () => {
-      shouldRestoreOnNextPath.current = true;
+    const onPopState = () => {
+      isBackNav.current = true;
     };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  // First line of defence: reset scroll synchronously before paint on forward
+  // navigation so the new page is never briefly visible at the old position.
+  useLayoutEffect(() => {
+    if (!isBackNav.current) {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname]);
+
+  // Second line of defence + back-nav restoration + scroll tracking.
   useEffect(() => {
-    lastScrollY.current = window.scrollY;
-
-    const handleScroll = () => {
-      if (scrollRaf.current !== null) return;
-      scrollRaf.current = window.requestAnimationFrame(() => {
-        scrollRaf.current = null;
-        lastScrollY.current = window.scrollY;
-      });
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    if (shouldRestoreOnNextPath.current) {
-      shouldRestoreOnNextPath.current = false;
-      const stored = readScroll(key);
-      if (typeof stored === "number") {
+    if (isBackNav.current) {
+      // Back/forward navigation — restore whatever was saved (0 is valid).
+      isBackNav.current = false;
+      const pos = readSavedScroll(pathname);
+      requestAnimationFrame(() =>
         requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            window.scrollTo(0, stored);
-          });
-        });
-      }
+          window.scrollTo(0, pos);
+        }),
+      );
+    } else {
+      // Forward navigation fallback in case useLayoutEffect missed it.
+      window.scrollTo(0, 0);
     }
 
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      if (scrollRaf.current !== null) {
-        window.cancelAnimationFrame(scrollRaf.current);
-        scrollRaf.current = null;
-      }
-      writeScroll(key, lastScrollY.current);
+    // Track scroll position continuously so we can save it on leave.
+    scrollY.current = window.scrollY;
+    const onScroll = () => {
+      scrollY.current = window.scrollY;
     };
-  }, [key]);
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      saveScroll(pathname, scrollY.current);
+    };
+  }, [pathname]);
 
   return null;
 }

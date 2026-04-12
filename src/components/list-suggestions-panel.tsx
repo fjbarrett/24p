@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 import { apiFetch } from "@/lib/api-client";
@@ -139,9 +140,13 @@ export function ListSuggestionsPanel({ listId }: Props) {
 }
 
 function SuggestionCard({ movie, onAdd }: { movie: SimplifiedMovie; onAdd: () => void }) {
+  const href = movie.mediaType === "tv" ? `/tv/${movie.tmdbId}` : `/movies/${movie.tmdbId}`;
+
   return (
     <li className="group">
       <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-white/10 bg-black-900/40">
+        {/* Poster link — sits below the add button so both are independently clickable */}
+        <Link href={href} className="absolute inset-0 z-10" aria-label={`View ${movie.title}`} />
         {movie.posterUrl ? (
           <Image
             src={toSmallPoster(movie.posterUrl)}
@@ -155,18 +160,20 @@ function SuggestionCard({ movie, onAdd }: { movie: SimplifiedMovie; onAdd: () =>
             No art
           </div>
         )}
-        {/* Add button — always visible on mobile, revealed on hover on desktop */}
+        {/* Add button — above the link (z-20), always visible on mobile, revealed on hover on desktop */}
         <button
           onClick={onAdd}
           aria-label={`Add ${movie.title} to list`}
-          className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-white hover:text-black sm:opacity-0 sm:group-hover:opacity-100"
+          className="absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-white hover:text-black sm:opacity-0 sm:group-hover:opacity-100"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
             <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
           </svg>
         </button>
       </div>
-      <p className="mt-1 truncate text-xs text-white/70">{movie.title}</p>
+      <Link href={href} className="mt-1 block truncate text-xs text-white/70 hover:text-white">
+        {movie.title}
+      </Link>
       {movie.releaseYear ? <p className="text-[10px] text-white/40">{movie.releaseYear}</p> : null}
     </li>
   );

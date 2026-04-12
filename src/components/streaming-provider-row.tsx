@@ -351,7 +351,7 @@ export function StreamingProviderRow({ tmdbId, title, imdbId, releaseYear, media
   return (
     <div className="w-full max-w-[720px] py-2">
       {(effectiveAppleTvUrl || displayProviders.length) ? (
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           {effectiveAppleTvUrl ? (
             <a
               href={effectiveAppleTvUrl}

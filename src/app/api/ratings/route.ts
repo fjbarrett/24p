@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRatingsMapForUser, saveRatingsForUser } from "@/lib/server/ratings";
+import { getRatingsForUser, saveRatingsForUser } from "@/lib/server/ratings";
 import { errorResponse } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
@@ -8,14 +8,9 @@ export async function GET() {
   if (!userEmail) {
     return errorResponse("Unauthorized", 401);
   }
-  const ratings = await getRatingsMapForUser(userEmail);
+  const ratings = await getRatingsForUser(userEmail);
   return NextResponse.json({
-    ratings: Object.entries(ratings).map(([tmdbId, rating]) => ({
-      tmdbId: Number(tmdbId),
-      rating,
-      source: "tmdb",
-      updatedAt: new Date().toISOString(),
-    })),
+    ratings,
   });
 }
 

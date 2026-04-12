@@ -4,6 +4,7 @@ import type { FilmographyEntry, PersonLink, SimplifiedArtist, SimplifiedMovie } 
 
 const TMDB_API_ROOT = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w185";
+const TMDB_FETCH_TIMEOUT_MS = 5000;
 const DEFAULT_STRAWBERRY_BASE_URL =
   process.env.NODE_ENV === "development" ? "https://strawberry.fjbarrett.workers.dev" : "";
 
@@ -96,6 +97,7 @@ async function fetchFromStrawberry<T>(
   const response = await fetch(url.toString(), {
     headers: { Accept: "application/json" },
     next: { revalidate: 60 * 60 * 6 },
+    signal: AbortSignal.timeout(TMDB_FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -118,6 +120,7 @@ async function tmdbFetch<T>(path: string, params?: Record<string, string | numbe
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
     next: { revalidate: 60 * 60 * 6 },
+    signal: AbortSignal.timeout(TMDB_FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -139,6 +142,7 @@ async function fetchExternalRatings(imdbId: string) {
     const response = await fetch(url.toString(), {
       headers: { Accept: "application/json" },
       next: { revalidate: 60 * 60 * 6 },
+      signal: AbortSignal.timeout(TMDB_FETCH_TIMEOUT_MS),
     });
     if (!response.ok) {
       return undefined;

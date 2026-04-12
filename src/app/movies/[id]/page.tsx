@@ -9,6 +9,7 @@ import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/app-url";
+import { serializeJsonLd } from "@/lib/json-ld";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +75,7 @@ export default async function MovieDetailPage({ params }: PageProps) {
     <div className="flex min-h-screen flex-col items-center bg-black text-white">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <div className="mx-auto w-full max-w-[800px] px-6 py-8 sm:px-10">
         {/* Poster */}
