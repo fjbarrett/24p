@@ -237,9 +237,6 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-white leading-snug">{item.name}</p>
-                        {item.department && (
-                          <p className="mt-0.5 text-xs text-black-500">{item.department}</p>
-                        )}
                       </div>
                     </Link>
                   </li>
