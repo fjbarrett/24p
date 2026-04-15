@@ -92,6 +92,9 @@ export default async function MovieDetailPage({ params }: PageProps) {
           style={{ color: "#fff", WebkitTextFillColor: "#fff", opacity: 1 }}
         >
           {movie.title}
+          {typeof movie.releaseYear === "number" ? (
+            <span className="ml-2 font-normal text-[#888]">({movie.releaseYear})</span>
+          ) : null}
         </h1>
 
         {/* Year · Rating */}
@@ -150,6 +153,10 @@ function buildMovieJsonLd(movie: {
   posterUrl?: string | null;
   backdropUrl?: string | null;
   imdbId?: string | null;
+  runtime?: number;
+  genres?: string[];
+  director?: { name: string } | null;
+  cast?: Array<{ name: string }>;
 }) {
   const canonicalUrl = new URL(`/movies/${movie.tmdbId}`, getAppUrl()).toString();
   const imageUrl = movie.backdropUrl
@@ -167,8 +174,30 @@ function buildMovieJsonLd(movie: {
     datePublished: movie.releaseYear ? `${movie.releaseYear}-01-01` : undefined,
     url: canonicalUrl,
   };
+
   if (movie.imdbId) {
     schema.sameAs = `https://www.imdb.com/title/${movie.imdbId}/`;
   }
+  if (movie.genres?.length) {
+    schema.genre = movie.genres;
+  }
+  if (typeof movie.runtime === "number" && movie.runtime > 0) {
+    schema.duration = `PT${movie.runtime}M`;
+  }
+  if (movie.director?.name) {
+    schema.director = { "@type": "Person", name: movie.director.name };
+  }
+  if (movie.cast?.length) {
+    schema.actor = movie.cast.slice(0, 5).map((p) => ({ "@type": "Person", name: p.name }));
+  }
+
+  const identifiers: Array<Record<string, unknown>> = [
+    { "@type": "PropertyValue", propertyID: "TMDB", value: String(movie.tmdbId) },
+  ];
+  if (movie.imdbId) {
+    identifiers.push({ "@type": "PropertyValue", propertyID: "IMDB", value: movie.imdbId });
+  }
+  schema.identifier = identifiers;
+
   return schema;
 }

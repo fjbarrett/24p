@@ -91,6 +91,9 @@ export default async function TvShowDetailPage({ params }: PageProps) {
           style={{ color: "#fff", WebkitTextFillColor: "#fff", opacity: 1 }}
         >
           {show.title}
+          {typeof show.releaseYear === "number" ? (
+            <span className="ml-2 font-normal text-[#888]">({show.releaseYear})</span>
+          ) : null}
         </h1>
 
         {(typeof show.releaseYear === "number" || typeof show.imdbRating === "number") ? (
@@ -154,6 +157,7 @@ function buildShowJsonLd(show: {
   posterUrl?: string | null;
   backdropUrl?: string | null;
   imdbId?: string | null;
+  genres?: string[];
 }) {
   const canonicalUrl = new URL(`/tv/${show.tmdbId}`, getAppUrl()).toString();
   const imageUrl = show.backdropUrl
@@ -171,8 +175,21 @@ function buildShowJsonLd(show: {
     startDate: show.releaseYear ? `${show.releaseYear}-01-01` : undefined,
     url: canonicalUrl,
   };
+
   if (show.imdbId) {
     schema.sameAs = `https://www.imdb.com/title/${show.imdbId}/`;
   }
+  if (show.genres?.length) {
+    schema.genre = show.genres;
+  }
+
+  const identifiers: Array<Record<string, unknown>> = [
+    { "@type": "PropertyValue", propertyID: "TMDB", value: String(show.tmdbId) },
+  ];
+  if (show.imdbId) {
+    identifiers.push({ "@type": "PropertyValue", propertyID: "IMDB", value: show.imdbId });
+  }
+  schema.identifier = identifiers;
+
   return schema;
 }
