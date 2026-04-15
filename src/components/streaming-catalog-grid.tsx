@@ -41,27 +41,30 @@ function StreamingCatalogCard({
   const imageAlt = movie.posterUrl ? `${movie.title} poster` : `${movie.title} artwork`;
 
   return (
-    <div className="group relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-neutral-900">
+    <div className="group relative aspect-[2/3] w-full rounded-lg focus-within:ring-2 focus-within:ring-white/70 focus-within:ring-offset-2 focus-within:ring-offset-black">
+      {/* overflow-hidden is on this inner div so the focus ring on the outer wrapper isn't clipped */}
+      <div className="absolute inset-0 overflow-hidden rounded-lg bg-neutral-900">
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={imageAlt}
+            fill
+            sizes="(max-width: 1024px) 50vw, 33vw"
+            className="object-cover"
+            unoptimized
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[10px] text-white/40">No art</div>
+        )}
+      </div>
       {/* Card link covers the full card beneath the provider badge */}
       <Link
         href={href}
-        className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+        className="absolute inset-0 z-10 rounded-lg"
         aria-label={movie.title}
       />
       <div className="pointer-events-none absolute inset-0 z-10 rounded-lg shadow-[inset_0_0_20px_rgba(0,0,0,0.55)] transition-shadow duration-300 group-hover:shadow-[inset_0_0_20px_rgba(255,255,255,0.06)]" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/3 bg-gradient-to-t from-black/70 to-transparent" />
-      {imageUrl ? (
-        <Image
-          src={imageUrl}
-          alt={imageAlt}
-          fill
-          sizes="(max-width: 1024px) 50vw, 33vw"
-          className="object-cover"
-          unoptimized
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-[10px] text-white/40">No art</div>
-      )}
 
       {providerIcon ? (
         <a
