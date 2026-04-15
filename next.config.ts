@@ -12,7 +12,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["jose"],
+  serverExternalPackages: ["jose", "pg", "pg-pool", "pg-connection-string", "pgpass"],
   output: "standalone",
   images: {
     remotePatterns: [
