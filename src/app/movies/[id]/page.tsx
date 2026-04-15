@@ -88,7 +88,7 @@ export default async function MovieDetailPage({ params }: PageProps) {
 
         {/* Title */}
         <h1
-          className="mt-3 text-center text-2xl font-semibold tracking-tight !text-white"
+          className="mt-6 mb-3 text-center text-2xl font-semibold tracking-tight !text-white"
           style={{ color: "#fff", WebkitTextFillColor: "#fff", opacity: 1 }}
         >
           {movie.title}
@@ -97,10 +97,9 @@ export default async function MovieDetailPage({ params }: PageProps) {
           ) : null}
         </h1>
 
-        {/* Year · Rating */}
-        {(typeof movie.releaseYear === "number" || typeof movie.imdbRating === "number") ? (
+        {/* Rating */}
+        {typeof movie.imdbRating === "number" ? (
           <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-[#B3B3B3]">
-            {typeof movie.releaseYear === "number" ? <span>{movie.releaseYear}</span> : null}
             {typeof movie.imdbRating === "number" && movie.imdbId ? (
               <a
                 href={`https://www.imdb.com/title/${movie.imdbId}/`}
