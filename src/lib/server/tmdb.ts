@@ -232,11 +232,19 @@ function scoreMovieResult(query: string, movie: TmdbMovie) {
   const normalizedQuery = query.trim().toLowerCase();
   let score = 0;
   if (!normalizedQuery) return score;
-  if (title === normalizedQuery) score += 100;
-  else if (title.startsWith(normalizedQuery)) score += 75;
-  else if (title.includes(normalizedQuery)) score += 50;
-  score += Math.min(Math.round((movie.popularity ?? 0) / 10), 20);
-  score += Math.min(Math.round((movie.vote_count ?? 0) / 500), 10);
+
+  if (title === normalizedQuery) score += 60;
+  else if (title.startsWith(normalizedQuery)) score += 40;
+  else {
+    const words = title.split(/\s+/);
+    if (words.some((w) => w.startsWith(normalizedQuery))) score += 25;
+    else if (title.includes(normalizedQuery)) score += 15;
+  }
+
+  // Log scale: popular titles surface strongly without a hard ceiling that
+  // lets obscure exact-matches beat well-known titles.
+  score += Math.round(Math.log2(Math.max(1, movie.popularity ?? 0)) * 8);
+  score += Math.round(Math.log2(Math.max(1, movie.vote_count ?? 0)) * 4);
   return score;
 }
 
@@ -262,11 +270,19 @@ function scorePersonResult(query: string, person: TmdbPerson) {
   const normalizedQuery = query.trim().toLowerCase();
   let score = 0;
   if (!normalizedQuery) return score;
-  if (name === normalizedQuery) score += 100;
-  else if (name.startsWith(normalizedQuery)) score += 75;
-  else if (name.includes(normalizedQuery)) score += 50;
-  // Higher popularity cap for people — their popularity scale is more concentrated
-  score += Math.min(Math.round((person.popularity ?? 0) / 5), 30);
+
+  if (name === normalizedQuery) score += 60;
+  else if (name.startsWith(normalizedQuery)) score += 40;
+  else {
+    // Word-boundary match: "nolan" → "Christopher Nolan", "chris" → "Chris Evans"
+    const words = name.split(/\s+/);
+    if (words.some((w) => w.startsWith(normalizedQuery))) score += 30;
+    else if (name.includes(normalizedQuery)) score += 15;
+  }
+
+  // Log scale so genuinely famous people (Nolan, Spielberg, Johansson) beat
+  // obscure titles that happen to share their first name as an exact-match.
+  score += Math.round(Math.log2(Math.max(1, person.popularity ?? 0)) * 15);
   return score;
 }
 
