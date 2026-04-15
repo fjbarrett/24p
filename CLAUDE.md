@@ -47,8 +47,10 @@ When creating a `.persist/` file for the first time, initialize with:
 The in-app changelog lives in `src/lib/changelog.ts`. When opening a pull request, consider whether the change is worth a user-facing entry. Add one if:
 - It affects something a user sees or interacts with (search, detail pages, streaming, lists, navigation)
 - It fixes a noticeable bug or meaningfully improves a flow
+- It is a significant upgrade to a dependency or platform (e.g. Next.js major version, major API change) that affects behaviour
+- It is a big architectural or performance change the user would notice
 
-Skip entries for internal tooling, ops/infra changes, security patches with no visible effect, or minor copy tweaks. Add the entry in the same PR as the feature — prepend it to the `changelogEntries` array with a new `slug`, today's date, and a plain-English `title` and `summary` that describe the benefit to the user, not the implementation detail.
+Skip entries for internal tooling, ops/infra changes, security patches with no visible effect, minor copy tweaks, or routine patch-level dependency bumps. Add the entry in the same PR as the feature — prepend it to the `changelogEntries` array with a new `slug`, today's date, and a plain-English `title` and `summary` that describe the benefit to the user, not the implementation detail.
 
 ## Git Workflow
 
