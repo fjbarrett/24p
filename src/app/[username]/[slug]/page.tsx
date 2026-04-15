@@ -87,7 +87,7 @@ export default async function ListDetail({
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black-900/60 via-black-950/70 to-black-950" />
           <div className="relative z-10 space-y-3 px-5 pb-0 pt-3 text-center sm:px-6 sm:pt-4">
             <h1 className="text-4xl font-semibold leading-[1.05] text-white sm:text-5xl">{list.title}</h1>
-            <div className="mb-1 flex flex-wrap items-center justify-center gap-1.5 text-sm text-black-400">
+            <div className="mb-1 flex flex-wrap items-center justify-center gap-1.5 text-sm text-black-400 opacity-70">
               {ownerIsPublic ? (
                 <Link
                   href={`/${encodeURIComponent(ownerUsername)}`}
@@ -113,7 +113,7 @@ export default async function ListDetail({
               ) : null}
             </div>
             {canFavorite && (
-              <div className="flex justify-center pb-4">
+              <div className="flex justify-center pb-4 opacity-70">
                 <FavoriteToggle listId={list.id} userEmail={viewerEmail} initialFavorite={isFavorite} />
               </div>
             )}
