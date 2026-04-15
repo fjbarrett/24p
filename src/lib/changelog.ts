@@ -12,6 +12,21 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "smarter-search",
+    date: "2026-04-15",
+    title: "Search ranks by what you actually want",
+    summary:
+      "Search results now surface the most well-known match first — typing a director's name brings up the director before a list of films that share a word.",
+    type: "Improvement",
+    tags: ["search", "artists"],
+    changed: [
+      "Search ranking now weights popularity heavily so famous directors, actors, and titles reach the top instead of being buried by obscure exact matches.",
+      "Artist pages were redesigned to match the rest of the app — darker background, cleaner typography, and notable works shown right in the header.",
+      "Filmography pages collapse duplicate credits (e.g. Director + Writer on the same film) into a single entry showing the most significant role.",
+      "Self-appearances and documentary cameos are now grouped separately and hidden by default.",
+    ],
+  },
+  {
     slug: "stability-and-polish",
     date: "2026-04-11",
     title: "Faster detail pages and steadier ratings",

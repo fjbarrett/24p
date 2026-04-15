@@ -42,6 +42,14 @@ When creating a `.persist/` file for the first time, initialize with:
 - **TODO.md** — `# TODO` with sections `## Outstanding Tasks` and `## Feature Ideas`
 - **PIPELINE.md** — `# Pipeline / Workflow` followed by a description of how project files connect
 
+## Changelog
+
+The in-app changelog lives in `src/lib/changelog.ts`. When opening a pull request, consider whether the change is worth a user-facing entry. Add one if:
+- It affects something a user sees or interacts with (search, detail pages, streaming, lists, navigation)
+- It fixes a noticeable bug or meaningfully improves a flow
+
+Skip entries for internal tooling, ops/infra changes, security patches with no visible effect, or minor copy tweaks. Add the entry in the same PR as the feature — prepend it to the `changelogEntries` array with a new `slug`, today's date, and a plain-English `title` and `summary` that describe the benefit to the user, not the implementation detail.
+
 ## Git Workflow
 
 If the project directory contains a `.git` repo:
