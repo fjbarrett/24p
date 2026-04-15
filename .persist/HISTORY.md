@@ -22,3 +22,4 @@
 | 2026-04-11 | Codex | Finalized the pending tvOS + runtime hardening changes for commit, push, and merge |
 | 2026-04-11 | Codex | Added a user-facing changelog page and linked it from the signed-in home footer |
 | 2026-04-11 | Codex | Matched the changelog to a GitHub-style layout, made filters clickable, slimmed the sticky header, and fixed forward/detail-page scroll resets |
+| 2026-04-14 | Codex | Audited the repo for benchmark/performance testing coverage across scripts, CI, and deploy workflows |

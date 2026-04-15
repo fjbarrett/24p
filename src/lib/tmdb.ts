@@ -53,7 +53,12 @@ export type SimplifiedArtist = {
   popularity?: number;
   profileUrl?: string | null;
   knownFor: string[];
+  department?: string | null;
 };
+
+export type SearchResultItem =
+  | (SimplifiedMovie & { resultType: "movie" })
+  | (SimplifiedArtist & { resultType: "artist" });
 
 export type FilmographyEntry = {
   tmdbId: number;
@@ -67,6 +72,7 @@ export type FilmographyEntry = {
   role?: string | null;
   imdbRating?: number;
   imdbId?: string | null;
+  popularity?: number;
 };
 
 export type TmdbPersonDetail = {
