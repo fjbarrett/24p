@@ -227,16 +227,46 @@ function enrichMoviePeople(movie: SimplifiedMovie, credits?: TmdbMovie["credits"
   return movie;
 }
 
+const WIKIPEDIA_API = "https://en.wikipedia.org/api/rest_v1/page/summary";
+const WIKIPEDIA_BONUS_PERSON = 40;
+const WIKIPEDIA_BONUS_TITLE = 20;
+const WIKIPEDIA_FETCH_TIMEOUT_MS = 1500;
+
+async function fetchWikipediaPresence(name: string): Promise<boolean> {
+  if (!name.trim()) return false;
+  try {
+    const slug = encodeURIComponent(name.trim().replace(/\s+/g, "_"));
+    const res = await fetch(`${WIKIPEDIA_API}/${slug}`, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 86400 },
+      signal: AbortSignal.timeout(WIKIPEDIA_FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { type?: string };
+    return data.type !== "disambiguation";
+  } catch {
+    return false;
+  }
+}
+
 function scoreMovieResult(query: string, movie: TmdbMovie) {
   const title = normalizeTitle(movie.title ?? movie.name, "").toLowerCase();
   const normalizedQuery = query.trim().toLowerCase();
   let score = 0;
   if (!normalizedQuery) return score;
-  if (title === normalizedQuery) score += 100;
-  else if (title.startsWith(normalizedQuery)) score += 75;
-  else if (title.includes(normalizedQuery)) score += 50;
-  score += Math.min(Math.round((movie.popularity ?? 0) / 10), 20);
-  score += Math.min(Math.round((movie.vote_count ?? 0) / 500), 10);
+
+  if (title === normalizedQuery) score += 60;
+  else if (title.startsWith(normalizedQuery)) score += 40;
+  else {
+    const words = title.split(/\s+/);
+    if (words.some((w) => w.startsWith(normalizedQuery))) score += 25;
+    else if (title.includes(normalizedQuery)) score += 15;
+  }
+
+  // Log scale: popular titles surface strongly without a hard ceiling that
+  // lets obscure exact-matches beat well-known titles.
+  score += Math.round(Math.log2(Math.max(1, movie.popularity ?? 0)) * 8);
+  score += Math.round(Math.log2(Math.max(1, movie.vote_count ?? 0)) * 4);
   return score;
 }
 
@@ -262,11 +292,21 @@ function scorePersonResult(query: string, person: TmdbPerson) {
   const normalizedQuery = query.trim().toLowerCase();
   let score = 0;
   if (!normalizedQuery) return score;
-  if (name === normalizedQuery) score += 100;
-  else if (name.startsWith(normalizedQuery)) score += 75;
-  else if (name.includes(normalizedQuery)) score += 50;
-  // Higher popularity cap for people — their popularity scale is more concentrated
-  score += Math.min(Math.round((person.popularity ?? 0) / 5), 30);
+
+  if (name === normalizedQuery) score += 60;
+  else if (name.startsWith(normalizedQuery)) score += 40;
+  else {
+    // Word-boundary match: "nolan" → "Christopher Nolan", "chris" → "Chris Evans"
+    const words = name.split(/\s+/);
+    if (words.some((w) => w.startsWith(normalizedQuery))) score += 30;
+    else if (name.includes(normalizedQuery)) score += 15;
+  }
+
+  // Log scale so genuinely famous people (Nolan, Spielberg, Johansson) beat
+  // obscure titles that happen to share their first name as an exact-match.
+  // Multiplier is 20 (vs 8 for movies) to correct the TMDB calibration gap:
+  // people's raw popularity scores run lower than titles by design.
+  score += Math.round(Math.log2(Math.max(1, person.popularity ?? 0)) * 20);
   return score;
 }
 
@@ -294,22 +334,48 @@ export async function searchTmdb(query: string) {
     }),
   ]);
 
-  const movieItems: Array<{ item: SearchResultItem; score: number }> = [
+  // Filter movies/TV to those with posters before firing Wikipedia checks
+  const rawMovies = [
     ...(moviesPayload.results ?? []).map((m) => ({ raw: m, mediaType: "movie" as const })),
     ...(tvPayload.results ?? []).map((m) => ({ raw: m, mediaType: "tv" as const })),
-  ]
-    .map(({ raw, mediaType }) => ({
-      item: { resultType: "movie" as const, ...mapMovie(raw, mediaType) },
-      score: scoreMovieResult(trimmed, raw),
-    }))
-    .filter(({ item }) => Boolean(item.posterUrl));
+  ].filter(({ raw }) => Boolean(raw.poster_path));
 
-  const artistItems: Array<{ item: SearchResultItem; score: number }> = (peoplePayload.results ?? [])
-    .flatMap((person) => {
+  const rawPeople = peoplePayload.results ?? [];
+
+  // Second parallel wave: Wikipedia presence checks for all candidates.
+  // Responses are cached 24h so popular names are instant on repeat queries.
+  const [movieWiki, personWiki] = await Promise.all([
+    Promise.allSettled(
+      rawMovies.map(({ raw }) => fetchWikipediaPresence(normalizeTitle(raw.title ?? raw.name, "")))
+    ),
+    Promise.allSettled(
+      rawPeople.map((p) => fetchWikipediaPresence(p.name ?? ""))
+    ),
+  ]);
+
+  const movieItems: Array<{ item: SearchResultItem; score: number }> = rawMovies.map(
+    ({ raw, mediaType }, i) => ({
+      item: { resultType: "movie" as const, ...mapMovie(raw, mediaType) },
+      score:
+        scoreMovieResult(trimmed, raw) +
+        (movieWiki[i]?.status === "fulfilled" && movieWiki[i].value ? WIKIPEDIA_BONUS_TITLE : 0),
+    }),
+  );
+
+  const artistItems: Array<{ item: SearchResultItem; score: number }> = rawPeople.flatMap(
+    (person, i) => {
       const mapped = mapArtist(person);
       if (!mapped) return [];
-      return [{ item: { resultType: "artist" as const, ...mapped } as SearchResultItem, score: scorePersonResult(trimmed, person) }];
-    });
+      const wikiBonus =
+        personWiki[i]?.status === "fulfilled" && personWiki[i].value ? WIKIPEDIA_BONUS_PERSON : 0;
+      return [
+        {
+          item: { resultType: "artist" as const, ...mapped } as SearchResultItem,
+          score: scorePersonResult(trimmed, person) + wikiBonus,
+        },
+      ];
+    },
+  );
 
   const combined = [...movieItems, ...artistItems]
     .sort((a, b) => b.score - a.score)
