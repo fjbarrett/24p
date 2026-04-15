@@ -13,9 +13,10 @@ type TmdbSearchBarProps = {
   lists: SavedList[];
   userEmail: string;
   wide?: boolean;
+  compact?: boolean;
 };
 
-export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarProps) {
+export function TmdbSearchBar({ lists, userEmail, wide = false, compact = false }: TmdbSearchBarProps) {
   const [query, setQuery] = useState("");
   const [combined, setCombined] = useState<SearchResultItem[]>([]);
   const [panelDismissed, setPanelDismissed] = useState(false);
@@ -177,7 +178,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
             }}
             onFocus={() => setPanelDismissed(false)}
             type="text"
-            placeholder="Search for movies, tv, cast and crew"
+            placeholder={compact ? "Search" : "Search for movies, tv, cast and crew"}
             aria-label="Search movies and shows"
             aria-controls={resultsId}
             aria-describedby={error ? errorId : undefined}
