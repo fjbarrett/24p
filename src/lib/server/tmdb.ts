@@ -304,7 +304,9 @@ function scorePersonResult(query: string, person: TmdbPerson) {
 
   // Log scale so genuinely famous people (Nolan, Spielberg, Johansson) beat
   // obscure titles that happen to share their first name as an exact-match.
-  score += Math.round(Math.log2(Math.max(1, person.popularity ?? 0)) * 15);
+  // Multiplier is 20 (vs 8 for movies) to correct the TMDB calibration gap:
+  // people's raw popularity scores run lower than titles by design.
+  score += Math.round(Math.log2(Math.max(1, person.popularity ?? 0)) * 20);
   return score;
 }
 
