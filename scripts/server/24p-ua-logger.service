@@ -1,0 +1,16 @@
+[Unit]
+Description=24p unique user-agent logger
+After=nginx.service
+Requires=nginx.service
+
+[Service]
+Type=simple
+User=deploy
+ExecStart=/usr/bin/python3 /opt/24p/log-user-agents.py
+Restart=on-failure
+RestartSec=5s
+Environment=NGINX_LOG=/var/log/nginx/access.log
+Environment=UA_LOG=/var/log/24p-user-agents.txt
+
+[Install]
+WantedBy=multi-user.target
