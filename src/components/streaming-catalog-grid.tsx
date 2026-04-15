@@ -41,27 +41,30 @@ function StreamingCatalogCard({
   const imageAlt = movie.posterUrl ? `${movie.title} poster` : `${movie.title} artwork`;
 
   return (
-    <div className="group relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-neutral-900">
+    <div className="group relative aspect-[2/3] w-full rounded-lg focus-within:ring-2 focus-within:ring-white/70 focus-within:ring-offset-2 focus-within:ring-offset-black">
+      {/* overflow-hidden is on this inner div so the focus ring on the outer wrapper isn't clipped */}
+      <div className="absolute inset-0 overflow-hidden rounded-lg bg-neutral-900">
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={imageAlt}
+            fill
+            sizes="(max-width: 1024px) 50vw, 33vw"
+            className="object-cover"
+            unoptimized
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[10px] text-white/40">No art</div>
+        )}
+      </div>
       {/* Card link covers the full card beneath the provider badge */}
       <Link
         href={href}
-        className="absolute inset-0 z-10"
+        className="absolute inset-0 z-10 rounded-lg"
         aria-label={movie.title}
       />
       <div className="pointer-events-none absolute inset-0 z-10 rounded-lg shadow-[inset_0_0_20px_rgba(0,0,0,0.55)] transition-shadow duration-300 group-hover:shadow-[inset_0_0_20px_rgba(255,255,255,0.06)]" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/3 bg-gradient-to-t from-black/70 to-transparent" />
-      {imageUrl ? (
-        <Image
-          src={imageUrl}
-          alt={imageAlt}
-          fill
-          sizes="(max-width: 1024px) 50vw, 33vw"
-          className="object-cover"
-          unoptimized
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-[10px] text-white/40">No art</div>
-      )}
 
       {providerIcon ? (
         <a
@@ -82,11 +85,17 @@ function StreamingCatalogCard({
         </a>
       ) : null}
 
-      {typeof movie.imdbRating === "number" ? (
-        <div className="pointer-events-none absolute bottom-1.5 right-1.5 z-20 flex items-center gap-1 rounded px-1 py-0.5">
+      {typeof movie.imdbRating === "number" && movie.imdbId ? (
+        <a
+          href={`https://www.imdb.com/title/${movie.imdbId}/`}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`${movie.title} on IMDb — ${movie.imdbRating.toFixed(1)}`}
+          className="absolute bottom-1.5 right-1.5 z-20 flex items-center gap-1 rounded px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        >
           <Image src="/imdb_logo.svg" alt="IMDb" width={28} height={14} className="h-3.5 w-auto" unoptimized />
           <span className="text-[11px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">{movie.imdbRating.toFixed(1)}</span>
-        </div>
+        </a>
       ) : null}
     </div>
   );
