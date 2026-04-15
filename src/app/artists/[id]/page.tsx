@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { FilmographyEntry, SimplifiedArtist } from "@/lib/tmdb";
 import { FilmographyRoleFilter } from "./filmography-role-filter";
@@ -84,35 +83,35 @@ export default async function ArtistPage({ params }: { params: Promise<{ id: str
   };
 
   return (
-    <div className="min-h-screen px-4 py-8 text-black-100 sm:px-8 lg:px-16">
+    <div className="min-h-screen bg-black px-4 py-8 text-white sm:px-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       <div className="mx-auto w-full max-w-[1000px] space-y-8">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            {person.profileUrl ? (
-              <Image
-                src={person.profileUrl}
-                alt={person.name}
-                width={64}
-                height={64}
-                className="h-16 w-16 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black-900 text-xs text-black-500">
-                No art
+        <header className="flex items-center gap-5">
+          {person.profileUrl ? (
+            <Image
+              src={person.profileUrl}
+              alt={person.name}
+              width={80}
+              height={80}
+              className="h-20 w-20 flex-shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-xs text-white/40">
+              No photo
+            </div>
+          )}
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold text-white">{person.name}</h1>
+            {person.knownFor.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {person.knownFor.map((item) => (
+                  <span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-white/60">
+                    {item}
+                  </span>
+                ))}
               </div>
             )}
-            <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-black-500">Filmography</p>
-              <h1 className="text-3xl font-semibold text-white">{person.name}</h1>
-            </div>
           </div>
-          <Link
-            href="/"
-            className="rounded-full bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.3em] text-black transition hover:brightness-95 active:brightness-90"
-          >
-            Back
-          </Link>
         </header>
 
         <FilmographyRoleFilter filmography={filmography} />

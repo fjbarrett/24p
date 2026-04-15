@@ -100,7 +100,7 @@ function Header({
           href="/streaming"
           className="text-sm text-white/62 underline-offset-4 transition hover:text-white hover:underline"
         >
-          Streaming On
+          Streaming Availability
         </Link>
       </div>
     </header>

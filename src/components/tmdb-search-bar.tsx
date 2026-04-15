@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import type { SimplifiedArtist, SimplifiedMovie } from "@/lib/tmdb";
+import type { SearchResultItem } from "@/lib/tmdb";
 import { apiFetch } from "@/lib/api-client";
 import { addMovieToList, type SavedList } from "@/lib/list-store";
 import { Plus, Search, X } from "lucide-react";
@@ -17,8 +17,7 @@ type TmdbSearchBarProps = {
 
 export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarProps) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SimplifiedMovie[]>([]);
-  const [artists, setArtists] = useState<SimplifiedArtist[]>([]);
+  const [combined, setCombined] = useState<SearchResultItem[]>([]);
   const [panelDismissed, setPanelDismissed] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,8 +45,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
-      setResults([]);
-      setArtists([]);
+      setCombined([]);
       setPanelDismissed(false);
       setError(null);
       setIsSearching(false);
@@ -62,19 +60,17 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
       }, networkTimeoutMs);
       try {
         setIsSearching(true);
-        const payload = await apiFetch<{ results: SimplifiedMovie[]; artists?: SimplifiedArtist[] }>(
+        const payload = await apiFetch<{ combined: SearchResultItem[] }>(
           `/tmdb/search?query=${encodeURIComponent(trimmed)}`,
           { signal: controller.signal },
         );
         if (!controller.signal.aborted) {
-          setResults(payload.results ?? []);
-          setArtists(payload.artists ?? []);
+          setCombined(payload.combined ?? []);
           setError(null);
         }
       } catch (err) {
         if (controller.signal.aborted) return;
-        setResults([]);
-        setArtists([]);
+        setCombined([]);
         setError(err instanceof Error ? err.message : "Unexpected TMDB error.");
       } finally {
         clearTimeout(networkTimeout);
@@ -107,13 +103,23 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
     };
   }, [panelDismissed]);
 
-  const displayResults = results.filter((movie) => Boolean(movie.posterUrl));
-  const displayArtists = artists.filter((artist) => artist.name);
+  const displayItems = combined.filter((item) =>
+    item.resultType === "artist" ? Boolean(item.name) : Boolean(item.posterUrl),
+  );
 
   const showResultsPanel = !panelDismissed && (query.trim().length >= 2 || isSearching || !!error);
 
   const noLists = !lists.length;
   const canManageLists = Boolean(normalizedEmail);
+
+  function clearSearch() {
+    setQuery("");
+    setCombined([]);
+    setError(null);
+    setPanelDismissed(false);
+    setActiveMovieId(null);
+    inputRef.current?.focus();
+  }
 
   async function handleAdd(movieId: number, mediaType: "movie" | "tv" = "movie") {
     if (!normalizedEmail) {
@@ -138,16 +144,6 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
     }
   }
 
-  function clearSearch() {
-    setQuery("");
-    setResults([]);
-    setArtists([]);
-    setError(null);
-    setPanelDismissed(false);
-    setActiveMovieId(null);
-    inputRef.current?.focus();
-  }
-
   return (
     <div ref={containerRef} className="relative w-full" role="search" aria-label="Movie search">
       <div className="flex items-center gap-2">
@@ -164,7 +160,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
             }}
             onFocus={() => setPanelDismissed(false)}
             type="text"
-            placeholder="Search"
+            placeholder="Search for movies, tv, cast and crew"
             aria-label="Search movies and shows"
             aria-controls={resultsId}
             aria-describedby={error ? errorId : undefined}
@@ -201,149 +197,147 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
             aria-busy={isSearching}
             aria-label="Search results"
           >
-            {displayResults.map((movie) => {
-              const isShow = movie.mediaType === "tv";
-              const detailHref = isShow
-                ? `/tv/${movie.tmdbId}`
-                : `/movies/${movie.tmdbId}`;
-              return (
-              <li key={movie.tmdbId}>
-                <div className="flex items-center gap-3 rounded-3xl bg-black-900/70 p-4 transition hover:bg-black-800/70">
-                  <Link
-                    href={detailHref}
-                    className="flex flex-1 gap-3"
-                    aria-label={`${movie.title}${movie.releaseYear ? ` (${movie.releaseYear})` : ""}`}
-                  >
-                    {movie.posterUrl ? (
-                      <Image
-                        src={movie.posterUrl}
-                        alt={`${movie.title} poster`}
-                        width={64}
-                        height={96}
-                        className="h-24 w-16 rounded-xl object-cover mx-auto"
-                      />
-                    ) : (
-                      <div className="flex h-24 w-16 items-center justify-center rounded-xl bg-black-800 text-xs text-black-500 mx-auto">
-                        No art
-                      </div>
-                    )}
-                    <div className="flex-1 flex flex-col justify-center text-center sm:text-left">
-                      <h4 className="text-base font-normal text-white leading-tight">
-                        {movie.title}{" "}
-                        {movie.releaseYear && <span className="text-base text-black-500">({movie.releaseYear})</span>}
-                      </h4>
-                      {movie.genres?.length ? (
-                        <p className="text-sm text-black-500">{movie.genres.slice(0, 2).join(" • ")}</p>
-                      ) : null}
-                    </div>
-                  </Link>
-                  {canManageLists ? (
-                    <button
-                      type="button"
-                      aria-label={`Add ${movie.title} to a list`}
-                      aria-controls={`add-to-list-${movie.tmdbId}`}
-                      aria-expanded={activeMovieId === movie.tmdbId}
-                      disabled={noLists}
-                      onClick={() => {
-                        if (noLists) return;
-                        setActiveMovieId((current) => (current === movie.tmdbId ? null : movie.tmdbId));
-                        setSelectedListId((current) => (current || lists[0]?.id) ?? "");
-                        setStatus(null);
-                      }}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-40"
-                    >
-                      <Plus className="h-5 w-5" />
-                    </button>
-                  ) : null}
-                </div>
-
-                {activeMovieId === movie.tmdbId && (
-                  <div
-                    id={`add-to-list-${movie.tmdbId}`}
-                    className="mt-2 space-y-2 rounded-2xl bg-black-900/80 p-3 shadow-inner"
-                  >
-                    {noLists ? (
-                      <p className="text-sm text-black-400">Create a list first to save movies.</p>
-                    ) : (
-                      <>
-                        <label className="sr-only" htmlFor={`list-picker-${movie.tmdbId}`}>
-                          Select a list
-                        </label>
-                        <select
-                          id={`list-picker-${movie.tmdbId}`}
-                          value={selectedListId}
-                          onChange={(event) => setSelectedListId(event.target.value)}
-                          className="w-full rounded-2xl bg-black-800/80 px-3 py-2 text-sm text-black-100 outline-none"
-                        >
-                          {lists.map((list) => (
-                            <option key={list.id} value={list.id} className="bg-black-900 text-black-100">
-                              {list.title}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          className="flex w-full items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
-                          onClick={() => handleAdd(movie.tmdbId, isShow ? "tv" : "movie")}
-                          disabled={savingMovieId === movie.tmdbId}
-                        >
-                          {savingMovieId === movie.tmdbId ? "Adding..." : "Add to list"}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {status && status.movieId === movie.tmdbId && (
-                  <p
-                    className={`mt-1 text-xs ${
-                      status.tone === "success" ? "text-emerald-300" : "text-rose-300"
-                    }`}
-                    role="status"
-                  >
-                    {status.message}
-                  </p>
-                )}
-              </li>
-              );
-            })}
-            {displayArtists.length > 0 && (
-              <li>
-                <p className="text-[11px] uppercase tracking-[0.4em] text-black-500">Artists</p>
-                <div className="mt-2 space-y-2">
-                  {displayArtists.map((artist) => (
+            {displayItems.map((item) => {
+              if (item.resultType === "artist") {
+                return (
+                  <li key={`artist-${item.tmdbId}`}>
                     <Link
-                      key={artist.tmdbId}
-                      href={`/artists/${artist.tmdbId}`}
-                      className="flex items-center gap-3 rounded-2xl bg-black-900/70 px-3 py-2 transition hover:bg-black-800/70"
+                      href={`/artists/${item.tmdbId}`}
+                      className="flex items-center gap-3 rounded-3xl bg-black-900/70 px-4 py-3 transition hover:bg-black-800/70"
                     >
-                      {artist.profileUrl ? (
+                      {item.profileUrl ? (
                         <Image
-                          src={artist.profileUrl}
-                          alt={artist.name}
+                          src={item.profileUrl}
+                          alt={item.name}
                           width={48}
                           height={48}
-                          className="h-12 w-12 rounded-full object-cover"
+                          className="h-12 w-12 flex-shrink-0 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black-800 text-[10px] text-black-500">
+                        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-black-800 text-[10px] text-black-500">
                           No art
                         </div>
                       )}
-                      <div className="flex-1">
-                        <p className="text-sm text-white">{artist.name}</p>
-                        {artist.knownFor.length ? (
-                          <p className="text-xs text-black-500">
-                            {artist.knownFor.slice(0, 2).join(" • ")}
-                          </p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                          <span className="text-sm text-white">{item.name}</span>
+                          {item.knownFor.length > 0 && (
+                            <span className="text-xs text-black-400 truncate">
+                              {item.knownFor.slice(0, 5).join(" · ")}
+                            </span>
+                          )}
+                        </div>
+                        {item.department && (
+                          <p className="text-xs text-black-500">{item.department}</p>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              }
+
+              const isShow = item.mediaType === "tv";
+              const detailHref = isShow ? `/tv/${item.tmdbId}` : `/movies/${item.tmdbId}`;
+              return (
+                <li key={`movie-${item.tmdbId}`}>
+                  <div className="flex items-center gap-3 rounded-3xl bg-black-900/70 p-4 transition hover:bg-black-800/70">
+                    <Link
+                      href={detailHref}
+                      className="flex flex-1 gap-3"
+                      aria-label={`${item.title}${item.releaseYear ? ` (${item.releaseYear})` : ""}`}
+                    >
+                      {item.posterUrl ? (
+                        <Image
+                          src={item.posterUrl}
+                          alt={`${item.title} poster`}
+                          width={64}
+                          height={96}
+                          className="h-24 w-16 rounded-xl object-cover mx-auto"
+                        />
+                      ) : (
+                        <div className="flex h-24 w-16 items-center justify-center rounded-xl bg-black-800 text-xs text-black-500 mx-auto">
+                          No art
+                        </div>
+                      )}
+                      <div className="flex-1 flex flex-col justify-center text-center sm:text-left">
+                        <h4 className="text-base font-normal text-white leading-tight">
+                          {item.title}{" "}
+                          {item.releaseYear && <span className="text-base text-black-500">({item.releaseYear})</span>}
+                        </h4>
+                        {item.genres?.length ? (
+                          <p className="text-sm text-black-500">{item.genres.slice(0, 2).join(" • ")}</p>
                         ) : null}
                       </div>
                     </Link>
-                  ))}
-                </div>
-              </li>
-            )}
-            {!displayResults.length && !displayArtists.length && query.trim().length >= 2 && !isSearching && !error && (
+                    {canManageLists ? (
+                      <button
+                        type="button"
+                        aria-label={`Add ${item.title} to a list`}
+                        aria-controls={`add-to-list-${item.tmdbId}`}
+                        aria-expanded={activeMovieId === item.tmdbId}
+                        disabled={noLists}
+                        onClick={() => {
+                          if (noLists) return;
+                          setActiveMovieId((current) => (current === item.tmdbId ? null : item.tmdbId));
+                          setSelectedListId((current) => (current || lists[0]?.id) ?? "");
+                          setStatus(null);
+                        }}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-40"
+                      >
+                        <Plus className="h-5 w-5" />
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {activeMovieId === item.tmdbId && (
+                    <div
+                      id={`add-to-list-${item.tmdbId}`}
+                      className="mt-2 space-y-2 rounded-2xl bg-black-900/80 p-3 shadow-inner"
+                    >
+                      {noLists ? (
+                        <p className="text-sm text-black-400">Create a list first to save movies.</p>
+                      ) : (
+                        <>
+                          <label className="sr-only" htmlFor={`list-picker-${item.tmdbId}`}>
+                            Select a list
+                          </label>
+                          <select
+                            id={`list-picker-${item.tmdbId}`}
+                            value={selectedListId}
+                            onChange={(event) => setSelectedListId(event.target.value)}
+                            className="w-full rounded-2xl bg-black-800/80 px-3 py-2 text-sm text-black-100 outline-none"
+                          >
+                            {lists.map((list) => (
+                              <option key={list.id} value={list.id} className="bg-black-900 text-black-100">
+                                {list.title}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
+                            onClick={() => handleAdd(item.tmdbId, isShow ? "tv" : "movie")}
+                            disabled={savingMovieId === item.tmdbId}
+                          >
+                            {savingMovieId === item.tmdbId ? "Adding..." : "Add to list"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {status && status.movieId === item.tmdbId && (
+                    <p
+                      className={`mt-1 text-xs ${status.tone === "success" ? "text-emerald-300" : "text-rose-300"}`}
+                      role="status"
+                    >
+                      {status.message}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+            {!displayItems.length && query.trim().length >= 2 && !isSearching && !error && (
               <li>
                 <p className="text-sm text-black-500" role="status">
                   No matches yet. Try a different title.

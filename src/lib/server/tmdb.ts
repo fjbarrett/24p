@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { FilmographyEntry, PersonLink, SimplifiedArtist, SimplifiedMovie } from "@/lib/tmdb";
+import type { FilmographyEntry, PersonLink, SearchResultItem, SimplifiedArtist, SimplifiedMovie } from "@/lib/tmdb";
 
 const TMDB_API_ROOT = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w185";
@@ -46,6 +46,8 @@ type TmdbPerson = {
   name?: string | null;
   profile_path?: string | null;
   popularity?: number | null;
+  known_for_department?: string | null;
+  known_for?: Array<{ title?: string | null; name?: string | null }> | null;
 };
 
 type TmdbMovieCredit = {
@@ -57,6 +59,8 @@ type TmdbMovieCredit = {
   character?: string | null;
   job?: string | null;
   department?: string | null;
+  popularity?: number | null;
+  vote_count?: number | null;
 };
 
 function getApiKey() {
@@ -239,19 +243,37 @@ function scoreMovieResult(query: string, movie: TmdbMovie) {
 function mapArtist(person: TmdbPerson): SimplifiedArtist | null {
   const name = person.name?.trim();
   if (!name) return null;
+  const knownFor = (person.known_for ?? [])
+    .map((item) => (item.title ?? item.name ?? "").trim())
+    .filter(Boolean)
+    .slice(0, 5);
   return {
     tmdbId: person.id,
     name,
     popularity: typeof person.popularity === "number" ? person.popularity : undefined,
     profileUrl: posterUrl(person.profile_path),
-    knownFor: [],
+    knownFor,
+    department: person.known_for_department?.trim() ?? null,
   };
+}
+
+function scorePersonResult(query: string, person: TmdbPerson) {
+  const name = (person.name ?? "").trim().toLowerCase();
+  const normalizedQuery = query.trim().toLowerCase();
+  let score = 0;
+  if (!normalizedQuery) return score;
+  if (name === normalizedQuery) score += 100;
+  else if (name.startsWith(normalizedQuery)) score += 75;
+  else if (name.includes(normalizedQuery)) score += 50;
+  // Higher popularity cap for people — their popularity scale is more concentrated
+  score += Math.min(Math.round((person.popularity ?? 0) / 5), 30);
+  return score;
 }
 
 export async function searchTmdb(query: string) {
   const trimmed = query.trim();
   if (!trimmed) {
-    return { results: [], artists: [] };
+    return { combined: [] as SearchResultItem[] };
   }
 
   const [moviesPayload, tvPayload, peoplePayload] = await Promise.all([
@@ -272,24 +294,29 @@ export async function searchTmdb(query: string) {
     }),
   ]);
 
-  const tagged = [
+  const movieItems: Array<{ item: SearchResultItem; score: number }> = [
     ...(moviesPayload.results ?? []).map((m) => ({ raw: m, mediaType: "movie" as const })),
     ...(tvPayload.results ?? []).map((m) => ({ raw: m, mediaType: "tv" as const })),
-  ];
+  ]
+    .map(({ raw, mediaType }) => ({
+      item: { resultType: "movie" as const, ...mapMovie(raw, mediaType) },
+      score: scoreMovieResult(trimmed, raw),
+    }))
+    .filter(({ item }) => Boolean(item.posterUrl));
 
-  const results = tagged
-    .slice()
-    .sort((a, b) => scoreMovieResult(trimmed, b.raw) - scoreMovieResult(trimmed, a.raw))
-    .map(({ raw, mediaType }) => mapMovie(raw, mediaType))
-    .filter((movie) => Boolean(movie.posterUrl))
-    .slice(0, 10);
+  const artistItems: Array<{ item: SearchResultItem; score: number }> = (peoplePayload.results ?? [])
+    .flatMap((person) => {
+      const mapped = mapArtist(person);
+      if (!mapped) return [];
+      return [{ item: { resultType: "artist" as const, ...mapped } as SearchResultItem, score: scorePersonResult(trimmed, person) }];
+    });
 
-  const artists = (peoplePayload.results ?? [])
-    .map(mapArtist)
-    .filter((artist): artist is SimplifiedArtist => Boolean(artist))
-    .slice(0, 6);
+  const combined = [...movieItems, ...artistItems]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 12)
+    .map(({ item }) => item);
 
-  return { results, artists };
+  return { combined };
 }
 
 export async function fetchTmdbShow(tmdbId: number): Promise<SimplifiedMovie> {
@@ -496,6 +523,59 @@ export async function findTmdbMovieId(title: string, year?: string | null) {
   return response.results?.[0]?.id ?? null;
 }
 
+// Job priority for deduplication: lower number = higher priority
+const JOB_PRIORITY: Record<string, number> = {
+  Director: 1,
+  Writer: 2,
+  Screenplay: 2,
+  "Original Story": 2,
+  Story: 2,
+  "Director of Photography": 3,
+  Cinematography: 3,
+  Editor: 4,
+  Composer: 4,
+  Producer: 5,
+  "Executive Producer": 5,
+};
+
+function jobPriority(credit: { creditType?: "cast" | "crew"; job?: string | null; role?: string | null }): number {
+  if (credit.creditType === "crew" && credit.job) {
+    return JOB_PRIORITY[credit.job] ?? 6;
+  }
+  // Cast: Self-appearances ranked lower than real roles
+  if (credit.role?.toLowerCase().startsWith("self")) return 8;
+  return 7;
+}
+
+function isSelfAppearance(credit: { creditType?: "cast" | "crew"; role?: string | null }): boolean {
+  return credit.creditType === "cast" && (credit.role?.toLowerCase().startsWith("self") ?? false);
+}
+
+function deriveKnownFor(filmography: FilmographyEntry[], primaryDept: string | null): string[] {
+  const deptCredits = filmography.filter((entry) => {
+    if (!primaryDept) return !isSelfAppearance(entry);
+    if (primaryDept === "Acting") return entry.creditType === "cast" && !isSelfAppearance(entry);
+    return entry.department === primaryDept;
+  });
+
+  return deptCredits
+    .filter((entry) => entry.posterUrl)
+    .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
+    .slice(0, 5)
+    .map((entry) => entry.title);
+}
+
+function primaryDepartment(filmography: FilmographyEntry[]): string | null {
+  const counts = new Map<string, number>();
+  for (const entry of filmography) {
+    if (isSelfAppearance(entry)) continue;
+    const dept = entry.creditType === "cast" ? "Acting" : (entry.department ?? "Other");
+    counts.set(dept, (counts.get(dept) ?? 0) + 1);
+  }
+  if (!counts.size) return null;
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
+
 export async function fetchTmdbPersonWithFilmography(
   personId: number,
 ): Promise<{ person: SimplifiedArtist; filmography: FilmographyEntry[] }> {
@@ -509,21 +589,41 @@ export async function fetchTmdbPersonWithFilmography(
     throw new Error("Artist not found");
   }
 
-  const filmography = [...(credits.cast ?? []), ...(credits.crew ?? [])]
-    .map((credit) => ({
-      tmdbId: credit.id,
-      title: normalizeTitle(credit.title),
-      releaseYear: parseReleaseYear(credit.release_date),
-      posterUrl: posterUrl(credit.poster_path),
-      backdropUrl: posterUrl(credit.backdrop_path),
-      creditType: credit.character ? ("cast" as const) : ("crew" as const),
-      department: credit.department ?? null,
-      job: credit.job ?? null,
-      role: credit.character ?? null,
-      imdbId: null,
-      imdbRating: undefined,
-    }))
-    .sort((a, b) => (b.releaseYear ?? 0) - (a.releaseYear ?? 0));
+  // Map all raw credits
+  const allCredits: FilmographyEntry[] = [...(credits.cast ?? []), ...(credits.crew ?? [])].map((credit) => ({
+    tmdbId: credit.id,
+    title: normalizeTitle(credit.title),
+    releaseYear: parseReleaseYear(credit.release_date),
+    posterUrl: posterUrl(credit.poster_path),
+    backdropUrl: posterUrl(credit.backdrop_path),
+    creditType: credit.character ? ("cast" as const) : ("crew" as const),
+    department: credit.department ?? null,
+    job: credit.job ?? null,
+    role: credit.character ?? null,
+    imdbId: null,
+    imdbRating: undefined,
+    popularity: typeof credit.popularity === "number" ? credit.popularity : undefined,
+  }));
+
+  // Deduplicate: one entry per tmdbId, keeping the highest-priority role
+  const byId = new Map<number, FilmographyEntry>();
+  for (const credit of allCredits) {
+    const existing = byId.get(credit.tmdbId);
+    if (!existing || jobPriority(credit) < jobPriority(existing)) {
+      byId.set(credit.tmdbId, credit);
+    }
+  }
+
+  const filmography = [...byId.values()].sort((a, b) => (b.releaseYear ?? 0) - (a.releaseYear ?? 0));
+
+  // Derive knownFor from the filmography if not already populated
+  if (!person.knownFor.length) {
+    const dept = primaryDepartment(filmography);
+    person.knownFor = deriveKnownFor(filmography, dept);
+    if (!person.department) {
+      person.department = dept;
+    }
+  }
 
   return { person, filmography };
 }
