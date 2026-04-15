@@ -82,11 +82,17 @@ function StreamingCatalogCard({
         </a>
       ) : null}
 
-      {typeof movie.imdbRating === "number" ? (
-        <div className="pointer-events-none absolute bottom-1.5 right-1.5 z-20 flex items-center gap-1 rounded px-1 py-0.5">
+      {typeof movie.imdbRating === "number" && movie.imdbId ? (
+        <a
+          href={`https://www.imdb.com/title/${movie.imdbId}/`}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`${movie.title} on IMDb — ${movie.imdbRating.toFixed(1)}`}
+          className="absolute bottom-1.5 right-1.5 z-20 flex items-center gap-1 rounded px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        >
           <Image src="/imdb_logo.svg" alt="IMDb" width={28} height={14} className="h-3.5 w-auto" unoptimized />
           <span className="text-[11px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">{movie.imdbRating.toFixed(1)}</span>
-        </div>
+        </a>
       ) : null}
     </div>
   );
