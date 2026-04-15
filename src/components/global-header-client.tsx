@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
@@ -20,11 +19,7 @@ export function GlobalHeaderClient({ children }: { children: ReactNode }) {
       <div className="min-w-[3rem] shrink-0">
         {isDetailPage ? <BackControl /> : <BrandLink />}
       </div>
-      <div className="min-w-0 flex-1">
-        {isDetailPage && React.isValidElement(children)
-          ? React.cloneElement(children as React.ReactElement<{ compact?: boolean }>, { compact: true })
-          : children}
-      </div>
+      <div className="min-w-0 flex-1">{children}</div>
     </header>
   );
 }

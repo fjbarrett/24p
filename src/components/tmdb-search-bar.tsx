@@ -13,10 +13,10 @@ type TmdbSearchBarProps = {
   lists: SavedList[];
   userEmail: string;
   wide?: boolean;
-  compact?: boolean;
+  bordered?: boolean;
 };
 
-export function TmdbSearchBar({ lists, userEmail, wide = false, compact = false }: TmdbSearchBarProps) {
+export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false }: TmdbSearchBarProps) {
   const [query, setQuery] = useState("");
   const [combined, setCombined] = useState<SearchResultItem[]>([]);
   const [panelDismissed, setPanelDismissed] = useState(false);
@@ -165,7 +165,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, compact = false 
   return (
     <div ref={containerRef} className="relative w-full" role="search" aria-label="Movie search">
       <div className="flex items-center gap-2">
-        <div className={`relative mx-auto flex w-full items-center gap-2 overflow-hidden rounded-3xl bg-black-950/70 px-3.5 py-2 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"}`}>
+        <div className={`relative mx-auto flex w-full items-center gap-2 overflow-hidden rounded-3xl bg-black-950/70 px-3.5 py-2 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"} ${bordered ? "border border-white/15" : ""}`}>
           <span className="flex items-center justify-center rounded-full p-1.5 text-white" aria-hidden>
             <Search className="h-4.5 w-4.5" />
           </span>
@@ -178,7 +178,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, compact = false 
             }}
             onFocus={() => setPanelDismissed(false)}
             type="text"
-            placeholder={compact ? "Search" : "Search for movies, tv, cast and crew"}
+            placeholder={pathname.split("/").filter(Boolean).length >= 2 ? "Search" : "Search for movies, tv, cast and crew"}
             aria-label="Search movies and shows"
             aria-controls={resultsId}
             aria-describedby={error ? errorId : undefined}
