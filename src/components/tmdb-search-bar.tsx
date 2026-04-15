@@ -106,7 +106,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
   }, [panelDismissed]);
 
   const displayItems = combined.filter((item) =>
-    item.resultType === "artist" ? Boolean(item.name) : Boolean(item.posterUrl),
+    item.resultType === "artist" ? Boolean(item.profileUrl) : Boolean(item.posterUrl),
   );
 
   const showResultsPanel = !panelDismissed && (query.trim().length >= 2 || isSearching || !!error);
