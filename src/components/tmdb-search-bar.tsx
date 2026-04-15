@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import type { SearchResultItem } from "@/lib/tmdb";
 import { apiFetch } from "@/lib/api-client";
 import { addMovieToList, type SavedList } from "@/lib/list-store";
-import { Plus, Search, X } from "lucide-react";
+import { Check, Plus, Search, X } from "lucide-react";
 
 type TmdbSearchBarProps = {
   lists: SavedList[];
@@ -25,6 +25,8 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
   const [selectedListId, setSelectedListId] = useState<string>(lists[0]?.id ?? "");
   const [savingMovieId, setSavingMovieId] = useState<number | null>(null);
   const [status, setStatus] = useState<{ movieId: number; message: string; tone: "success" | "error" } | null>(null);
+  // Tracks movies added during this session so the UI stays correct without a page reload
+  const [localAdditions, setLocalAdditions] = useState<Map<number, string>>(new Map());
   const errorId = useId();
   const panelId = useId();
   const resultsId = useId();
@@ -121,6 +123,21 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
     inputRef.current?.focus();
   }
 
+  // Returns the id of the first list that already contains this movie,
+  // checking both server-loaded list items and adds made this session.
+  function firstListContaining(tmdbId: number): string | undefined {
+    const localListId = localAdditions.get(tmdbId);
+    if (localListId) return localListId;
+    return lists.find((l) => l.items.some((i) => i.tmdbId === tmdbId))?.id;
+  }
+
+  // True when the currently selected list already has this movie.
+  function isInSelectedList(tmdbId: number): boolean {
+    if (!selectedListId) return false;
+    if (localAdditions.get(tmdbId) === selectedListId) return true;
+    return lists.find((l) => l.id === selectedListId)?.items.some((i) => i.tmdbId === tmdbId) ?? false;
+  }
+
   async function handleAdd(movieId: number, mediaType: "movie" | "tv" = "movie") {
     if (!normalizedEmail) {
       setStatus({ movieId, message: "Sign in to save movies.", tone: "error" });
@@ -134,7 +151,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
       setSavingMovieId(movieId);
       setStatus(null);
       await addMovieToList(selectedListId, movieId, normalizedEmail, mediaType);
-      setStatus({ movieId, message: "Added to list.", tone: "success" });
+      setLocalAdditions((prev) => new Map(prev).set(movieId, selectedListId));
       setActiveMovieId(null);
     } catch (err) {
       const detail = err instanceof Error ? err.message : "Unable to add movie.";
@@ -270,13 +287,19 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
                         disabled={noLists}
                         onClick={() => {
                           if (noLists) return;
-                          setActiveMovieId((current) => (current === item.tmdbId ? null : item.tmdbId));
-                          setSelectedListId((current) => (current || lists[0]?.id) ?? "");
+                          const isOpen = activeMovieId === item.tmdbId;
+                          setActiveMovieId(isOpen ? null : item.tmdbId);
+                          if (!isOpen) {
+                            const existing = firstListContaining(item.tmdbId);
+                            setSelectedListId(existing ?? selectedListId ?? lists[0]?.id ?? "");
+                          }
                           setStatus(null);
                         }}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-40"
+                        className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-40"
                       >
-                        <Plus className="h-5 w-5" />
+                        {firstListContaining(item.tmdbId)
+                          ? <Check className="h-5 w-5" />
+                          : <Plus className="h-5 w-5" />}
                       </button>
                     ) : null}
                   </div>
@@ -307,11 +330,15 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
                           </select>
                           <button
                             type="button"
-                            className="flex w-full items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
+                            className="flex w-full items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
                             onClick={() => handleAdd(item.tmdbId, isShow ? "tv" : "movie")}
-                            disabled={savingMovieId === item.tmdbId}
+                            disabled={savingMovieId === item.tmdbId || isInSelectedList(item.tmdbId)}
                           >
-                            {savingMovieId === item.tmdbId ? "Adding..." : "Add to list"}
+                            {savingMovieId === item.tmdbId
+                              ? "Adding..."
+                              : isInSelectedList(item.tmdbId)
+                                ? "Added"
+                                : "Add to list"}
                           </button>
                         </>
                       )}
