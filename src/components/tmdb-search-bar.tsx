@@ -203,32 +203,25 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
                   <li key={`artist-${item.tmdbId}`}>
                     <Link
                       href={`/artists/${item.tmdbId}`}
-                      className="flex items-center gap-3 rounded-3xl bg-black-900/70 px-4 py-3 transition hover:bg-black-800/70"
+                      className="flex items-center gap-3 rounded-2xl bg-black-900/70 px-3 py-2.5 transition hover:bg-black-800/70"
                     >
                       {item.profileUrl ? (
                         <Image
                           src={item.profileUrl}
                           alt={item.name}
                           width={48}
-                          height={48}
-                          className="h-12 w-12 flex-shrink-0 rounded-full object-cover"
+                          height={64}
+                          className="h-16 w-12 flex-shrink-0 rounded-xl object-cover object-top"
                         />
                       ) : (
-                        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-black-800 text-[10px] text-black-500">
+                        <div className="flex h-16 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-black-800 text-[10px] text-black-500">
                           No art
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                          <span className="text-sm text-white">{item.name}</span>
-                          {item.knownFor.length > 0 && (
-                            <span className="text-xs text-black-400 truncate">
-                              {item.knownFor.slice(0, 5).join(" · ")}
-                            </span>
-                          )}
-                        </div>
+                        <p className="text-sm text-white leading-snug">{item.name}</p>
                         {item.department && (
-                          <p className="text-xs text-black-500">{item.department}</p>
+                          <p className="mt-0.5 text-xs text-black-500">{item.department}</p>
                         )}
                       </div>
                     </Link>
@@ -240,32 +233,31 @@ export function TmdbSearchBar({ lists, userEmail, wide = false }: TmdbSearchBarP
               const detailHref = isShow ? `/tv/${item.tmdbId}` : `/movies/${item.tmdbId}`;
               return (
                 <li key={`movie-${item.tmdbId}`}>
-                  <div className="flex items-center gap-3 rounded-3xl bg-black-900/70 p-4 transition hover:bg-black-800/70">
+                  <div className="flex items-center gap-3 rounded-2xl bg-black-900/70 px-3 py-2.5 transition hover:bg-black-800/70">
                     <Link
                       href={detailHref}
-                      className="flex flex-1 gap-3"
+                      className="flex flex-1 items-center gap-3"
                       aria-label={`${item.title}${item.releaseYear ? ` (${item.releaseYear})` : ""}`}
                     >
                       {item.posterUrl ? (
                         <Image
                           src={item.posterUrl}
                           alt={`${item.title} poster`}
-                          width={64}
-                          height={96}
-                          className="h-24 w-16 rounded-xl object-cover mx-auto"
+                          width={48}
+                          height={64}
+                          className="h-16 w-12 flex-shrink-0 rounded-xl object-cover"
                         />
                       ) : (
-                        <div className="flex h-24 w-16 items-center justify-center rounded-xl bg-black-800 text-xs text-black-500 mx-auto">
+                        <div className="flex h-16 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-black-800 text-xs text-black-500">
                           No art
                         </div>
                       )}
-                      <div className="flex-1 flex flex-col justify-center text-center sm:text-left">
-                        <h4 className="text-base font-normal text-white leading-tight">
-                          {item.title}{" "}
-                          {item.releaseYear && <span className="text-base text-black-500">({item.releaseYear})</span>}
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-normal text-white leading-snug">
+                          {item.title}{item.releaseYear ? <span className="text-black-500"> ({item.releaseYear})</span> : null}
                         </h4>
                         {item.genres?.length ? (
-                          <p className="text-sm text-black-500">{item.genres.slice(0, 2).join(" • ")}</p>
+                          <p className="mt-0.5 text-xs text-black-500">{item.genres.slice(0, 2).join(" · ")}</p>
                         ) : null}
                       </div>
                     </Link>
