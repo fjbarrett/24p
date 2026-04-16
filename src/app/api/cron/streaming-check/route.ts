@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { waitForMigrations } from "@/lib/server/db";
 import { runStreamingNotificationCheck } from "@/lib/server/streaming-notifications";
 
 // Long-running: allow up to 5 minutes before the runtime kills it.
@@ -16,6 +17,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    await waitForMigrations();
     const result = await runStreamingNotificationCheck();
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {

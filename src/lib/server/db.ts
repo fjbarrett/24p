@@ -61,11 +61,9 @@ const INCREMENTAL_MIGRATIONS = [
   `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS price_notifications BOOLEAN NOT NULL DEFAULT FALSE`,
 ];
 
-let migrationsRun = false;
+let migrationPromise: Promise<void> | null = null;
 
-async function runIncrementalMigrations(pool: Pool) {
-  if (migrationsRun) return;
-  migrationsRun = true;
+async function runIncrementalMigrations(pool: Pool): Promise<void> {
   for (const sql of INCREMENTAL_MIGRATIONS) {
     try {
       await pool.query(sql);
@@ -83,10 +81,14 @@ export function getPool() {
       max: Number(process.env.DB_MAX_CONNECTIONS ?? 5),
       ssl,
     });
-    // Fire-and-forget: apply incremental column additions on first pool creation.
-    runIncrementalMigrations(global.__24pPool).catch((err) =>
+    migrationPromise = runIncrementalMigrations(global.__24pPool).catch((err) =>
       console.error("[db] Incremental migration failed", err),
     );
   }
   return global.__24pPool;
+}
+
+/** Resolves once the startup schema migrations have completed. */
+export async function waitForMigrations(): Promise<void> {
+  if (migrationPromise) await migrationPromise;
 }
