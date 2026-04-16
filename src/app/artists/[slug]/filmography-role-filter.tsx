@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { FilmographyEntry } from "@/lib/tmdb";
+import { toMovieSlug } from "@/lib/slug";
 
 type RoleOption = { key: string; label: string; count: number };
 
@@ -47,7 +48,7 @@ export function FilmographyRoleFilter({ filmography }: { filmography: Filmograph
           {filtered.map((credit) => (
             <Link
               key={`${credit.tmdbId}-${credit.role ?? "credit"}`}
-              href={`/movies/${credit.tmdbId}`}
+              href={`/movies/${toMovieSlug(credit.title, credit.releaseYear)}`}
               className="flex gap-3 rounded-2xl bg-white/[0.04] p-3 transition hover:bg-white/[0.08]"
             >
               {credit.posterUrl ? (

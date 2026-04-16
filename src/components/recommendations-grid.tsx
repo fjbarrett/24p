@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { SimplifiedMovie } from "@/lib/tmdb";
+import { toMovieSlug } from "@/lib/slug";
 
 type RecommendationsGridProps = {
   movies: SimplifiedMovie[];
@@ -22,7 +23,7 @@ export function RecommendationsGrid({ movies }: RecommendationsGridProps) {
       {movies.map((movie) => (
         <li key={movie.tmdbId} className="w-[calc(50%-6px)] sm:w-[calc(33%-7px)] lg:w-[calc(25%-9px)]">
           <Link
-            href={`/movies/${movie.tmdbId}?from=/recommendations`}
+            href={`/movies/${toMovieSlug(movie.title, movie.releaseYear)}?from=/recommendations`}
             className="group relative block aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-black-900/40 transition hover:border-black-400"
           >
             {movie.posterUrl ? (

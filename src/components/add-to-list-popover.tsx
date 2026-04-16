@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus } from "@/components/icons";
 import { addMovieToList, type SavedList } from "@/lib/list-store";
 
 type AddToListPopoverProps = {

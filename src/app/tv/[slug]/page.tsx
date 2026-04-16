@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { fetchTmdbShow } from "@/lib/server/tmdb";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { fetchTmdbShow, resolveTvSlug } from "@/lib/server/tmdb";
 import { MovieActions } from "@/components/movie-actions";
 import { DescriptionExpander } from "@/components/description-expander";
 import { MovieTrailerToggle } from "@/components/movie-trailer-toggle";
@@ -10,23 +11,34 @@ import { authOptions } from "@/lib/auth";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/app-url";
 import { serializeJsonLd } from "@/lib/json-ld";
+import { toMovieSlug, parseLegacyNumericSlug } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 };
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
-  const tmdbId = Number(id);
-  if (Number.isNaN(tmdbId)) return { title: "TV Show" };
+async function resolveToShow(slug: string) {
+  const legacyId = parseLegacyNumericSlug(slug);
+  if (legacyId !== null) {
+    const show = await fetchTmdbShow(legacyId);
+    permanentRedirect(`/tv/${toMovieSlug(show.title, show.releaseYear)}`);
+  }
+  const tmdbId = await resolveTvSlug(slug);
+  if (!tmdbId) return null;
+  return fetchTmdbShow(tmdbId);
+}
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
   try {
-    const show = await fetchTmdbShow(tmdbId);
+    const show = await resolveToShow(slug);
+    if (!show) return { title: "TV Show", robots: { index: false, follow: false } };
+
+    const canonical = `/tv/${toMovieSlug(show.title, show.releaseYear)}`;
     const title = typeof show.releaseYear === "number" ? `${show.title} (${show.releaseYear})` : show.title;
     const description = show.overview?.trim() ? show.overview : `Details for ${show.title} on 24p.`;
-    const canonical = `/tv/${show.tmdbId}`;
     const imageUrl = show.backdropUrl
       ? getLargeImage(show.backdropUrl, "backdrop")
       : show.posterUrl
@@ -50,25 +62,21 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       },
     };
   } catch {
-    return {
-      title: "TV Show",
-      alternates: { canonical: `/tv/${tmdbId}` },
-      robots: { index: false, follow: false },
-    };
+    return { title: "TV Show", robots: { index: false, follow: false } };
   }
 }
 
 export default async function TvShowDetailPage({ params }: PageProps) {
-  const [{ id }, session] = await Promise.all([
-    params,
-    getServerSession(authOptions),
-  ]);
-  const tmdbId = Number(id);
-  if (Number.isNaN(tmdbId)) throw new Error("Invalid TMDB id");
+  const [{ slug }, session] = await Promise.all([params, getServerSession(authOptions)]);
+
+  const show = await resolveToShow(slug);
+  if (!show) notFound();
+
+  const canonical = toMovieSlug(show.title, show.releaseYear);
+  if (slug !== canonical) redirect(`/tv/${canonical}`);
 
   const typedSession = session as Session | null;
   const userEmail = typedSession?.user?.email?.toLowerCase() ?? "";
-  const show = await fetchTmdbShow(tmdbId);
   const jsonLd = buildShowJsonLd(show);
 
   return (
@@ -96,9 +104,8 @@ export default async function TvShowDetailPage({ params }: PageProps) {
           ) : null}
         </h1>
 
-        {(typeof show.releaseYear === "number" || typeof show.imdbRating === "number") ? (
+        {typeof show.imdbRating === "number" ? (
           <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-[#B3B3B3]">
-            {typeof show.releaseYear === "number" ? <span>{show.releaseYear}</span> : null}
             {typeof show.imdbRating === "number" && show.imdbId ? (
               <a
                 href={`https://www.imdb.com/title/${show.imdbId}/`}
@@ -159,7 +166,7 @@ function buildShowJsonLd(show: {
   imdbId?: string | null;
   genres?: string[];
 }) {
-  const canonicalUrl = new URL(`/tv/${show.tmdbId}`, getAppUrl()).toString();
+  const canonicalUrl = new URL(`/tv/${toMovieSlug(show.title, show.releaseYear)}`, getAppUrl()).toString();
   const imageUrl = show.backdropUrl
     ? getLargeImage(show.backdropUrl, "backdrop")
     : show.posterUrl
@@ -176,19 +183,13 @@ function buildShowJsonLd(show: {
     url: canonicalUrl,
   };
 
-  if (show.imdbId) {
-    schema.sameAs = `https://www.imdb.com/title/${show.imdbId}/`;
-  }
-  if (show.genres?.length) {
-    schema.genre = show.genres;
-  }
+  if (show.imdbId) schema.sameAs = `https://www.imdb.com/title/${show.imdbId}/`;
+  if (show.genres?.length) schema.genre = show.genres;
 
   const identifiers: Array<Record<string, unknown>> = [
     { "@type": "PropertyValue", propertyID: "TMDB", value: String(show.tmdbId) },
   ];
-  if (show.imdbId) {
-    identifiers.push({ "@type": "PropertyValue", propertyID: "IMDB", value: show.imdbId });
-  }
+  if (show.imdbId) identifiers.push({ "@type": "PropertyValue", propertyID: "IMDB", value: show.imdbId });
   schema.identifier = identifiers;
 
   return schema;

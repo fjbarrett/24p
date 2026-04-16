@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useRef, useCallback, useEffect } from "react";
+import { getListColorStyles } from "@/lib/list-colors";
 import { apiFetch } from "@/lib/api-client";
 import type { SavedList } from "@/lib/list-store";
 import type { SimplifiedMovie } from "@/lib/tmdb";
@@ -194,12 +195,13 @@ function ListCard({ list, showOwner }: ListCardProps) {
 
   const href = list.username ? `/${list.username}/${list.slug}` : null;
   const ownerHref = list.username ? `/${list.username}` : null;
+  const colorStyles = getListColorStyles(list.color);
 
   return (
     <div className={!href ? "cursor-not-allowed" : undefined}>
       <div
-        className="relative overflow-hidden rounded-2xl bg-neutral-900"
-        style={{ aspectRatio: "2.39 / 1" }}
+        className="relative overflow-hidden rounded-2xl"
+        style={{ aspectRatio: "2.39 / 1", ...colorStyles.surface }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -211,6 +213,17 @@ function ListCard({ list, showOwner }: ListCardProps) {
           />
         )}
 
+        {/* Persistent color overlay — always visible beneath backdrops */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            ...colorStyles.overlay,
+          }}
+        />
+
         {/* A/B backdrop layers — crossfade by swapping opacity simultaneously */}
         {[layerA, layerB].map((layer, i) =>
           layer.url ? (
@@ -220,7 +233,7 @@ function ListCard({ list, showOwner }: ListCardProps) {
               style={{
                 position: "absolute",
                 inset: 0,
-                zIndex: 0,
+                zIndex: 1,
                 opacity: layer.on ? 1 : 0,
                 transition: `opacity ${CROSSFADE_MS}ms ease-in-out`,
               }}

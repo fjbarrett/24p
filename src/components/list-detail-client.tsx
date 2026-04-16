@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Pencil } from "lucide-react";
+import { Pencil } from "@/components/icons";
 import type { SavedList } from "@/lib/list-store";
 import { ListEditor } from "@/components/list-editor";
 import { ListExportButton } from "@/components/list-export-button";

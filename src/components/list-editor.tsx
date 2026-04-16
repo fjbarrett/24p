@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { ListShare, SavedList } from "@/lib/list-store";
 import { addListShare, loadListShares, removeListShare, updateListSharePermission } from "@/lib/list-store";
-import { DEFAULT_LIST_COLOR_ID, normalizeListColor } from "@/lib/list-colors";
+import { DEFAULT_LIST_COLOR_ID, LIST_COLOR_OPTIONS, normalizeListColor } from "@/lib/list-colors";
 import { apiFetch } from "@/lib/api-client";
 
 export function ListEditor({
@@ -272,6 +272,30 @@ export function ListEditor({
                 Set a username first so your list can go public.
               </p>
             )}
+          </div>
+
+          <div className="rounded-xl border border-white/8 bg-black/30 p-2.5">
+            <p className="mb-2.5 text-[11px] uppercase tracking-[0.28em] text-black-500">Color</p>
+            <div className="flex flex-wrap gap-2">
+              {LIST_COLOR_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setColor(option.id)}
+                  title={option.label}
+                  aria-label={option.label}
+                  aria-pressed={color === option.id}
+                  style={{
+                    backgroundImage: option.overlay,
+                    backgroundColor: option.surface,
+                    boxShadow: color === option.id
+                      ? `0 0 0 2px #000, 0 0 0 4px ${option.ring}`
+                      : undefined,
+                  }}
+                  className="h-7 w-7 rounded-full transition-all duration-150 hover:scale-110 active:scale-95"
+                />
+              ))}
+            </div>
           </div>
         </section>
       </div>

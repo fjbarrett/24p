@@ -2,6 +2,8 @@
 
 | Date | Agent | Action |
 |------|-------|--------|
+| 2026-04-15 | Codex | Removed the duplicate standalone year beneath TV detail page titles while keeping the parenthesized year in the heading |
+| 2026-04-15 | Claude | Added color picker to list editor and applied color tint to list cards in gallery |
 | 2026-04-10 | Claude | Overhauled /streaming: poster-only grid, vignette+gradient, IMDb rating, provider icon, centered filter row |
 | 2026-04-10 | Claude | Researched TV show support path: streaming catalog → search → lists (not yet started) |
 | 2026-04-10 | Codex | Fixed TV watch-provider direct links so show pages like House resolve Hulu/Prime URLs instead of TMDB fallback pages |
@@ -20,6 +22,3 @@
 | 2026-04-11 | Codex | Updated repo-owned domain references for prod `24p.mov` and dev `24p.actual.company` and documented required secret changes |
 | 2026-04-11 | Codex | Ran a security/reliability audit: upgraded Next, pinned patched preact, escaped JSON-LD, added TMDB timeouts, and fixed ratings timestamps |
 | 2026-04-11 | Codex | Finalized the pending tvOS + runtime hardening changes for commit, push, and merge |
-| 2026-04-11 | Codex | Added a user-facing changelog page and linked it from the signed-in home footer |
-| 2026-04-11 | Codex | Matched the changelog to a GitHub-style layout, made filters clickable, slimmed the sticky header, and fixed forward/detail-page scroll resets |
-| 2026-04-14 | Codex | Audited the repo for benchmark/performance testing coverage across scripts, CI, and deploy workflows |
