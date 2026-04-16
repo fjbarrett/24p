@@ -74,7 +74,8 @@ Services:
 
 For Google OAuth, add these redirect URIs in the Cloud Console:
 - `http://localhost:3000/api/auth/callback/google` (development)
-- `https://your-domain.com/api/auth/callback/google` (production)
+- `https://24p-dev.actual.company/api/auth/callback/google` (dev deploy)
+- `https://24p.mov/api/auth/callback/google` (production)
 
 ## Database setup
 
