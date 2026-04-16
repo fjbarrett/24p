@@ -2,6 +2,8 @@
 
 | Date | Agent | Action |
 |------|-------|--------|
+| 2026-04-16 | Claude | Integrated CheapCharts price-drop alerts: iTunes price snapshots, price_notifications toggle, combined digest email with streaming + price changes |
+| 2026-04-16 | Claude | Added streaming availability notifications: Resend email digest, streaming_snapshots table, opt-in toggle in Settings, daily GitHub Actions cron |
 | 2026-04-15 | Codex | Replaced movie/TV detail IMDb rating lookups with an internal JustWatch search path in `src/lib/server/tmdb.ts` instead of the Strawberry ratings endpoint |
 | 2026-04-15 | Codex | Corrected the dev deploy hostname and OAuth callback docs/config to `24p-dev.actual.company` so Google sign-in can work on the PR environment |
 | 2026-04-15 | Codex | Removed the duplicate standalone year beneath TV detail page titles while keeping the parenthesized year in the heading |
