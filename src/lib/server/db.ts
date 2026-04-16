@@ -34,6 +34,27 @@ function resolveDbConfig() {
   };
 }
 
+// Columns added incrementally — safe to run on every startup via IF NOT EXISTS.
+const INCREMENTAL_MIGRATIONS = [
+  `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS streaming_notifications BOOLEAN NOT NULL DEFAULT FALSE`,
+  `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS price_notifications BOOLEAN NOT NULL DEFAULT FALSE`,
+  `ALTER TABLE streaming_snapshots ADD COLUMN IF NOT EXISTS imdb_id TEXT`,
+];
+
+let migrationsRun = false;
+
+async function runIncrementalMigrations(pool: Pool) {
+  if (migrationsRun) return;
+  migrationsRun = true;
+  for (const sql of INCREMENTAL_MIGRATIONS) {
+    try {
+      await pool.query(sql);
+    } catch {
+      // Table may not exist yet in fresh environments — ignore and move on.
+    }
+  }
+}
+
 export function getPool() {
   if (!global.__24pPool) {
     const { connectionString, ssl } = resolveDbConfig();
@@ -42,6 +63,10 @@ export function getPool() {
       max: Number(process.env.DB_MAX_CONNECTIONS ?? 5),
       ssl,
     });
+    // Fire-and-forget: apply incremental column additions on first pool creation.
+    runIncrementalMigrations(global.__24pPool).catch((err) =>
+      console.error("[db] Incremental migration failed", err),
+    );
   }
   return global.__24pPool;
 }
