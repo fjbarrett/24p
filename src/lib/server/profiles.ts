@@ -67,14 +67,8 @@ export async function setUsernameForUser(userEmail: string, username: string) {
 export async function setStreamingNotificationsForUser(userEmail: string, enabled: boolean) {
   const pool = getPool();
   const result = await pool.query<ProfileRow>(
-    `
-      INSERT INTO profiles (user_email, streaming_notifications)
-      VALUES ($1, $2)
-      ON CONFLICT (user_email)
-      DO UPDATE SET streaming_notifications = EXCLUDED.streaming_notifications
-      RETURNING *
-    `,
-    [userEmail, enabled],
+    `UPDATE profiles SET streaming_notifications = $1 WHERE user_email = $2 RETURNING *`,
+    [enabled, userEmail],
   );
   if (!result.rows[0]) {
     throw new Error("Profile not found");
@@ -85,14 +79,8 @@ export async function setStreamingNotificationsForUser(userEmail: string, enable
 export async function setPriceNotificationsForUser(userEmail: string, enabled: boolean) {
   const pool = getPool();
   const result = await pool.query<ProfileRow>(
-    `
-      INSERT INTO profiles (user_email, price_notifications)
-      VALUES ($1, $2)
-      ON CONFLICT (user_email)
-      DO UPDATE SET price_notifications = EXCLUDED.price_notifications
-      RETURNING *
-    `,
-    [userEmail, enabled],
+    `UPDATE profiles SET price_notifications = $1 WHERE user_email = $2 RETURNING *`,
+    [enabled, userEmail],
   );
   if (!result.rows[0]) {
     throw new Error("Profile not found");
