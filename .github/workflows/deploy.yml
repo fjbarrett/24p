@@ -144,8 +144,11 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
         run: |
-          psql "$DATABASE_URL" -f migrations/004_streaming_notifications.sql || true
-          psql "$DATABASE_URL" -f migrations/005_price_notifications.sql || true
+          docker run --rm \
+            -e PGPASSWORD="$(echo $DATABASE_URL | sed 's/.*:\(.*\)@.*/\1/')" \
+            -v "${{ github.workspace }}/migrations:/migrations" \
+            postgres:16-alpine \
+            sh -c "psql '$DATABASE_URL' -f /migrations/004_streaming_notifications.sql; psql '$DATABASE_URL' -f /migrations/005_price_notifications.sql" || true
 
       - name: Deploy stack
         working-directory: ${{ github.workspace }}
