@@ -74,6 +74,9 @@ jobs:
           POSTGRES_USER=${{ secrets.PROD_POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.PROD_POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.PROD_POSTGRES_DB }}
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM=${{ secrets.EMAIL_FROM }}
+          CRON_SECRET=${{ secrets.CRON_SECRET }}
           EOF
           chmod 600 .env
 
@@ -130,6 +133,9 @@ jobs:
           POSTGRES_USER=${{ secrets.DEV_POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.DEV_POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.DEV_POSTGRES_DB }}
+          RESEND_API_KEY=${{ secrets.DEV_RESEND_API_KEY }}
+          EMAIL_FROM=${{ secrets.EMAIL_FROM }}
+          CRON_SECRET=${{ secrets.DEV_CRON_SECRET }}
           NEXT_PUBLIC_NO_INDEX=true
           EOF
           chmod 600 .env

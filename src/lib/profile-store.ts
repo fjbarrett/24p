@@ -4,6 +4,7 @@ export type UserProfile = {
   userEmail: string;
   username: string;
   isPublic: boolean;
+  streamingNotifications: boolean;
   createdAt: string;
 };
 
@@ -45,6 +46,18 @@ export async function setProfileVisibility(userEmail: string, isPublic: boolean)
   const data = await apiFetch<{ profile: UserProfile }>(`/profiles/visibility`, {
     method: "PATCH",
     body: JSON.stringify({ isPublic }),
+  });
+  return data.profile;
+}
+
+export async function setStreamingNotifications(userEmail: string, enabled: boolean): Promise<UserProfile> {
+  const email = normalizeEmail(userEmail);
+  if (!email) {
+    throw new Error("userEmail is required");
+  }
+  const data = await apiFetch<{ profile: UserProfile }>(`/profiles/notifications`, {
+    method: "PATCH",
+    body: JSON.stringify({ enabled }),
   });
   return data.profile;
 }

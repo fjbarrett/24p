@@ -1,0 +1,24 @@
+name: Streaming notifications
+
+on:
+  schedule:
+    # Runs daily at 08:00 UTC
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  notify:
+    name: Check streaming changes and notify users
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger streaming check
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.PROD_APP_URL }}/api/cron/streaming-check" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "Response status: $response"
+          if [ "$response" != "200" ]; then
+            echo "Streaming check failed with status $response"
+            exit 1
+          fi

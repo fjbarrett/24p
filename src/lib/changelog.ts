@@ -12,6 +12,19 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "streaming-notifications",
+    date: "2026-04-16",
+    title: "Get notified when your watchlist hits a new platform",
+    summary:
+      "Turn on streaming notifications in Settings and we'll email you a daily digest whenever a title in your lists becomes available on a new streaming service.",
+    type: "Improvement",
+    tags: ["notifications", "streaming"],
+    added: [
+      "New streaming notifications toggle in Settings — opt in to receive email digests when watchlisted titles land on new platforms.",
+      "Daily digest email groups all new streaming arrivals into a single message so you're not flooded.",
+    ],
+  },
+  {
     slug: "smarter-search",
     date: "2026-04-15",
     title: "Search ranks by what you actually want",
