@@ -132,13 +132,18 @@ async function upsertPriceSnapshot(
 
 async function loadDistinctListItems(): Promise<Array<{ tmdbId: number; mediaType: "movie" | "tv" }>> {
   const pool = getPool();
-  const result = await pool.query<{ tmdb_id: number; media_type: string }>(
-    "SELECT DISTINCT tmdb_id, media_type FROM list_items",
-  );
-  return result.rows.map((row) => ({
-    tmdbId: row.tmdb_id,
-    mediaType: row.media_type === "tv" ? "tv" : "movie",
-  }));
+  try {
+    const result = await pool.query<{ tmdb_id: number; media_type: string }>(
+      "SELECT DISTINCT tmdb_id, media_type FROM list_items",
+    );
+    return result.rows.map((row) => ({
+      tmdbId: row.tmdb_id,
+      mediaType: row.media_type === "tv" ? "tv" : "movie",
+    }));
+  } catch {
+    // Schema not yet initialised (e.g. fresh dev environment).
+    return [];
+  }
 }
 
 async function findUsersForTitle(

@@ -21,8 +21,7 @@ export async function POST(request: Request) {
     const result = await runStreamingNotificationCheck();
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     console.error("[cron/streaming-check] Job failed", error);
-    return NextResponse.json({ error: "Job failed", detail: message }, { status: 500 });
+    return NextResponse.json({ error: "Job failed" }, { status: 500 });
   }
 }
