@@ -8,6 +8,9 @@ const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w185";
 const TMDB_FETCH_TIMEOUT_MS = 5000;
 const DEFAULT_STRAWBERRY_BASE_URL =
   process.env.NODE_ENV === "development" ? "https://strawberry.fjbarrett.workers.dev" : "";
+const JUSTWATCH_GRAPHQL = "https://apis.justwatch.com/graphql";
+const JUSTWATCH_LOCALE = "US";
+const JUSTWATCH_LANGUAGE = "en";
 
 type TmdbMovie = {
   id: number;
@@ -63,6 +66,58 @@ type TmdbMovieCredit = {
   popularity?: number | null;
   vote_count?: number | null;
 };
+
+type JustWatchSearchNode = {
+  objectType?: string | null;
+  content: {
+    title: string;
+    originalReleaseYear: number | null;
+    externalIds?: { imdbId?: string | null } | null;
+    scoring?: { imdbScore?: number | null } | null;
+  };
+};
+
+type JustWatchSearchResult = {
+  data?: {
+    searchTitles?: {
+      edges?: Array<{ node?: JustWatchSearchNode | null } | null> | null;
+    } | null;
+  } | null;
+};
+
+const JUSTWATCH_RATING_QUERY = `
+  query($q:String!,$country:Country!,$lang:Language!){
+    searchTitles(
+      source:"JUSTWATCH_CATALOG"
+      country:$country
+      language:$lang
+      first:10
+      filter:{objectTypes:[MOVIE,SHOW],searchQuery:$q}
+    ){
+      edges{
+        node{
+          objectType
+          ... on Movie{
+            content(country:$country,language:$lang){
+              title
+              originalReleaseYear
+              externalIds{ imdbId }
+              scoring{ imdbScore }
+            }
+          }
+          ... on Show{
+            content(country:$country,language:$lang){
+              title
+              originalReleaseYear
+              externalIds{ imdbId }
+              scoring{ imdbScore }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
 
 function getApiKey() {
   return process.env.TMDB_API_KEY?.trim() || null;
@@ -135,30 +190,69 @@ async function tmdbFetch<T>(path: string, params?: Record<string, string | numbe
   return (await response.json()) as T;
 }
 
-async function fetchExternalRatings(imdbId: string) {
-  const base = getStrawberryBaseUrl();
-  if (!base) {
-    return undefined;
-  }
-
-  const url = new URL(`/ratings/${imdbId}`, base);
-
+async function postJustWatch<T>(query: string, variables: Record<string, unknown>): Promise<T | null> {
   try {
-    const response = await fetch(url.toString(), {
-      headers: { Accept: "application/json" },
+    const response = await fetch(JUSTWATCH_GRAPHQL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0",
+      },
+      body: JSON.stringify({ query, variables }),
       next: { revalidate: 60 * 60 * 6 },
       signal: AbortSignal.timeout(TMDB_FETCH_TIMEOUT_MS),
     });
-    if (!response.ok) {
-      return undefined;
-    }
-    const body = (await response.json()) as { imdbRating?: number | string | null };
-    const raw = body.imdbRating;
-    const rating = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
-    return Number.isFinite(rating) ? Number(rating.toFixed(1)) : undefined;
+
+    if (!response.ok) return null;
+    return (await response.json()) as T;
   } catch {
-    return undefined;
+    return null;
   }
+}
+
+function normalizeLookupTitle(value: string) {
+  return value.trim().toLowerCase();
+}
+
+async function fetchInternalImdbRating(
+  title: string,
+  year?: number,
+  mediaType: "movie" | "tv" = "movie",
+  imdbId?: string | null,
+) {
+  const data = await postJustWatch<JustWatchSearchResult>(JUSTWATCH_RATING_QUERY, {
+    q: title,
+    country: JUSTWATCH_LOCALE,
+    lang: JUSTWATCH_LANGUAGE,
+  });
+
+  const nodes = (data?.data?.searchTitles?.edges ?? [])
+    .map((edge) => edge?.node)
+    .filter((node): node is JustWatchSearchNode => Boolean(node?.content?.title));
+
+  if (!nodes.length) return undefined;
+
+  const normalizedTitle = normalizeLookupTitle(title);
+  const preferredObjectType = mediaType === "tv" ? "SHOW" : "MOVIE";
+  const scored = nodes.map((node) => {
+    const candidateTitle = normalizeLookupTitle(node.content.title);
+    let score = 0;
+
+    if (imdbId && node.content.externalIds?.imdbId === imdbId) score += 200;
+    if (candidateTitle === normalizedTitle) score += 100;
+    else if (candidateTitle.startsWith(normalizedTitle)) score += 40;
+    if (year && node.content.originalReleaseYear === year) score += 50;
+    if (node.objectType === preferredObjectType) score += 80;
+
+    return { node, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  const best = scored[0];
+  if (!best || best.score <= 0) return undefined;
+
+  const raw = best.node.content.scoring?.imdbScore;
+  return typeof raw === "number" && Number.isFinite(raw) ? Number(raw.toFixed(1)) : undefined;
 }
 
 function parseReleaseYear(value?: string | null) {
@@ -394,9 +488,7 @@ export async function fetchTmdbShow(tmdbId: number): Promise<SimplifiedMovie> {
   const externalIds = (show as unknown as { external_ids?: { imdb_id?: string | null } }).external_ids;
   const withImdbId: TmdbMovie = externalIds?.imdb_id ? { ...show, imdb_id: externalIds.imdb_id } : show;
   const mapped = mapMovie(withImdbId, "tv");
-  if (mapped.imdbId) {
-    mapped.imdbRating = await fetchExternalRatings(mapped.imdbId);
-  }
+  mapped.imdbRating = await fetchInternalImdbRating(mapped.title, mapped.releaseYear, "tv", mapped.imdbId);
   return mapped;
 }
 
@@ -405,9 +497,7 @@ export async function fetchTmdbMovie(tmdbId: number, lite = false): Promise<Simp
     append_to_response: lite ? undefined : "credits",
   });
   const mapped = mapMovie(movie);
-  if (mapped.imdbId) {
-    mapped.imdbRating = await fetchExternalRatings(mapped.imdbId);
-  }
+  mapped.imdbRating = await fetchInternalImdbRating(mapped.title, mapped.releaseYear, "movie", mapped.imdbId);
   return lite ? mapped : enrichMoviePeople(mapped, movie.credits);
 }
 

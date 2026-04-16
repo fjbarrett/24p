@@ -26,6 +26,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Updated the documented dev hostname to `https://24p.actual.company` and aligned project notes and PR guidance with the current prod/dev domain split.
 - Added a user-friendly release timeline that explains recent additions, changes, and removals in product language instead of repo-only notes.
 ### Fixed
+- Replaced Strawberry-based IMDb detail-page rating lookups with an internal JustWatch-backed path and slightly thickened the bordered search input outline.
 - Corrected the dev deploy hostname and OAuth callback origin to `https://24p-dev.actual.company` so Google sign-in works on the PR environment again.
 - Removed the duplicate standalone year beneath TV detail page titles while keeping the parenthesized year in the heading.
 - Swapped middleware nonce generation to an Edge-safe Web Crypto path so deployed hosts no longer crash on every request.

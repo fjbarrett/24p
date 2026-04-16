@@ -2,6 +2,7 @@
 
 | Date | Agent | Action |
 |------|-------|--------|
+| 2026-04-15 | Codex | Replaced movie/TV detail IMDb rating lookups with an internal JustWatch search path in `src/lib/server/tmdb.ts` instead of the Strawberry ratings endpoint |
 | 2026-04-15 | Codex | Corrected the dev deploy hostname and OAuth callback docs/config to `24p-dev.actual.company` so Google sign-in can work on the PR environment |
 | 2026-04-15 | Codex | Removed the duplicate standalone year beneath TV detail page titles while keeping the parenthesized year in the heading |
 | 2026-04-15 | Claude | Added color picker to list editor and applied color tint to list cards in gallery |
@@ -21,4 +22,3 @@
 | 2026-04-10 | Claude | Built tvOS SwiftUI app in apple-tv/ — Home (public lists), Search, Detail (providers), ListDetail |
 | 2026-04-11 | Codex | Assessed monetization paths and recorded affiliate, freemium, sponsorship, and B2B options in TODO |
 | 2026-04-11 | Codex | Updated repo-owned domain references for prod `24p.mov` and dev `24p.actual.company` and documented required secret changes |
-| 2026-04-11 | Codex | Ran a security/reliability audit: upgraded Next, pinned patched preact, escaped JSON-LD, added TMDB timeouts, and fixed ratings timestamps |
