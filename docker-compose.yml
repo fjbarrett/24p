@@ -29,6 +29,9 @@ services:
       STRAWBERRY_BASE_URL: ${STRAWBERRY_BASE_URL:-}
       TMDB_API_KEY: ${TMDB_API_KEY:-}
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/24p}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      CRON_SECRET: ${CRON_SECRET:-}
     depends_on:
       db:
         condition: service_healthy
