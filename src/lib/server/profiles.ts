@@ -8,6 +8,7 @@ type ProfileRow = {
   username: string;
   is_public: boolean;
   streaming_notifications: boolean;
+  price_notifications: boolean;
   created_at: string;
 };
 
@@ -17,6 +18,7 @@ function mapProfile(row: ProfileRow): UserProfile {
     username: row.username,
     isPublic: row.is_public,
     streamingNotifications: row.streaming_notifications ?? false,
+    priceNotifications: row.price_notifications ?? false,
     createdAt: new Date(row.created_at).toISOString(),
   };
 }
@@ -80,12 +82,22 @@ export async function setStreamingNotificationsForUser(userEmail: string, enable
   return mapProfile(result.rows[0]);
 }
 
-export async function getEmailsWithNotificationsEnabled(): Promise<string[]> {
+export async function setPriceNotificationsForUser(userEmail: string, enabled: boolean) {
   const pool = getPool();
-  const result = await pool.query<{ user_email: string }>(
-    "SELECT user_email FROM profiles WHERE streaming_notifications = true",
+  const result = await pool.query<ProfileRow>(
+    `
+      INSERT INTO profiles (user_email, price_notifications)
+      VALUES ($1, $2)
+      ON CONFLICT (user_email)
+      DO UPDATE SET price_notifications = EXCLUDED.price_notifications
+      RETURNING *
+    `,
+    [userEmail, enabled],
   );
-  return result.rows.map((row) => row.user_email.trim().toLowerCase());
+  if (!result.rows[0]) {
+    throw new Error("Profile not found");
+  }
+  return mapProfile(result.rows[0]);
 }
 
 export async function setProfileVisibilityForUser(userEmail: string, isPublic: boolean) {
