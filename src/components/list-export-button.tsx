@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { Download } from "@/components/icons";
 import { apiFetch } from "@/lib/api-client";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 

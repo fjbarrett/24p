@@ -1,5 +1,7 @@
 import Image from "next/image";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { fetchTmdbMovie } from "@/lib/tmdb-server";
+import { resolveMovieSlug } from "@/lib/server/tmdb";
 import { MovieActions } from "@/components/movie-actions";
 import { DescriptionExpander } from "@/components/description-expander";
 import { MovieTrailerToggle } from "@/components/movie-trailer-toggle";
@@ -10,23 +12,34 @@ import { authOptions } from "@/lib/auth";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/app-url";
 import { serializeJsonLd } from "@/lib/json-ld";
+import { toMovieSlug, parseLegacyNumericSlug } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 };
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
-  const tmdbId = Number(id);
-  if (Number.isNaN(tmdbId)) return { title: "Movie" };
+async function resolveToMovie(slug: string) {
+  const legacyId = parseLegacyNumericSlug(slug);
+  if (legacyId !== null) {
+    const movie = await fetchTmdbMovie(legacyId);
+    permanentRedirect(`/movies/${toMovieSlug(movie.title, movie.releaseYear)}`);
+  }
+  const tmdbId = await resolveMovieSlug(slug);
+  if (!tmdbId) return null;
+  return fetchTmdbMovie(tmdbId);
+}
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
   try {
-    const movie = await fetchTmdbMovie(tmdbId);
+    const movie = await resolveToMovie(slug);
+    if (!movie) return { title: "Movie", robots: { index: false, follow: false } };
+
+    const canonical = `/movies/${toMovieSlug(movie.title, movie.releaseYear)}`;
     const title = typeof movie.releaseYear === "number" ? `${movie.title} (${movie.releaseYear})` : movie.title;
     const description = movie.overview?.trim() ? movie.overview : `Details for ${movie.title} on 24p.`;
-    const canonical = `/movies/${movie.tmdbId}`;
     const imageUrl = movie.backdropUrl
       ? getLargeImage(movie.backdropUrl, "backdrop")
       : movie.posterUrl
@@ -50,25 +63,22 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       },
     };
   } catch {
-    return {
-      title: "Movie",
-      alternates: { canonical: `/movies/${tmdbId}` },
-      robots: { index: false, follow: false },
-    };
+    return { title: "Movie", robots: { index: false, follow: false } };
   }
 }
 
 export default async function MovieDetailPage({ params }: PageProps) {
-  const [{ id }, session] = await Promise.all([
-    params,
-    getServerSession(authOptions),
-  ]);
-  const tmdbId = Number(id);
-  if (Number.isNaN(tmdbId)) throw new Error("Invalid TMDB id");
+  const [{ slug }, session] = await Promise.all([params, getServerSession(authOptions)]);
+
+  const movie = await resolveToMovie(slug);
+  if (!movie) notFound();
+
+  // Redirect to canonical slug if it doesn't match
+  const canonical = toMovieSlug(movie.title, movie.releaseYear);
+  if (slug !== canonical) redirect(`/movies/${canonical}`);
 
   const typedSession = session as Session | null;
   const userEmail = typedSession?.user?.email?.toLowerCase() ?? "";
-  const movie = await fetchTmdbMovie(tmdbId);
   const jsonLd = buildMovieJsonLd(movie);
 
   return (
@@ -78,7 +88,6 @@ export default async function MovieDetailPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <div className="mx-auto w-full max-w-[800px] px-6 py-8 sm:px-10">
-        {/* Poster */}
         <MovieTrailerToggle
           tmdbId={movie.tmdbId}
           title={movie.title}
@@ -86,7 +95,6 @@ export default async function MovieDetailPage({ params }: PageProps) {
           backdropUrl={movie.backdropUrl ? getLargeImage(movie.backdropUrl, "backdrop") : null}
         />
 
-        {/* Title */}
         <h1
           className="mt-6 mb-3 text-center text-2xl font-semibold tracking-tight !text-white"
           style={{ color: "#fff", WebkitTextFillColor: "#fff", opacity: 1 }}
@@ -97,10 +105,9 @@ export default async function MovieDetailPage({ params }: PageProps) {
           ) : null}
         </h1>
 
-        {/* Rating */}
         {typeof movie.imdbRating === "number" ? (
           <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-[#B3B3B3]">
-            {typeof movie.imdbRating === "number" && movie.imdbId ? (
+            {movie.imdbId ? (
               <a
                 href={`https://www.imdb.com/title/${movie.imdbId}/`}
                 target="_blank"
@@ -123,14 +130,12 @@ export default async function MovieDetailPage({ params }: PageProps) {
           />
         </div>
 
-        {/* Description */}
         {movie.overview ? (
           <div className="mt-4 w-full">
             <DescriptionExpander text={movie.overview} />
           </div>
         ) : null}
 
-        {/* Action buttons */}
         {(userEmail || movie.imdbId) ? (
           <MovieActions tmdbId={movie.tmdbId} userEmail={userEmail} imdbId={movie.imdbId} title={movie.title} releaseYear={movie.releaseYear} />
         ) : null}
@@ -157,7 +162,7 @@ function buildMovieJsonLd(movie: {
   director?: { name: string } | null;
   cast?: Array<{ name: string }>;
 }) {
-  const canonicalUrl = new URL(`/movies/${movie.tmdbId}`, getAppUrl()).toString();
+  const canonicalUrl = new URL(`/movies/${toMovieSlug(movie.title, movie.releaseYear)}`, getAppUrl()).toString();
   const imageUrl = movie.backdropUrl
     ? getLargeImage(movie.backdropUrl, "backdrop")
     : movie.posterUrl
@@ -174,28 +179,16 @@ function buildMovieJsonLd(movie: {
     url: canonicalUrl,
   };
 
-  if (movie.imdbId) {
-    schema.sameAs = `https://www.imdb.com/title/${movie.imdbId}/`;
-  }
-  if (movie.genres?.length) {
-    schema.genre = movie.genres;
-  }
-  if (typeof movie.runtime === "number" && movie.runtime > 0) {
-    schema.duration = `PT${movie.runtime}M`;
-  }
-  if (movie.director?.name) {
-    schema.director = { "@type": "Person", name: movie.director.name };
-  }
-  if (movie.cast?.length) {
-    schema.actor = movie.cast.slice(0, 5).map((p) => ({ "@type": "Person", name: p.name }));
-  }
+  if (movie.imdbId) schema.sameAs = `https://www.imdb.com/title/${movie.imdbId}/`;
+  if (movie.genres?.length) schema.genre = movie.genres;
+  if (typeof movie.runtime === "number" && movie.runtime > 0) schema.duration = `PT${movie.runtime}M`;
+  if (movie.director?.name) schema.director = { "@type": "Person", name: movie.director.name };
+  if (movie.cast?.length) schema.actor = movie.cast.slice(0, 5).map((p) => ({ "@type": "Person", name: p.name }));
 
   const identifiers: Array<Record<string, unknown>> = [
     { "@type": "PropertyValue", propertyID: "TMDB", value: String(movie.tmdbId) },
   ];
-  if (movie.imdbId) {
-    identifiers.push({ "@type": "PropertyValue", propertyID: "IMDB", value: movie.imdbId });
-  }
+  if (movie.imdbId) identifiers.push({ "@type": "PropertyValue", propertyID: "IMDB", value: movie.imdbId });
   schema.identifier = identifiers;
 
   return schema;

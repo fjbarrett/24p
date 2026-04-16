@@ -7,7 +7,8 @@ import { usePathname } from "next/navigation";
 import type { SearchResultItem } from "@/lib/tmdb";
 import { apiFetch } from "@/lib/api-client";
 import { addMovieToList, type SavedList } from "@/lib/list-store";
-import { Check, Plus, Search, X } from "lucide-react";
+import { Check, Plus, Search, X } from "@/components/icons";
+import { toMovieSlug, toArtistSlug } from "@/lib/slug";
 
 type TmdbSearchBarProps = {
   lists: SavedList[];
@@ -165,7 +166,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
   return (
     <div ref={containerRef} className="relative w-full" role="search" aria-label="Movie search">
       <div className="flex items-center gap-2">
-        <div className={`relative mx-auto flex w-full items-center gap-2 overflow-hidden rounded-3xl bg-black-950/70 px-3.5 py-2 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"} ${bordered ? "border border-white/15" : ""}`}>
+        <div className={`relative mx-auto flex w-full items-center gap-2 overflow-hidden rounded-3xl bg-black-950/70 px-3.5 py-2 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"} ${bordered ? "border-2 border-white/15" : ""}`}>
           <span className="flex items-center justify-center rounded-full p-1.5 text-white" aria-hidden>
             <Search className="h-4.5 w-4.5" />
           </span>
@@ -220,7 +221,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
                 return (
                   <li key={`artist-${item.tmdbId}`}>
                     <Link
-                      href={`/artists/${item.tmdbId}`}
+                      href={`/artists/${toArtistSlug(item.name)}`}
                       className="flex items-center gap-3 rounded-2xl bg-black-900/70 px-3 py-2.5 transition hover:bg-black-800/70"
                     >
                       {item.profileUrl ? (
@@ -245,7 +246,9 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
               }
 
               const isShow = item.mediaType === "tv";
-              const detailHref = isShow ? `/tv/${item.tmdbId}` : `/movies/${item.tmdbId}`;
+              const detailHref = isShow
+                ? `/tv/${toMovieSlug(item.title, item.releaseYear)}`
+                : `/movies/${toMovieSlug(item.title, item.releaseYear)}`;
               return (
                 <li key={`movie-${item.tmdbId}`}>
                   <div className="flex items-center gap-3 rounded-2xl bg-black-900/70 px-3 py-2.5 transition hover:bg-black-800/70">

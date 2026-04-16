@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { LogOut } from "lucide-react";
+import { LogOut } from "@/components/icons";
 
 export function SignOutIconButton() {
   const [pending, setPending] = useState(false);

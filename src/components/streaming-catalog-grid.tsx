@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { StreamingCatalogMovie } from "@/lib/server/justwatch";
+import { toMovieSlug } from "@/lib/slug";
 
 type StreamingCatalogGridProps = {
   movies: StreamingCatalogMovie[];
@@ -36,7 +37,9 @@ function StreamingCatalogCard({
   movie: StreamingCatalogMovie;
   providerIcon: string | null;
 }) {
-  const href = movie.contentType === "SHOW" ? `/tv/${movie.tmdbId}` : `/movies/${movie.tmdbId}`;
+  const href = movie.contentType === "SHOW"
+    ? `/tv/${toMovieSlug(movie.title, movie.releaseYear)}`
+    : `/movies/${toMovieSlug(movie.title, movie.releaseYear)}`;
   const imageUrl = movie.posterUrl ?? movie.backdropUrls[0] ?? null;
   const imageAlt = movie.posterUrl ? `${movie.title} poster` : `${movie.title} artwork`;
 

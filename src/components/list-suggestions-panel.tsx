@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 import { apiFetch } from "@/lib/api-client";
+import { toMovieSlug } from "@/lib/slug";
 
 type Props = {
   listId: string;
@@ -140,7 +141,9 @@ export function ListSuggestionsPanel({ listId }: Props) {
 }
 
 function SuggestionCard({ movie, onAdd }: { movie: SimplifiedMovie; onAdd: () => void }) {
-  const href = movie.mediaType === "tv" ? `/tv/${movie.tmdbId}` : `/movies/${movie.tmdbId}`;
+  const href = movie.mediaType === "tv"
+    ? `/tv/${toMovieSlug(movie.title, movie.releaseYear)}`
+    : `/movies/${toMovieSlug(movie.title, movie.releaseYear)}`;
 
   return (
     <li className="group">

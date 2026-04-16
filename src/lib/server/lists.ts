@@ -45,8 +45,8 @@ type ParsedEntry = {
   source: string;
 };
 
-const DEFAULT_COLOR = "neutral";
-const ALLOWED_COLORS = new Set(["neutral", "rose", "amber", "emerald", "sky", "violet"]);
+const DEFAULT_COLOR = "sky";
+const ALLOWED_COLORS = new Set(["sky", "emerald", "amber", "violet", "rose", "indigo", "slate"]);
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();

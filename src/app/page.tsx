@@ -5,7 +5,7 @@ import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import type { SavedList } from "@/lib/list-store";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
-import { NotebookText, Settings, User } from "lucide-react";
+import { NotebookText, Settings, User } from "@/components/icons";
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 import { listListsForUser } from "@/lib/server/lists";
@@ -93,7 +93,7 @@ function Header({
         </p>
       </div>
       <div className={`w-full ${isSignedIn ? "max-w-[560px]" : "max-w-[480px]"}`}>
-        <TmdbSearchBar lists={lists} userEmail={userEmail} />
+        <TmdbSearchBar lists={lists} userEmail={userEmail} bordered />
       </div>
       <div className="flex justify-center">
         <Link

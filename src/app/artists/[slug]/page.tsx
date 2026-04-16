@@ -1,11 +1,12 @@
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { FilmographyEntry, SimplifiedArtist } from "@/lib/tmdb";
 import { FilmographyRoleFilter } from "./filmography-role-filter";
 import type { Metadata } from "next";
-import { fetchTmdbPersonWithFilmography } from "@/lib/server/tmdb";
+import { fetchTmdbPersonWithFilmography, resolvePersonSlug } from "@/lib/server/tmdb";
 import { serializeJsonLd } from "@/lib/json-ld";
 import { getAppUrl } from "@/lib/app-url";
+import { toArtistSlug, parseLegacyNumericSlug } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -14,71 +15,68 @@ type PersonResponse = {
   filmography: FilmographyEntry[];
 };
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
-  const personId = Number(id);
-  if (!Number.isFinite(personId)) {
-    return { title: "Artist" };
+async function resolveToPerson(slug: string): Promise<PersonResponse | null> {
+  const legacyId = parseLegacyNumericSlug(slug);
+  if (legacyId !== null) {
+    const payload = await fetchTmdbPersonWithFilmography(legacyId);
+    permanentRedirect(`/artists/${toArtistSlug(payload.person.name)}`);
   }
-
-  let payload: PersonResponse | null = null;
+  const tmdbId = await resolvePersonSlug(slug);
+  if (!tmdbId) return null;
   try {
-    payload = await fetchTmdbPersonWithFilmography(personId);
+    return await fetchTmdbPersonWithFilmography(tmdbId);
   } catch {
-    payload = null;
+    return null;
   }
-
-  if (!payload) {
-    return { title: "Not found", robots: { index: false, follow: false } };
-  }
-
-  const title = `${payload.person.name} — Filmography`;
-  const description = `Filmography for ${payload.person.name} on 24p.`;
-  const canonical = `/artists/${personId}`;
-
-  return {
-    title,
-    description,
-    alternates: { canonical },
-    openGraph: {
-      title,
-      description,
-      url: canonical,
-      ...(payload.person.profileUrl ? { images: [{ url: payload.person.profileUrl, alt: payload.person.name }] } : {}),
-    },
-    twitter: {
-      title,
-      description,
-      ...(payload.person.profileUrl ? { images: [payload.person.profileUrl] } : {}),
-    },
-  };
 }
 
-export default async function ArtistPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const personId = Number(id);
-  if (!Number.isFinite(personId)) {
-    notFound();
-  }
-
-  let payload: PersonResponse | null = null;
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
   try {
-    payload = await fetchTmdbPersonWithFilmography(personId);
-  } catch {
-    payload = null;
-  }
+    const payload = await resolveToPerson(slug);
+    if (!payload) return { title: "Not found", robots: { index: false, follow: false } };
 
-  if (!payload) {
-    notFound();
+    const canonical = `/artists/${toArtistSlug(payload.person.name)}`;
+    const title = `${payload.person.name} — Filmography`;
+    const description = `Filmography for ${payload.person.name} on 24p.`;
+
+    return {
+      title,
+      description,
+      alternates: { canonical },
+      openGraph: {
+        title,
+        description,
+        url: canonical,
+        ...(payload.person.profileUrl ? { images: [{ url: payload.person.profileUrl, alt: payload.person.name }] } : {}),
+      },
+      twitter: {
+        title,
+        description,
+        ...(payload.person.profileUrl ? { images: [payload.person.profileUrl] } : {}),
+      },
+    };
+  } catch {
+    return { title: "Artist", robots: { index: false, follow: false } };
   }
+}
+
+export default async function ArtistPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+
+  const payload = await resolveToPerson(slug);
+  if (!payload) notFound();
 
   const { person, filmography } = payload;
+
+  const canonical = toArtistSlug(person.name);
+  if (slug !== canonical) redirect(`/artists/${canonical}`);
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Person",
     name: person.name,
-    url: new URL(`/artists/${personId}`, getAppUrl()).toString(),
+    url: new URL(`/artists/${canonical}`, getAppUrl()).toString(),
     ...(person.profileUrl ? { image: person.profileUrl } : {}),
   };
 

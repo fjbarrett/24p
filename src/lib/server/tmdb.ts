@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { FilmographyEntry, PersonLink, SearchResultItem, SimplifiedArtist, SimplifiedMovie } from "@/lib/tmdb";
+import { parseMediaSlug } from "@/lib/slug";
 
 const TMDB_API_ROOT = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w185";
@@ -692,4 +693,60 @@ export async function fetchTmdbPersonWithFilmography(
   }
 
   return { person, filmography };
+}
+
+// ── Slug resolution ──────────────────────────────────────────────────────────
+// These functions turn a human-readable URL slug back into a TMDB ID by
+// searching TMDB. Takes the most popular matching result.
+
+type TmdbSearchMovieResult = {
+  id: number;
+  title?: string | null;
+  release_date?: string | null;
+  popularity?: number | null;
+};
+
+type TmdbSearchTvResult = {
+  id: number;
+  name?: string | null;
+  first_air_date?: string | null;
+  popularity?: number | null;
+};
+
+type TmdbSearchPersonResult = {
+  id: number;
+  name?: string | null;
+  popularity?: number | null;
+};
+
+export async function resolveMovieSlug(slug: string): Promise<number | null> {
+  const { title, year } = parseMediaSlug(slug);
+  const data = await tmdbFetch<{ results?: TmdbSearchMovieResult[] }>("/search/movie", {
+    query: title,
+    ...(year ? { year } : {}),
+  });
+  const results = data.results ?? [];
+  if (!results.length) return null;
+  return results.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))[0].id;
+}
+
+export async function resolveTvSlug(slug: string): Promise<number | null> {
+  const { title, year } = parseMediaSlug(slug);
+  const data = await tmdbFetch<{ results?: TmdbSearchTvResult[] }>("/search/tv", {
+    query: title,
+    ...(year ? { first_air_date_year: year } : {}),
+  });
+  const results = data.results ?? [];
+  if (!results.length) return null;
+  return results.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))[0].id;
+}
+
+export async function resolvePersonSlug(slug: string): Promise<number | null> {
+  const name = slug.replace(/-/g, " ");
+  const data = await tmdbFetch<{ results?: TmdbSearchPersonResult[] }>("/search/person", {
+    query: name,
+  });
+  const results = data.results ?? [];
+  if (!results.length) return null;
+  return results.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))[0].id;
 }
