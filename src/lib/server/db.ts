@@ -34,23 +34,64 @@ function resolveDbConfig() {
   };
 }
 
-// DDL that is safe to run on every startup via IF NOT EXISTS / IF NOT EXISTS.
+// DDL that is safe to run on every startup via IF NOT EXISTS.
+// Core tables come first so the ALTER TABLE statements that follow always have a target.
 const INCREMENTAL_MIGRATIONS = [
+  // ── Core schema ──────────────────────────────────────────────────────────
+  `CREATE TABLE IF NOT EXISTS profiles (
+    user_email TEXT PRIMARY KEY,
+    username   TEXT UNIQUE,
+    is_public  BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE TABLE IF NOT EXISTS lists (
+    id         TEXT PRIMARY KEY,
+    title      TEXT NOT NULL,
+    slug       TEXT NOT NULL,
+    visibility TEXT NOT NULL DEFAULT 'private',
+    color      TEXT,
+    user_email TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_email, slug)
+  )`,
+  `CREATE TABLE IF NOT EXISTS list_items (
+    list_id    TEXT    NOT NULL,
+    tmdb_id    INTEGER NOT NULL,
+    media_type TEXT    NOT NULL DEFAULT 'movie',
+    position   INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (list_id, tmdb_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS list_shares (
+    list_id            TEXT    NOT NULL,
+    shared_with_email  TEXT    NOT NULL,
+    can_edit           BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (list_id, shared_with_email)
+  )`,
+  `CREATE TABLE IF NOT EXISTS user_ratings (
+    user_email TEXT    NOT NULL,
+    tmdb_id    INTEGER NOT NULL,
+    rating     INTEGER NOT NULL,
+    source     TEXT    NOT NULL DEFAULT 'tmdb',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_email, tmdb_id)
+  )`,
+  // ── Feature additions ────────────────────────────────────────────────────
   `CREATE TABLE IF NOT EXISTS streaming_snapshots (
-    tmdb_id       INTEGER     NOT NULL,
-    media_type    TEXT        NOT NULL DEFAULT 'movie',
-    title         TEXT        NOT NULL DEFAULT '',
-    release_year  INTEGER,
-    poster_url    TEXT,
-    imdb_id       TEXT,
-    provider_short_names TEXT[] NOT NULL DEFAULT '{}',
-    last_checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    tmdb_id              INTEGER     NOT NULL,
+    media_type           TEXT        NOT NULL DEFAULT 'movie',
+    title                TEXT        NOT NULL DEFAULT '',
+    release_year         INTEGER,
+    poster_url           TEXT,
+    imdb_id              TEXT,
+    provider_short_names TEXT[]      NOT NULL DEFAULT '{}',
+    last_checked_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (tmdb_id, media_type)
   )`,
   `CREATE TABLE IF NOT EXISTS price_snapshots (
-    imdb_id         TEXT        NOT NULL,
+    imdb_id         TEXT    NOT NULL,
     tmdb_id         INTEGER,
-    title           TEXT        NOT NULL DEFAULT '',
+    title           TEXT    NOT NULL DEFAULT '',
     poster_url      TEXT,
     buy_price_usd   NUMERIC,
     last_checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
