@@ -74,6 +74,9 @@ jobs:
           POSTGRES_USER=${{ secrets.PROD_POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.PROD_POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.PROD_POSTGRES_DB }}
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM=${{ secrets.EMAIL_FROM }}
+          CRON_SECRET=${{ secrets.CRON_SECRET }}
           EOF
           chmod 600 .env
 
@@ -130,9 +133,23 @@ jobs:
           POSTGRES_USER=${{ secrets.DEV_POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.DEV_POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.DEV_POSTGRES_DB }}
+          RESEND_API_KEY=${{ secrets.DEV_RESEND_API_KEY }}
+          EMAIL_FROM=${{ secrets.EMAIL_FROM }}
+          CRON_SECRET=${{ secrets.DEV_CRON_SECRET }}
           NEXT_PUBLIC_NO_INDEX=true
           EOF
           chmod 600 .env
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          docker run --rm --network host \
+            -v "${{ github.workspace }}/migrations:/migrations" \
+            -e PGPASSWORD="" \
+            postgres:16-alpine \
+            sh -c "psql '$DATABASE_URL' -f /migrations/004_streaming_notifications.sql; psql '$DATABASE_URL' -f /migrations/005_price_notifications.sql" || true
 
       - name: Deploy stack
         working-directory: ${{ github.workspace }}

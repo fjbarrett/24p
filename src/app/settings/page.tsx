@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { ImportListModal } from "@/components/import-list-modal";
+import { StreamingNotificationsCard } from "@/components/streaming-notifications-card";
 import { authOptions } from "@/lib/auth";
+import { getProfileForUser } from "@/lib/server/profiles";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +26,8 @@ export default async function SettingsPage() {
     redirect("/");
   }
 
+  const profile = await getProfileForUser(userEmail);
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8 text-black-100">
       <div className="w-full max-w-[560px] space-y-3 rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,26,26,0.98),rgba(13,13,13,1))] p-3 shadow-[0_36px_120px_rgba(0,0,0,0.72)] ring-1 ring-white/5 sm:p-5">
@@ -43,6 +47,7 @@ export default async function SettingsPage() {
           </Link>
         </div>
         <ImportListModal />
+        <StreamingNotificationsCard userEmail={userEmail} profile={profile} />
       </div>
     </div>
   );

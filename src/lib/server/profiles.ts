@@ -7,6 +7,8 @@ type ProfileRow = {
   user_email: string;
   username: string;
   is_public: boolean;
+  streaming_notifications: boolean;
+  price_notifications: boolean;
   created_at: string;
 };
 
@@ -15,6 +17,8 @@ function mapProfile(row: ProfileRow): UserProfile {
     userEmail: row.user_email.trim().toLowerCase(),
     username: row.username,
     isPublic: row.is_public,
+    streamingNotifications: row.streaming_notifications ?? false,
+    priceNotifications: row.price_notifications ?? false,
     createdAt: new Date(row.created_at).toISOString(),
   };
 }
@@ -57,6 +61,30 @@ export async function setUsernameForUser(userEmail: string, username: string) {
     `,
     [userEmail, normalized],
   );
+  return mapProfile(result.rows[0]);
+}
+
+export async function setStreamingNotificationsForUser(userEmail: string, enabled: boolean) {
+  const pool = getPool();
+  const result = await pool.query<ProfileRow>(
+    `UPDATE profiles SET streaming_notifications = $1 WHERE user_email = $2 RETURNING *`,
+    [enabled, userEmail],
+  );
+  if (!result.rows[0]) {
+    throw new Error("Profile not found");
+  }
+  return mapProfile(result.rows[0]);
+}
+
+export async function setPriceNotificationsForUser(userEmail: string, enabled: boolean) {
+  const pool = getPool();
+  const result = await pool.query<ProfileRow>(
+    `UPDATE profiles SET price_notifications = $1 WHERE user_email = $2 RETURNING *`,
+    [enabled, userEmail],
+  );
+  if (!result.rows[0]) {
+    throw new Error("Profile not found");
+  }
   return mapProfile(result.rows[0]);
 }
 
