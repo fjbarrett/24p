@@ -133,7 +133,7 @@ export default async function MovieDetailPage({ params }: PageProps) {
 
         {movie.cast && movie.cast.length > 0 ? (
           <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-[#999]">
-            {movie.cast.slice(0, 5).map((person, i) => (
+            {movie.cast.slice(0, 5).map((person) => (
               <span key={person.tmdbId} className="flex items-center gap-x-1.5">
                 <Link
                   href={`/artists/${toArtistSlug(person.name)}`}
