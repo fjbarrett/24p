@@ -12,6 +12,18 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "movie-cast-links",
+    date: "2026-04-22",
+    title: "See who's in a film at a glance",
+    summary:
+      "Movie detail pages now show the top-billed cast just above the description — tap any name to go straight to their filmography.",
+    type: "Improvement",
+    tags: ["movie detail", "artists"],
+    added: [
+      "Top-billed cast (up to 5 names) now appears on every movie detail page, each linking to that artist's filmography.",
+    ],
+  },
+  {
     slug: "streaming-notifications",
     date: "2026-04-16",
     title: "Get notified when your watchlist hits a new platform",
