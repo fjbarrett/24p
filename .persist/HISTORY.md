@@ -24,3 +24,4 @@
 | 2026-04-10 | Claude | Built tvOS SwiftUI app in apple-tv/ — Home (public lists), Search, Detail (providers), ListDetail |
 | 2026-04-11 | Codex | Assessed monetization paths and recorded affiliate, freemium, sponsorship, and B2B options in TODO |
 | 2026-04-11 | Codex | Updated repo-owned domain references for prod `24p.mov` and dev `24p.actual.company` and documented required secret changes |
+| 2026-04-21 | Claude Sonnet 4.6 | Added top-billed cast (up to 5) as linked names above description on movie detail pages |

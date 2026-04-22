@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { fetchTmdbMovie } from "@/lib/tmdb-server";
 import { resolveMovieSlug } from "@/lib/server/tmdb";
@@ -12,7 +13,7 @@ import { authOptions } from "@/lib/auth";
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/app-url";
 import { serializeJsonLd } from "@/lib/json-ld";
-import { toMovieSlug, parseLegacyNumericSlug } from "@/lib/slug";
+import { toMovieSlug, toArtistSlug, parseLegacyNumericSlug } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +130,21 @@ export default async function MovieDetailPage({ params }: PageProps) {
             releaseYear={movie.releaseYear}
           />
         </div>
+
+        {movie.cast && movie.cast.length > 0 ? (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-[#999]">
+            {movie.cast.slice(0, 5).map((person, i) => (
+              <span key={person.tmdbId} className="flex items-center gap-x-1.5">
+                <Link
+                  href={`/artists/${toArtistSlug(person.name)}`}
+                  className="transition hover:text-white"
+                >
+                  {person.name}
+                </Link>
+              </span>
+            ))}
+          </div>
+        ) : null}
 
         {movie.overview ? (
           <div className="mt-4 w-full">
