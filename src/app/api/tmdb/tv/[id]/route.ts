@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchTmdbShow } from "@/lib/server/tmdb";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, tmdbErrorStatus } from "@/lib/server/http";
 
 export async function GET(
   _request: Request,
@@ -14,7 +14,8 @@ export async function GET(
   try {
     const detail = await fetchTmdbShow(tmdbId);
     return NextResponse.json({ detail });
-  } catch {
-    return errorResponse("Unable to load show", 500);
+  } catch (error) {
+    const status = tmdbErrorStatus(error);
+    return errorResponse(status === 404 ? "Show not found" : "Unable to load show", status);
   }
 }

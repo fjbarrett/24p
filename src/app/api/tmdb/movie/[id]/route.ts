@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchTmdbMovie } from "@/lib/server/tmdb";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, tmdbErrorStatus } from "@/lib/server/http";
 
 export async function GET(
   request: Request,
@@ -16,7 +16,8 @@ export async function GET(
   try {
     const detail = await fetchTmdbMovie(tmdbId, lite);
     return NextResponse.json({ detail });
-  } catch {
-    return errorResponse("Unable to load movie", 500);
+  } catch (error) {
+    const status = tmdbErrorStatus(error);
+    return errorResponse(status === 404 ? "Movie not found" : "Unable to load movie", status);
   }
 }
