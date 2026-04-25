@@ -18,17 +18,19 @@ function resolveDbConfig() {
 
   url.searchParams.delete("sslmode");
 
-  // Default to verifying certificates. Operators on a hosted DB with a self-signed
-  // CA must opt in explicitly via DB_SSLMODE=no-verify (or sslmode=no-verify in the
-  // URL) — the previous behavior silently disabled verification for sslmode=require
-  // and friends, which gave operators encryption without authentication.
+  // Default to verifying certificates. Hosted DBs with a custom CA can set
+  // DB_CA_CERT (PEM contents) to keep verification on. Operators that truly
+  // need to skip verification must opt in via DB_SSLMODE=no-verify / allow /
+  // prefer — the legacy behavior silently disabled verification for
+  // sslmode=require, giving encryption without authentication.
+  const ca = process.env.DB_CA_CERT;
   const insecureModes = new Set(["no-verify", "allow", "prefer"]);
   const ssl =
     sslMode === "disable"
       ? undefined
       : insecureModes.has(sslMode)
         ? { rejectUnauthorized: false }
-        : { rejectUnauthorized: true };
+        : { rejectUnauthorized: true, ...(ca ? { ca } : {}) };
 
   return {
     connectionString: url.toString(),
