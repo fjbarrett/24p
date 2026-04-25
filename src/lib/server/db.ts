@@ -17,16 +17,17 @@ function resolveDbConfig() {
   const sslModeFromUrl = url.searchParams.get("sslmode")?.toLowerCase();
   const sslMode = (process.env.DB_SSLMODE ?? sslModeFromUrl ?? "disable").toLowerCase();
 
-  // Let node-postgres take an explicit ssl object instead of inferring strict TLS
-  // from the connection string. This avoids self-signed CA failures on hosted DBs.
+  // node-postgres reads sslmode from the connection string but doesn't expose
+  // a CA-cert hook through it; build the ssl object explicitly instead.
   url.searchParams.delete("sslmode");
 
+  // Verify by default. Hosted DBs that need a custom CA should set DB_CA_CERT
+  // (PEM contents). Setting DB_SSLMODE=disable opts out entirely (local dev).
+  const ca = process.env.DB_CA_CERT;
   const ssl =
     sslMode === "disable"
       ? undefined
-      : sslMode === "verify-full"
-        ? { rejectUnauthorized: true }
-        : { rejectUnauthorized: false };
+      : { rejectUnauthorized: true, ...(ca ? { ca } : {}) };
 
   return {
     connectionString: url.toString(),
