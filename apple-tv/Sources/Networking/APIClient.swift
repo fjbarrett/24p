@@ -1,7 +1,21 @@
 import Foundation
 
-// Set this to your deployed URL. For local dev, use "http://localhost:3000".
-let kBaseURL = "https://24p.mov"
+enum APIEnvironment {
+    static var baseURL: String {
+        if let override = ProcessInfo.processInfo.environment["TV_APP_BASE_URL"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !override.isEmpty {
+            return override
+        }
+
+        if let plistValue = Bundle.main.object(forInfoDictionaryKey: "APIBaseURL") as? String {
+            let trimmed = plistValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
+
+        return "https://24p.mov"
+    }
+}
 
 enum APIError: LocalizedError {
     case badURL
@@ -35,7 +49,7 @@ final class APIClient {
     }()
 
     private func get<T: Decodable>(path: String, query: [String: String] = [:]) async throws -> T {
-        var components = URLComponents(string: kBaseURL + path)
+        var components = URLComponents(string: APIEnvironment.baseURL + path)
         if !query.isEmpty {
             components?.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
         }
