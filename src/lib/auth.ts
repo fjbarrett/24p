@@ -21,6 +21,14 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    // Reject Google id_tokens that don't assert a verified email. Without this,
+    // an attacker controlling any OIDC IdP that returns email='owner@example.com'
+    // with email_verified=false would be admitted as that user.
+    async signIn({ account, profile }) {
+      if (account?.provider !== "google") return true;
+      const googleProfile = profile as { email_verified?: boolean } | undefined;
+      return googleProfile?.email_verified === true;
+    },
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub;
