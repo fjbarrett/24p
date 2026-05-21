@@ -72,8 +72,12 @@ export function ListExportButton({ tmdbIds, ratingsMap, listSlug, listTitle }: L
           row
             .map((value) => {
               const safe = value ?? "";
-              const needsQuotes = /[",\n]/.test(safe);
-              const escaped = safe.replace(/"/g, '""');
+              // Defeat spreadsheet formula injection: cells starting with =, +,
+              // -, @, tab, or CR are interpreted as formulas by Excel/Numbers/
+              // Sheets. Prefix with a leading apostrophe to render literally.
+              const neutralized = /^[=+\-@\t\r]/.test(safe) ? `'${safe}` : safe;
+              const needsQuotes = /[",\n]/.test(neutralized);
+              const escaped = neutralized.replace(/"/g, '""');
               return needsQuotes ? `"${escaped}"` : escaped;
             })
             .join(","),
