@@ -9,6 +9,17 @@ const MAX_SEEDS = 10;
 const MAX_RESULTS = 24;
 const LIST_SUGGEST_COUNT = 18;
 
+// Strip newlines and quote characters from user-controlled values before
+// interpolating them into a Claude prompt, so a list title cannot break out
+// of its quoted slot and inject its own instructions.
+function sanitizePromptValue(value: string, maxLen = 200): string {
+  return value
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/["`]/g, "'")
+    .slice(0, maxLen)
+    .trim();
+}
+
 function getAnthropicClient() {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
@@ -88,7 +99,7 @@ export async function getRecommendationsForList(listId: string, userEmail: strin
         role: "user",
         content: `You are a film recommendation engine. Given a list name and its current films, suggest ${LIST_SUGGEST_COUNT} other films that would fit well in the list.
 
-List name: "${list.title}"
+List name: "${sanitizePromptValue(list.title)}"
 
 Current films:
 ${movieLines}
