@@ -38,6 +38,7 @@ final class SearchViewModel: ObservableObject {
 
 struct SearchView: View {
     @StateObject private var vm = SearchViewModel()
+    @State private var selectedMovie: SimplifiedMovie?
 
     private let columns = [GridItem(.adaptive(minimum: 200, maximum: 240), spacing: 32)]
 
@@ -45,7 +46,9 @@ struct SearchView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 TextField("Search movies & TV shows…", text: $vm.query)
-                    .textFieldStyle(.roundedBorder)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                    .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
                     .padding(.horizontal, 48)
                     .padding(.top, 48)
                     .onChange(of: vm.query) { vm.search() }
@@ -75,6 +78,9 @@ struct SearchView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .navigationTitle("Search")
+            .navigationDestination(item: $selectedMovie) { movie in
+                DetailView(tmdbId: movie.tmdbId, mediaType: movie.mediaType ?? "movie")
+            }
         }
     }
 
@@ -82,8 +88,9 @@ struct SearchView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 32) {
                 ForEach(vm.results) { movie in
-                    NavigationLink {
-                        DetailView(tmdbId: movie.tmdbId, mediaType: movie.mediaType ?? "movie")
+                    Button {
+                        print("[SearchView] selected movie \(movie.tmdbId) \(movie.title)")
+                        selectedMovie = movie
                     } label: {
                         PosterCard(movie: movie, size: 200)
                     }
