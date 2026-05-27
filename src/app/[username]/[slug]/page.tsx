@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { SavedList } from "@/lib/list-store";
-import { getServerSession } from "next-auth/next";
-import type { Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSessionUserEmail } from "@/lib/server/session";
 import { ListDetailClient } from "@/components/list-detail-client";
 import { FavoriteToggle } from "@/components/favorite-toggle";
 import type { Metadata } from "next";
@@ -21,8 +19,7 @@ export async function generateMetadata({
   params: Promise<{ username: string; slug: string }>;
 }): Promise<Metadata> {
   const { username, slug } = await params;
-  const session = (await getServerSession(authOptions)) as Session | null;
-  const viewerEmail = session?.user?.email?.toLowerCase() ?? null;
+  const viewerEmail = await getSessionUserEmail();
   const publicList = await getListByUsernameSlugForViewer(username, slug, viewerEmail);
 
   if (!publicList) {
@@ -52,8 +49,7 @@ export default async function ListDetail({
   params: Promise<{ username: string; slug: string }>;
 }) {
   const { username, slug } = await params;
-  const session = (await getServerSession(authOptions)) as Session | null;
-  const viewerEmail = session?.user?.email?.toLowerCase() ?? null;
+  const viewerEmail = await getSessionUserEmail();
   const list = await getListByUsernameSlugForViewer(username, slug, viewerEmail);
 
   if (!list) {

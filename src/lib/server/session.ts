@@ -1,5 +1,6 @@
 import "server-only";
 
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -27,4 +28,10 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
 export async function getSessionUserEmail() {
   return (await getSessionUser())?.email ?? null;
+}
+
+export async function requireSessionEmail(): Promise<string> {
+  const email = await getSessionUserEmail();
+  if (!email) redirect("/");
+  return email;
 }

@@ -17,7 +17,7 @@ export function DescriptionExpander({ text }: { text: string }) {
     <div className="w-full text-left">
       <p
         ref={ref}
-        className="text-sm leading-relaxed text-[#FAFAFA]"
+        className="text-sm leading-relaxed text-white/[0.98]"
         style={{
           fontFamily: '"Open Sans", Arial, sans-serif',
           display: "-webkit-box",
