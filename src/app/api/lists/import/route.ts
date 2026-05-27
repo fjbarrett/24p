@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { importListForUser } from "@/lib/server/lists";
 import { errorResponse } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
+import { consume } from "@/lib/server/rate-limit";
 
 const MAX_IMPORT_BYTES = 200_000;
 
@@ -9,6 +10,16 @@ export async function POST(request: Request) {
   const userEmail = await getSessionUserEmail();
   if (!userEmail) {
     return errorResponse("Unauthorized", 401);
+  }
+
+  // Each import can fan out to ~500 outbound TMDB calls. Cap per-user to
+  // prevent quota burn and outbound DoS amplification.
+  const limit = consume(`import:${userEmail}`, 3, 60 * 60 * 1000);
+  if (!limit.ok) {
+    return new NextResponse(JSON.stringify({ error: "Too many imports; try again later" }), {
+      status: 429,
+      headers: { "content-type": "application/json", "retry-after": String(limit.retryAfterSeconds) },
+    });
   }
 
   try {

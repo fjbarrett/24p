@@ -6,12 +6,12 @@ type MovieActionsProps = {
   tmdbId: number;
   userEmail: string;
   imdbId?: string | null;
-  title: string;
+  title?: string;
   releaseYear?: number;
   mediaType?: "movie" | "tv";
 };
 
-export function MovieActions({ tmdbId, userEmail, imdbId, title, releaseYear, mediaType = "movie" }: MovieActionsProps) {
+export function MovieActions({ tmdbId, userEmail, mediaType = "movie" }: MovieActionsProps) {
   if (!userEmail.trim()) return null;
 
   return (

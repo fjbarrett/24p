@@ -42,6 +42,51 @@ struct PersonLink: Codable, Hashable {
     let role: String?
 }
 
+struct SearchResultItem: Codable, Hashable {
+    let resultType: String
+    let tmdbId: Int?
+    let title: String?
+    let mediaType: String?
+    let overview: String?
+    let releaseYear: Int?
+    let rating: Double?
+    let imdbRating: Double?
+    let posterUrl: String?
+    let backdropUrl: String?
+    let runtime: Int?
+    let genres: [String]?
+    let tagline: String?
+    let imdbId: String?
+    let director: PersonLink?
+    let cast: [PersonLink]?
+
+    var movie: SimplifiedMovie? {
+        guard resultType == "movie",
+              let tmdbId,
+              let title else {
+            return nil
+        }
+
+        return SimplifiedMovie(
+            tmdbId: tmdbId,
+            title: title,
+            mediaType: mediaType,
+            overview: overview,
+            releaseYear: releaseYear,
+            rating: rating,
+            imdbRating: imdbRating,
+            posterUrl: posterUrl,
+            backdropUrl: backdropUrl,
+            runtime: runtime,
+            genres: genres,
+            tagline: tagline,
+            imdbId: imdbId,
+            director: director,
+            cast: cast
+        )
+    }
+}
+
 // MARK: - Watch Providers
 
 struct StreamingProvider: Codable, Identifiable {
@@ -80,7 +125,11 @@ struct SavedList: Codable, Identifiable, Hashable {
 // MARK: - API Response Envelopes
 
 struct SearchResponse: Codable {
-    let results: [SimplifiedMovie]
+    let combined: [SearchResultItem]
+
+    var results: [SimplifiedMovie] {
+        combined.compactMap(\.movie)
+    }
 }
 
 struct MovieDetailResponse: Codable {

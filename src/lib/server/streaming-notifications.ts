@@ -4,7 +4,6 @@ import { getPool } from "@/lib/server/db";
 import { fetchJustWatchOffers } from "@/lib/server/justwatch";
 import { fetchTmdbMovie, fetchTmdbShow } from "@/lib/server/tmdb";
 import { fetchPricesForImdbIds } from "@/lib/server/cheapcharts";
-import { sendNotificationDigest, type StreamingChangeItem, type PriceDropItem } from "@/lib/server/email";
 
 // Only subscription/free/ad-supported offers count for streaming notifications.
 const NOTIFY_ACCESS_MODELS = new Set(["subscription", "free", "ads"]);
@@ -12,8 +11,6 @@ const NOTIFY_ACCESS_MODELS = new Set(["subscription", "free", "ads"]);
 // Delay between external API fetches to avoid hammering rate limits.
 const FETCH_DELAY_MS = 300;
 
-// Minimum price drop fraction to trigger a notification (avoids noise on $0.01 rounding).
-const MIN_DROP_FRACTION = 0.05;
 
 type TitleSnapshot = {
   tmdbId: number;
@@ -35,13 +32,6 @@ type SnapshotRow = {
   provider_short_names: string[];
 };
 
-type PriceSnapshotRow = {
-  imdb_id: string;
-  tmdb_id: number | null;
-  title: string;
-  poster_url: string | null;
-  buy_price_usd: string | null; // NUMERIC comes back as string from pg
-};
 
 async function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -92,18 +82,6 @@ async function upsertStreamingSnapshot(snap: TitleSnapshot): Promise<void> {
 
 // ─── Price snapshots ──────────────────────────────────────────────────────────
 
-async function loadPriceSnapshots(): Promise<Map<string, PriceSnapshotRow>> {
-  const pool = getPool();
-  const result = await pool.query<PriceSnapshotRow>(
-    "SELECT imdb_id, tmdb_id, title, poster_url, buy_price_usd FROM price_snapshots",
-  );
-  const map = new Map<string, PriceSnapshotRow>();
-  for (const row of result.rows) {
-    map.set(row.imdb_id, row);
-  }
-  return map;
-}
-
 async function upsertPriceSnapshot(
   imdbId: string,
   tmdbId: number | null,
@@ -146,25 +124,6 @@ async function loadDistinctListItems(): Promise<Array<{ tmdbId: number; mediaTyp
   }
 }
 
-async function findUsersForTitle(
-  tmdbId: number,
-  column: "streaming_notifications" | "price_notifications",
-): Promise<string[]> {
-  const pool = getPool();
-  const result = await pool.query<{ user_email: string }>(
-    `
-      SELECT DISTINCT l.user_email
-      FROM list_items li
-      JOIN lists l ON l.id = li.list_id
-      JOIN profiles p ON p.user_email = l.user_email
-      WHERE li.tmdb_id = $1
-        AND p.${column} = true
-    `,
-    [tmdbId],
-  );
-  return result.rows.map((row) => row.user_email.trim().toLowerCase());
-}
-
 // ─── Main job ─────────────────────────────────────────────────────────────────
 
 export async function runStreamingNotificationCheck(): Promise<{ notified: number; checked: number }> {
@@ -172,11 +131,6 @@ export async function runStreamingNotificationCheck(): Promise<{ notified: numbe
   if (!listItems.length) return { notified: 0, checked: 0 };
 
   const streamingSnapshots = await loadStreamingSnapshots();
-  const priceSnapshots = await loadPriceSnapshots();
-
-  // email → { streaming changes, price drops }
-  const streamingPending = new Map<string, StreamingChangeItem[]>();
-  const pricePending = new Map<string, PriceDropItem[]>();
 
   let checked = 0;
 
@@ -239,9 +193,6 @@ export async function runStreamingNotificationCheck(): Promise<{ notified: numbe
       console.warn(`[notifications] Failed to fetch JustWatch offers for "${title}"`);
     }
 
-    const prevProviders = new Set(existing?.providerShortNames ?? []);
-    const newProviders = currentProviders.filter((p) => !prevProviders.has(p));
-
     await upsertStreamingSnapshot({
       tmdbId: item.tmdbId,
       mediaType: item.mediaType,
@@ -252,19 +203,6 @@ export async function runStreamingNotificationCheck(): Promise<{ notified: numbe
       providerShortNames: currentProviders,
     });
     checked += 1;
-
-    if (newProviders.length) {
-      const providerDisplayNames = newProviders.map((shortName) => {
-        const match = jwOffers.find((o) => o.providerShortName.toLowerCase() === shortName);
-        return match?.providerName ?? shortName;
-      });
-      const users = await findUsersForTitle(item.tmdbId, "streaming_notifications");
-      for (const email of users) {
-        const list = streamingPending.get(email) ?? [];
-        list.push({ tmdbId: item.tmdbId, title, releaseYear, posterUrl, newProviderNames: providerDisplayNames });
-        streamingPending.set(email, list);
-      }
-    }
 
     // ── Queue movie for price check (TV not supported by CheapCharts) ────────
     if (item.mediaType === "movie" && imdbId) {
@@ -279,51 +217,11 @@ export async function runStreamingNotificationCheck(): Promise<{ notified: numbe
 
     for (const queued of priceCheckQueue) {
       const current = currentPrices.get(queued.imdbId);
-      const snap = priceSnapshots.get(queued.imdbId);
-
       const newPrice = current?.buyPriceUsd ?? null;
-      const oldPrice = snap?.buy_price_usd != null ? parseFloat(snap.buy_price_usd) : null;
 
       await upsertPriceSnapshot(queued.imdbId, queued.tmdbId, queued.title, queued.posterUrl, newPrice);
-
-      // Notify on first-time price data (oldPrice was null → baseline only, no alert)
-      // and on subsequent drops that exceed the minimum threshold.
-      if (
-        newPrice !== null &&
-        oldPrice !== null &&
-        newPrice < oldPrice * (1 - MIN_DROP_FRACTION)
-      ) {
-        const users = await findUsersForTitle(queued.tmdbId, "price_notifications");
-        for (const email of users) {
-          const list = pricePending.get(email) ?? [];
-          list.push({
-            imdbId: queued.imdbId,
-            title: queued.title,
-            releaseYear: queued.releaseYear,
-            posterUrl: queued.posterUrl,
-            oldPriceUsd: oldPrice,
-            newPriceUsd: newPrice,
-          });
-          pricePending.set(email, list);
-        }
-      }
     }
   }
 
-  // ── Send one combined digest per user ─────────────────────────────────────
-  const allEmails = new Set([...streamingPending.keys(), ...pricePending.keys()]);
-  let notified = 0;
-
-  for (const email of allEmails) {
-    const streaming = streamingPending.get(email) ?? [];
-    const prices = pricePending.get(email) ?? [];
-    try {
-      await sendNotificationDigest(email, streaming, prices);
-      notified += 1;
-    } catch (error) {
-      console.error(`[notifications] Failed to send digest to ${email}`, error);
-    }
-  }
-
-  return { notified, checked };
+  return { notified: 0, checked };
 }

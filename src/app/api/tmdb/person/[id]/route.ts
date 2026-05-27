@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchTmdbPersonWithFilmography } from "@/lib/server/tmdb";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, tmdbErrorStatus } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function GET(
@@ -18,7 +18,8 @@ export async function GET(
   }
   try {
     return NextResponse.json(await fetchTmdbPersonWithFilmography(personId));
-  } catch {
-    return errorResponse("Unable to load artist", 500);
+  } catch (error) {
+    const status = tmdbErrorStatus(error);
+    return errorResponse(status === 404 ? "Artist not found" : "Unable to load artist", status);
   }
 }

@@ -174,6 +174,12 @@ export async function fetchAppleTvLink(
   }
 
   const fallback = await fetchFromStrawberry(imdbId, title);
-  await writeAppleCache(imdbId, title, fallback);
+  // Only persist results that actually resolved. Caching null overwrites a
+  // previously-good row for 7 days and lets any unauthenticated caller
+  // permanently break Apple TV links for an arbitrary imdbId by triggering
+  // a lookup the upstreams happen to miss.
+  if (fallback.url) {
+    await writeAppleCache(imdbId, title, fallback);
+  }
   return fallback;
 }

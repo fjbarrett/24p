@@ -3,7 +3,6 @@ import "server-only";
 import { Pool } from "pg";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __24pPool: Pool | undefined;
 }
 
@@ -17,16 +16,21 @@ function resolveDbConfig() {
   const sslModeFromUrl = url.searchParams.get("sslmode")?.toLowerCase();
   const sslMode = (process.env.DB_SSLMODE ?? sslModeFromUrl ?? "disable").toLowerCase();
 
-  // Let node-postgres take an explicit ssl object instead of inferring strict TLS
-  // from the connection string. This avoids self-signed CA failures on hosted DBs.
   url.searchParams.delete("sslmode");
 
+  // Default to verifying certificates. Hosted DBs with a custom CA can set
+  // DB_CA_CERT (PEM contents) to keep verification on. Operators that truly
+  // need to skip verification must opt in via DB_SSLMODE=no-verify / allow /
+  // prefer — the legacy behavior silently disabled verification for
+  // sslmode=require, giving encryption without authentication.
+  const ca = process.env.DB_CA_CERT;
+  const insecureModes = new Set(["no-verify", "allow", "prefer"]);
   const ssl =
     sslMode === "disable"
       ? undefined
-      : sslMode === "verify-full"
-        ? { rejectUnauthorized: true }
-        : { rejectUnauthorized: false };
+      : insecureModes.has(sslMode)
+        ? { rejectUnauthorized: false }
+        : { rejectUnauthorized: true, ...(ca ? { ca } : {}) };
 
   return {
     connectionString: url.toString(),
