@@ -11,7 +11,6 @@ export function getLargeImage(url: string, type: "poster" | "backdrop"): string 
 export function buildMediaMetadata(
   media: SimplifiedMovie,
   routePrefix: "/movies" | "/tv",
-  fallbackTitle: string,
 ): Metadata {
   const canonical = `${routePrefix}/${toMovieSlug(media.title, media.releaseYear)}`;
   const title =

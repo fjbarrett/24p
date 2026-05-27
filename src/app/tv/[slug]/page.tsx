@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   try {
     const show = await resolveToShow(slug);
     if (!show) return { title: "TV Show", robots: { index: false, follow: false } };
-    return buildMediaMetadata(show, "/tv", "TV Show");
+    return buildMediaMetadata(show, "/tv");
   } catch {
     return { title: "TV Show", robots: { index: false, follow: false } };
   }

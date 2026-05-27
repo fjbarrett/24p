@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   try {
     const movie = await resolveToMovie(slug);
     if (!movie) return { title: "Movie", robots: { index: false, follow: false } };
-    return buildMediaMetadata(movie, "/movies", "Movie");
+    return buildMediaMetadata(movie, "/movies");
   } catch {
     return { title: "Movie", robots: { index: false, follow: false } };
   }
