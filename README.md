@@ -1,6 +1,6 @@
 # 24p
 
-A collaborative movie list app. Search any film, build shareable lists, and rate with half-star precision. Friends can follow your lists and add their own picks.
+A film tracking app for building and sharing movie and TV lists. Search any title, organize your watchlists, rate what you've seen, and discover what's streaming.
 
 ## Stack
 
@@ -10,18 +10,44 @@ A collaborative movie list app. Search any film, build shareable lists, and rate
 | Auth | NextAuth.js with Google OAuth |
 | API | Next.js route handlers + server-only data modules |
 | Database | PostgreSQL |
-| Movie data | TMDB API |
+| Film data | TMDB API |
+| Streaming data | JustWatch |
+| Email | Resend |
 | Container | Docker + Docker Compose |
 
 ## Features
 
-- Google sign-in via OAuth
-- Search movies powered by TMDB
-- Create, name, and share movie lists
-- Half-star ratings (0.5–5.0)
+### Lists & library
+- Create named, colored lists with public or private visibility
+- Add movies and TV shows from search
+- Reorder items, move between lists, bulk manage
 - Import lists from Letterboxd or IMDb CSV exports
-- Public profiles with vanity URLs
-- List privacy controls (public / private)
+- Share public lists via vanity URL (`/@username/list-slug`)
+
+### Discovery
+- Search movies, TV shows, and people with live TMDB results
+- Browse person filmographies
+- Streaming catalog: filter by provider, sort by popularity or rating
+- Personalized recommendations based on your lists and favorites
+
+### Ratings
+- Half-star ratings (0.5–5.0) on any title
+- Aggregate community ratings alongside TMDB scores
+
+### Profiles
+- Public profile pages with vanity URLs (`/@username`)
+- Profile visibility toggle (public / private)
+- Customizable username
+
+### Notifications
+- Email alerts when titles you're watching become available on new streaming services
+- Price drop alerts for rental/purchase titles
+
+### Other
+- Cast credits with linked filmographies on movie detail pages
+- Watch provider links (streaming, rent, buy) powered by JustWatch
+- Trailer playback
+- In-app changelog
 
 ## Getting started
 
@@ -50,7 +76,7 @@ A collaborative movie list app. Search any film, build shareable lists, and rate
 
 4. Open [http://localhost:3000](http://localhost:3000).
 
-### Docker (recommended for full stack)
+### Docker
 
 Runs Next.js and PostgreSQL together:
 
@@ -71,38 +97,12 @@ Services:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) — create an OAuth 2.0 Web Client |
 | `TMDB_API_KEY` | [TMDB API settings](https://www.themoviedb.org/settings/api) — free account required |
 | `DATABASE_URL` | Your PostgreSQL connection string |
+| `RESEND_API_KEY` | [Resend dashboard](https://resend.com) — for email notifications |
+| `EMAIL_FROM` | Verified sender address in Resend |
 
 For Google OAuth, add these redirect URIs in the Cloud Console:
 - `http://localhost:3000/api/auth/callback/google` (development)
-- `https://24p-dev.actual.company/api/auth/callback/google` (dev deploy)
 - `https://24p.mov/api/auth/callback/google` (production)
-
-## Database setup
-
-Run these once against your PostgreSQL instance:
-
-```sql
-CREATE TABLE IF NOT EXISTS lists (
-  id          UUID        PRIMARY KEY,
-  title       TEXT        NOT NULL,
-  slug        TEXT        NOT NULL UNIQUE,
-  visibility  TEXT        NOT NULL DEFAULT 'public',
-  movies      INTEGER[]   NOT NULL DEFAULT '{}',
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  color       TEXT,
-  user_email  TEXT        NOT NULL,
-  username    TEXT
-);
-
-CREATE TABLE IF NOT EXISTS user_ratings (
-  user_email  TEXT        NOT NULL,
-  tmdb_id     INTEGER     NOT NULL,
-  rating      INTEGER     NOT NULL,
-  source      TEXT        NOT NULL,
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (user_email, tmdb_id)
-);
-```
 
 ## Project structure
 
@@ -113,6 +113,9 @@ CREATE TABLE IF NOT EXISTS user_ratings (
 │   ├── components/   # React components
 │   ├── lib/          # Shared utilities, API clients, stores, server modules
 │   └── types/        # TypeScript type definitions
+├── apple-tv/         # tvOS SwiftUI client (in development)
+├── migrations/       # SQL migration files
+├── scripts/server/   # Server bootstrap helpers
 ├── public/           # Static assets
 ├── docker-compose.yml
 └── Dockerfile
