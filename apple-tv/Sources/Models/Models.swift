@@ -103,6 +103,20 @@ struct WatchProvidersResponse: Codable {
     let justWatchLink: String?
 }
 
+struct WatchLinkOffer: Codable, Identifiable, Hashable {
+    var id: String { "\(providerShortName)-\(accessModel)-\(url)" }
+    let url: String
+    let accessModel: String
+    let providerName: String
+    let providerShortName: String
+    let iconUrl: String?
+
+    var iconURL: URL? {
+        guard let iconUrl else { return nil }
+        return URL(string: iconUrl)
+    }
+}
+
 // MARK: - Lists
 
 struct SavedList: Codable, Identifiable, Hashable {

@@ -12,13 +12,15 @@ struct TwentyFourPApp: App {
 struct RootView: View {
     var body: some View {
         TabView {
-            Tab("Home", systemImage: "house") {
-                HomeView()
-            }
+            HomeView()
+                .tabItem {
+                    Label("Home", systemImage: "house")
+                }
 
-            Tab("Search", systemImage: "magnifyingglass") {
-                SearchView()
-            }
+            SearchView()
+                .tabItem {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
         }
     }
 }

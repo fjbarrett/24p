@@ -19,16 +19,19 @@ enum APIEnvironment {
 
 enum APIError: LocalizedError {
     case badURL
-    case networkError(Error)
-    case badStatus(Int)
-    case decodingError(Error)
+    case networkError(path: String, underlying: Error)
+    case badStatus(path: String, code: Int, body: String?)
+    case decodingError(path: String, underlying: Error, body: String?)
 
     var errorDescription: String? {
         switch self {
         case .badURL: return "Invalid URL"
-        case .networkError(let e): return e.localizedDescription
-        case .badStatus(let code): return "Server returned \(code)"
-        case .decodingError(let e): return "Decode error: \(e.localizedDescription)"
+        case .networkError(let path, let error):
+            return "Network error on \(path): \(error.localizedDescription)"
+        case .badStatus(let path, let code, let body):
+            return "HTTP \(code) on \(path)\(body.map { " — \($0)" } ?? "")"
+        case .decodingError(let path, let error, let body):
+            return "Decode error on \(path): \(error.localizedDescription)\(body.map { " — \($0)" } ?? "")"
         }
     }
 }
@@ -38,7 +41,10 @@ final class APIClient {
 
     private let session: URLSession = {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForRequest = 45
+        config.timeoutIntervalForResource = 60
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.waitsForConnectivity = true
         return URLSession(configuration: config)
     }()
 
@@ -55,22 +61,31 @@ final class APIClient {
         }
         guard let url = components?.url else { throw APIError.badURL }
 
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 45
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(from: url)
+            (data, response) = try await session.data(for: request)
         } catch {
-            throw APIError.networkError(error)
+            log("network error", path: path, detail: error.localizedDescription)
+            throw APIError.networkError(path: path, underlying: error)
         }
 
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            throw APIError.badStatus(http.statusCode)
+            let body = responseSnippet(from: data)
+            log("bad status \(http.statusCode)", path: path, detail: body)
+            throw APIError.badStatus(path: path, code: http.statusCode, body: body)
         }
 
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
-            throw APIError.decodingError(error)
+            let body = responseSnippet(from: data)
+            log("decode error", path: path, detail: "\(error.localizedDescription) | \(body ?? "no body")")
+            throw APIError.decodingError(path: path, underlying: error, body: body)
         }
     }
 
@@ -84,7 +99,7 @@ final class APIClient {
     // MARK: - Detail
 
     func movieDetail(id: Int) async throws -> SimplifiedMovie {
-        let result: MovieDetailResponse = try await get(path: "/api/tmdb/movie/\(id)")
+        let result: MovieDetailResponse = try await get(path: "/api/tmdb/movie/\(id)", query: ["lite": "true"])
         return result.detail
     }
 
@@ -103,6 +118,17 @@ final class APIClient {
         ])
     }
 
+    func watchLinks(title: String, year: Int?, mediaType: String) async throws -> [WatchLinkOffer] {
+        var query = [
+            "title": title,
+            "mediaType": mediaType,
+        ]
+        if let year {
+            query["year"] = "\(year)"
+        }
+        return try await get(path: "/api/watch-links", query: query)
+    }
+
     // MARK: - Lists
 
     func publicLists(limit: Int = 40) async throws -> [SavedList] {
@@ -118,5 +144,20 @@ final class APIClient {
             path: "/api/lists/public/\(username)/\(slug)"
         )
         return result.list
+    }
+
+    private func responseSnippet(from data: Data) -> String? {
+        guard !data.isEmpty else { return nil }
+        let raw = String(decoding: data.prefix(400), as: UTF8.self)
+        let normalized = raw.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        return normalized.isEmpty ? nil : normalized
+    }
+
+    private func log(_ message: String, path: String, detail: String?) {
+        if let detail, !detail.isEmpty {
+            print("[APIClient] \(message) \(path) :: \(detail)")
+        } else {
+            print("[APIClient] \(message) \(path)")
+        }
     }
 }
