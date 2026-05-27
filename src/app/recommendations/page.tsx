@@ -1,7 +1,4 @@
-import { getServerSession } from "next-auth/next";
-import type { Session } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
+import { requireSessionEmail } from "@/lib/server/session";
 import { getRecommendationsForUser } from "@/lib/server/recommendations";
 import { RecommendationsGrid } from "@/components/recommendations-grid";
 import { BackButton } from "@/components/back-button";
@@ -15,13 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RecommendationsPage() {
-  const session = (await getServerSession(authOptions)) as Session | null;
-  const userEmail = session?.user?.email?.toLowerCase() ?? "";
-
-  if (!userEmail) {
-    redirect("/");
-  }
-
+  const userEmail = await requireSessionEmail();
   const movies = await getRecommendationsForUser(userEmail);
 
   return (

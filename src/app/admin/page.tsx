@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth/next";
-import type { Session } from "next-auth";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { authOptions } from "@/lib/auth";
+import { getSessionUserEmail } from "@/lib/server/session";
 import { getAdminStats } from "@/lib/server/admin";
 
 export const dynamic = "force-dynamic";
@@ -30,8 +28,7 @@ function relativeDate(iso: string) {
 }
 
 export default async function AdminPage() {
-  const session = (await getServerSession(authOptions)) as Session | null;
-  const email = session?.user?.email?.toLowerCase() ?? "";
+  const email = await getSessionUserEmail();
   if (email !== ADMIN_EMAIL) redirect("/");
 
   const { overview, users, recentLists, topLists, week } = await getAdminStats();

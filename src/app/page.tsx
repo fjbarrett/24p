@@ -3,20 +3,17 @@ import { SignInButton } from "@/components/sign-in-button";
 import { SignOutIconButton } from "@/components/sign-out-icon-button";
 import { TmdbSearchBar } from "@/components/tmdb-search-bar";
 import type { SavedList } from "@/lib/list-store";
-import { getServerSession } from "next-auth/next";
-import type { Session } from "next-auth";
 import { NotebookText, Settings, User } from "@/components/icons";
-import { authOptions } from "@/lib/auth";
+import { getSessionUserEmail } from "@/lib/server/session";
 import Link from "next/link";
 import { listListsForUser } from "@/lib/server/lists";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const session = (await getServerSession(authOptions)) as Session | null;
-  const userEmail = session?.user?.email?.toLowerCase() ?? "";
+  const userEmail = (await getSessionUserEmail()) ?? "";
   const lists = userEmail ? await listListsForUser(userEmail, true) : [];
-  const isSignedIn = Boolean(session);
+  const isSignedIn = Boolean(userEmail);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4 py-8 text-black-100 sm:px-6">
@@ -26,15 +23,15 @@ export default async function Home() {
         </div>
       ) : null}
       <div className={`mx-auto flex w-full flex-col items-center ${isSignedIn ? "max-w-[900px]" : "max-w-[1280px] -translate-y-16"}`}>
-        <Header isSignedIn={isSignedIn} centered={!session} lists={lists} userEmail={userEmail} />
+        <Header isSignedIn={isSignedIn} centered={!isSignedIn} lists={lists} userEmail={userEmail} />
 
-        {session ? (
+        {isSignedIn ? (
           <main className="mt-0 w-full max-w-[760px] space-y-10">
             <ListsSection lists={lists} userEmail={userEmail} />
           </main>
         ) : null}
 
-        {session ? (
+        {isSignedIn ? (
           <footer className="mb-6 mt-10 flex items-center justify-center gap-3">
             <Link
               href="/changelog"
