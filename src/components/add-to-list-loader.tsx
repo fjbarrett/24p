@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { MovieListActions } from "@/components/movie-list-actions";
-import { loadLists, type SavedList } from "@/lib/list-store";
+import { addList, loadLists, type SavedList } from "@/lib/list-store";
 import { apiFetch } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
 
@@ -68,9 +68,12 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
   const [lists, setLists] = useState<SavedList[]>([]);
   const [loadingLists, setLoadingLists] = useState(false);
   const [selectedListId, setSelectedListId] = useState("");
+  const [mode, setMode] = useState<"select" | "create">("select");
+  const [newListTitle, setNewListTitle] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [inList, setInList] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -86,13 +89,28 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
     return () => { active = false; };
   }, [userEmail, tmdbId]);
 
+  // Focus the title field as soon as the user enters create mode.
+  useEffect(() => {
+    if (!expanded || mode !== "create") return;
+    const id = window.setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 200);
+    return () => window.clearTimeout(id);
+  }, [expanded, mode]);
+
   function handleExpand() {
     setExpanded(true);
     onExpandChange?.(true);
-    if (lists.length > 0) return;
+    if (lists.length > 0) { setMode("select"); return; }
     setLoadingLists(true);
     loadLists(userEmail)
-      .then((data) => { setLists(data); setSelectedListId(data[0]?.id ?? ""); })
+      .then((data) => {
+        setLists(data);
+        setSelectedListId(data[0]?.id ?? "");
+        // With no lists yet, jump straight to creating one — it's the only useful action.
+        setMode(data.length ? "select" : "create");
+      })
       .catch(() => setMessage("Unable to load lists"))
       .finally(() => setLoadingLists(false));
   }
@@ -100,24 +118,42 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
   function collapse() {
     setExpanded(false);
     onExpandChange?.(false);
+    setMode("select");
+    setNewListTitle("");
     setMessage(null);
+  }
+
+  function handleLeftButton() {
+    // From the create field, step back to the picker when lists exist; otherwise close.
+    if (mode === "create" && lists.length > 0) {
+      setMode("select");
+      setMessage(null);
+      return;
+    }
+    collapse();
   }
 
   function handleAdd(event: React.FormEvent) {
     event.preventDefault();
-    if (!selectedListId) { setMessage("Select a list first"); return; }
     startTransition(async () => {
       try {
         setMessage(null);
-        await apiFetch(`/lists/${selectedListId}/items`, {
-          method: "POST",
-          body: JSON.stringify({ tmdbId, mediaType }),
-        });
+        if (mode === "create") {
+          const title = newListTitle.trim();
+          if (!title) { setMessage("Name your list"); return; }
+          await addList(title, userEmail, [tmdbId], undefined, mediaType);
+        } else {
+          if (!selectedListId) { setMessage("Select a list first"); return; }
+          await apiFetch(`/lists/${selectedListId}/items`, {
+            method: "POST",
+            body: JSON.stringify({ tmdbId, mediaType }),
+          });
+        }
         setInList(true);
         collapse();
         router.refresh();
       } catch (err) {
-        setMessage(err instanceof Error ? err.message : "Unable to add movie");
+        setMessage(err instanceof Error ? err.message : "Unable to save");
       }
     });
   }
@@ -148,35 +184,57 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
           >
             <button
               type="button"
-              onClick={collapse}
+              onClick={handleLeftButton}
+              aria-label={mode === "create" && lists.length > 0 ? "Back to list picker" : "Close"}
               className="shrink-0 px-1 text-base text-black/40 transition hover:text-black"
             >
-              ✕
+              {mode === "create" && lists.length > 0 ? "‹" : "✕"}
             </button>
-            <select
-              value={selectedListId}
-              onChange={(e) => setSelectedListId(e.target.value)}
-              disabled={loadingLists}
-              className="min-w-0 flex-1 bg-transparent text-center text-sm font-semibold text-black outline-none"
-            >
-              {loadingLists
-                ? <option>Loading…</option>
-                : <>
-                    <option value="">Pick a list</option>
-                    {lists.map((list) => (
-                      <option key={list.id ?? list.slug} value={list.id ?? ""} disabled={!list.id}>
-                        {list.title}
-                      </option>
-                    ))}
-                  </>
-              }
-            </select>
+            {mode === "create" ? (
+              <input
+                ref={inputRef}
+                value={newListTitle}
+                onChange={(e) => setNewListTitle(e.target.value)}
+                maxLength={64}
+                placeholder="New list name"
+                aria-label="New list name"
+                className="min-w-0 flex-1 bg-transparent text-center text-sm font-semibold text-black outline-none placeholder:text-black/40"
+              />
+            ) : (
+              <select
+                value={selectedListId}
+                onChange={(e) => {
+                  if (e.target.value === "__new__") {
+                    setNewListTitle("");
+                    setMessage(null);
+                    setMode("create");
+                  } else {
+                    setSelectedListId(e.target.value);
+                  }
+                }}
+                disabled={loadingLists}
+                className="min-w-0 flex-1 bg-transparent text-center text-sm font-semibold text-black outline-none"
+              >
+                {loadingLists
+                  ? <option>Loading…</option>
+                  : <>
+                      <option value="">Pick a list</option>
+                      {lists.map((list) => (
+                        <option key={list.id ?? list.slug} value={list.id ?? ""} disabled={!list.id}>
+                          {list.title}
+                        </option>
+                      ))}
+                      <option value="__new__">+ New list</option>
+                    </>
+                }
+              </select>
+            )}
             <button
               type="submit"
               disabled={isPending || loadingLists}
               className="shrink-0 px-2 text-sm font-semibold text-black disabled:opacity-40"
             >
-              {isPending ? "…" : "Add"}
+              {isPending ? "…" : mode === "create" ? "Create" : "Add"}
             </button>
           </div>
         </form>

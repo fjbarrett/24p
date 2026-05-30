@@ -12,6 +12,19 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "create-list-from-detail",
+    date: "2026-05-30",
+    title: "Start a new list right from a title",
+    summary:
+      "The add-to-list button on movie and TV pages now lets you spin up a brand-new list on the spot — name it and the title you're viewing is added straight away.",
+    type: "Improvement",
+    tags: ["movie detail", "tv detail", "lists"],
+    added: [
+      "Pick \"+ New list\" from the add-to-list button on any movie or TV page to create a list and drop the current title into it in one step.",
+      "If you don't have any lists yet, the button opens straight to naming your first one.",
+    ],
+  },
+  {
     slug: "movie-cast-links",
     date: "2026-04-22",
     title: "See who's in a film at a glance",
