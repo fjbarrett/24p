@@ -141,6 +141,7 @@ export async function addList(
   userEmail: string,
   initialMovies: number[] = [],
   color?: string,
+  mediaType: "movie" | "tv" = "movie",
 ): Promise<SavedList> {
   const email = normalizeEmail(userEmail);
   if (!email) {
@@ -149,7 +150,7 @@ export async function addList(
   const normalizedColor = normalizeListColor(color);
   const data = await apiFetch<{ list: ApiList }>("/lists", {
     method: "POST",
-    body: JSON.stringify({ title, movies: initialMovies, color: normalizedColor }),
+    body: JSON.stringify({ title, movies: initialMovies, color: normalizedColor, mediaType }),
   });
   const mapped = mapApiList(data.list);
   if (typeof window !== "undefined") {

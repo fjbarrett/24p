@@ -21,12 +21,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const payload = (await request.json()) as { title?: string; movies?: number[]; color?: string | null; tmdbId?: number };
+    const payload = (await request.json()) as {
+      title?: string;
+      movies?: number[];
+      color?: string | null;
+      tmdbId?: number;
+      mediaType?: "movie" | "tv";
+    };
     const movies = Array.isArray(payload.movies) ? payload.movies : [];
     if (Number.isInteger(payload.tmdbId) && !movies.includes(payload.tmdbId as number)) {
       movies.unshift(payload.tmdbId as number);
     }
-    const list = await createListForUser(payload.title ?? "", userEmail, movies, payload.color);
+    const mediaType = payload.mediaType === "tv" ? "tv" : "movie";
+    const list = await createListForUser(payload.title ?? "", userEmail, movies, payload.color, mediaType);
     return NextResponse.json({ list });
   } catch (error) {
     return errorResponse(error instanceof Error ? error.message : "Unable to create list");

@@ -263,13 +263,19 @@ export async function listListsForUser(userEmail: string, includeShared = false)
   return result.rows.map(mapList);
 }
 
-export async function createListForUser(title: string, userEmail: string, movies: number[] = [], color?: string | null) {
+export async function createListForUser(
+  title: string,
+  userEmail: string,
+  movies: number[] = [],
+  color?: string | null,
+  mediaType: "movie" | "tv" = "movie",
+) {
   const normalizedTitle = title.trim();
   if (!normalizedTitle) {
     throw new Error("Title is required");
   }
   const uniqueIds = Array.from(new Set(movies));
-  const items = uniqueIds.map((id) => ({ tmdbId: id, mediaType: "movie" as const }));
+  const items = uniqueIds.map((id) => ({ tmdbId: id, mediaType }));
   return insertList(normalizedTitle, items, color ?? null, userEmail);
 }
 
