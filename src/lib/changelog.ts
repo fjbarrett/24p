@@ -12,6 +12,18 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "known-for-clickable",
+    date: "2026-06-04",
+    title: "Jump straight to an artist's best-known titles",
+    summary:
+      "The \"known for\" titles highlighted at the top of an artist's page are now tappable — go straight to a title instead of scrolling to find it in the filmography.",
+    type: "Improvement",
+    tags: ["artists"],
+    changed: [
+      "The highlighted \"known for\" titles on an artist's page now link directly to that movie or show.",
+    ],
+  },
+  {
     slug: "create-list-from-detail",
     date: "2026-05-30",
     title: "Start a new list right from a title",
