@@ -47,6 +47,11 @@ jobs:
     name: Deploy to prod (24p.mov)
     runs-on: ubuntu-latest
     needs: build
+    # Without packages:read the GITHUB_TOKEN can't pull the private GHCR image,
+    # so `docker compose pull` on prod was denied on every run.
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v6
 
@@ -88,6 +93,10 @@ jobs:
           username: deploy
           key: ${{ secrets.PROD_DEPLOY_SSH_KEY }}
           script: |
+            # Fail loudly on any error (incl. a failed `docker compose pull`).
+            # Previously the trailing prune masked pull failures, so deploys
+            # reported success while prod stayed on a stale image.
+            set -eo pipefail
             cd /opt/24p
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
