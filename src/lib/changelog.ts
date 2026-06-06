@@ -12,6 +12,19 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "apple-tv-sign-in",
+    date: "2026-06-06",
+    title: "Sign in to 24p on Apple TV",
+    summary:
+      "There's now a 24p app for Apple TV. Generate a one-time code in Settings, enter it on your Apple TV, and your account comes with you — browse and search on the big screen.",
+    type: "Release",
+    tags: ["apple tv", "settings"],
+    added: [
+      "A new \"Apple TV\" card in Settings generates a one-time code to sign in on the 24p Apple TV app.",
+      "Revoke all Apple TV codes from the same card if you lose access to a device.",
+    ],
+  },
+  {
     slug: "known-for-clickable",
     date: "2026-06-04",
     title: "Jump straight to an artist's best-known titles",
