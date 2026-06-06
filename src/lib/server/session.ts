@@ -1,9 +1,11 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { resolveTvToken } from "@/lib/server/tv-tokens";
 
 export type SessionUser = {
   id: string | null;
@@ -16,14 +18,31 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const session = (await getServerSession(authOptions)) as Session | null;
   const user = session?.user;
   const email = user?.email?.trim().toLowerCase() ?? null;
-  if (!email) return null;
+  if (email) {
+    return {
+      id: user?.id ?? null,
+      email,
+      name: user?.name?.trim() ?? null,
+      image: user?.image?.trim() ?? null,
+    };
+  }
 
-  return {
-    id: user?.id ?? null,
-    email,
-    name: user?.name?.trim() ?? null,
-    image: user?.image?.trim() ?? null,
-  };
+  // Native clients (Apple TV) authenticate with a long-lived bearer token
+  // instead of the browser session cookie.
+  const bearerEmail = await resolveBearerEmail();
+  if (bearerEmail) {
+    return { id: null, email: bearerEmail, name: null, image: null };
+  }
+
+  return null;
+}
+
+async function resolveBearerEmail(): Promise<string | null> {
+  const authHeader = (await headers()).get("authorization");
+  if (!authHeader || !authHeader.toLowerCase().startsWith("bearer ")) return null;
+  const token = authHeader.slice(7).trim();
+  if (!token) return null;
+  return resolveTvToken(token);
 }
 
 export async function getSessionUserEmail() {

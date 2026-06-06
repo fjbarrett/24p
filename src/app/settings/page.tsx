@@ -1,5 +1,6 @@
 import { ImportListModal } from "@/components/import-list-modal";
 import { StreamingNotificationsCard } from "@/components/streaming-notifications-card";
+import { AppleTvCodeCard } from "@/components/apple-tv-code-card";
 import { SettingsShell } from "@/components/settings-shell";
 import { requireSessionEmail } from "@/lib/server/session";
 import { getProfileForUser } from "@/lib/server/profiles";
@@ -20,6 +21,7 @@ export default async function SettingsPage() {
     <SettingsShell title="Settings" subtitle={userEmail}>
       <ImportListModal />
       <StreamingNotificationsCard userEmail={userEmail} profile={profile} />
+      <AppleTvCodeCard />
     </SettingsShell>
   );
 }

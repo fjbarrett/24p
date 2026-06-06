@@ -104,6 +104,16 @@ const INCREMENTAL_MIGRATIONS = [
   `ALTER TABLE streaming_snapshots ADD COLUMN IF NOT EXISTS imdb_id TEXT`,
   `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS streaming_notifications BOOLEAN NOT NULL DEFAULT FALSE`,
   `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS price_notifications BOOLEAN NOT NULL DEFAULT FALSE`,
+  // Long-lived bearer tokens for native clients (e.g. Apple TV). Only the
+  // SHA-256 hash is stored; the plaintext is shown to the user once at mint.
+  `CREATE TABLE IF NOT EXISTS tv_tokens (
+    token_hash   TEXT PRIMARY KEY,
+    user_email   TEXT NOT NULL,
+    label        TEXT NOT NULL DEFAULT 'Apple TV',
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_used_at TIMESTAMPTZ
+  )`,
+  `CREATE INDEX IF NOT EXISTS tv_tokens_user_email_idx ON tv_tokens (user_email)`,
 ];
 
 let migrationPromise: Promise<void> | null = null;
