@@ -1,0 +1,32 @@
+name: 24p-tv
+
+options:
+  deploymentTarget:
+    tvOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    PRODUCT_BUNDLE_IDENTIFIER: com.fjbarrett.24ptv
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    GENERATE_INFOPLIST_FILE: YES
+    TARGETED_DEVICE_FAMILY: "3"
+    # Hardcoded so `xcodegen generate` doesn't wipe signing on every regen.
+    DEVELOPMENT_TEAM: 636U736G9T   # Frank Barrett
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  24p-tv:
+    type: application
+    platform: tvOS
+    sources:
+      - Sources
+    settings:
+      base:
+        PRODUCT_NAME: 24p
+        INFOPLIST_KEY_CFBundleDisplayName: 24p
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        SUPPORTS_MACCATALYST: NO

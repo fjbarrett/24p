@@ -3,10 +3,12 @@ import SwiftUI
 struct PosterCard: View {
     let movie: SimplifiedMovie
     var size: CGFloat = 200
+    /// Optional short text shown as a capsule in the poster's top-trailing corner (e.g. a rating).
+    var badge: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ZStack {
+            ZStack(alignment: .topTrailing) {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color(white: 0.15))
                     .frame(width: size, height: size * 1.5)
@@ -32,6 +34,17 @@ struct PosterCard: View {
                     }
                 } else {
                     placeholderIcon
+                }
+
+                if let badge {
+                    Text(badge)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.black.opacity(0.65), in: Capsule())
+                        .padding(8)
                 }
             }
             .frame(width: size, height: size * 1.5)
