@@ -7,21 +7,32 @@ final class ListDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     private let pageSize = 40
+    /// Owned lists are private to the user and already carry their items, so we
+    /// load titles straight from `list.items` instead of the public endpoint.
+    private let owned: Bool
 
-    init(username: String, slug: String, initialList: SavedList) {
+    init(initialList: SavedList, owned: Bool) {
         self.list = initialList
+        self.owned = owned
     }
 
-    func load(username: String, slug: String) async {
+    func load() async {
         guard !isLoading else { return }
         isLoading = true
         error = nil
         do {
-            let fetched = try await APIClient.shared.listDetail(username: username, slug: slug)
-            list = fetched
-            let ids = fetched.items
-            var orderedMovies: [SimplifiedMovie] = []
+            let ids: [SavedList.ListItem]
+            if owned {
+                ids = list.items
+            } else if let username = list.username {
+                let fetched = try await APIClient.shared.listDetail(username: username, slug: list.slug)
+                list = fetched
+                ids = fetched.items
+            } else {
+                ids = list.items
+            }
 
+            var orderedMovies: [SimplifiedMovie] = []
             for chunkStart in stride(from: 0, to: ids.count, by: pageSize) {
                 let chunk = Array(ids[chunkStart..<min(chunkStart + pageSize, ids.count)])
                 let results = await withTaskGroup(of: SimplifiedMovie?.self) { group in
@@ -51,23 +62,17 @@ final class ListDetailViewModel: ObservableObject {
 }
 
 struct ListDetailView: View {
-    let username: String
-    let slug: String
-    let initialList: SavedList
+    let list: SavedList
+    let owned: Bool
 
     @StateObject private var vm: ListDetailViewModel
 
     private let columns = [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 28)]
 
-    init(username: String, slug: String, initialList: SavedList) {
-        self.username = username
-        self.slug = slug
-        self.initialList = initialList
-        _vm = StateObject(wrappedValue: ListDetailViewModel(
-            username: username,
-            slug: slug,
-            initialList: initialList
-        ))
+    init(list: SavedList, owned: Bool = false) {
+        self.list = list
+        self.owned = owned
+        _vm = StateObject(wrappedValue: ListDetailViewModel(initialList: list, owned: owned))
     }
 
     var body: some View {
@@ -82,7 +87,7 @@ struct ListDetailView: View {
                 )
                 .overlay(alignment: .bottom) {
                     Button("Retry") {
-                        Task { await vm.load(username: username, slug: slug) }
+                        Task { await vm.load() }
                     }
                     .buttonStyle(.borderedProminent)
                     .padding(.bottom, 64)
@@ -116,12 +121,12 @@ struct ListDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    Task { await vm.load(username: username, slug: slug) }
+                    Task { await vm.load() }
                 } label: {
                     Label("Refresh", systemImage: "arrow.clockwise")
                 }
             }
         }
-        .task { await vm.load(username: username, slug: slug) }
+        .task { await vm.load() }
     }
 }
