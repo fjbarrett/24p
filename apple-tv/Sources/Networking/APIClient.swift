@@ -39,6 +39,10 @@ enum APIError: LocalizedError {
 final class APIClient {
     static let shared = APIClient()
 
+    /// Bearer token for authenticated requests. Set by `AuthStore` after sign-in;
+    /// attached to every request (public endpoints simply ignore it).
+    var authToken: String?
+
     private let session: URLSession = {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 45
@@ -64,6 +68,9 @@ final class APIClient {
         var request = URLRequest(url: url)
         request.timeoutInterval = 45
         request.cachePolicy = .reloadIgnoringLocalCacheData
+        if let authToken, !authToken.isEmpty {
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        }
 
         let data: Data
         let response: URLResponse
@@ -127,6 +134,37 @@ final class APIClient {
             query["year"] = "\(year)"
         }
         return try await get(path: "/api/watch-links", query: query)
+    }
+
+    // MARK: - Session (auth)
+
+    /// Validates the current `authToken` and returns the signed-in user + profile.
+    /// Throws `APIError.badStatus(code: 401, …)` if the token is missing/invalid.
+    func session() async throws -> SessionResponse {
+        try await get(path: "/api/session")
+    }
+
+    // MARK: - Streaming Catalog
+
+    /// Fetches the public JustWatch streaming catalog. Reuse the `seed` returned by the first
+    /// page on subsequent `popularity` pages to keep pagination ordering stable.
+    func streamingCatalog(
+        providers: [String] = [],
+        sort: String = "popularity",
+        seed: String? = nil,
+        page: Int = 1
+    ) async throws -> StreamingCatalogResponse {
+        var query: [String: String] = ["page": "\(page)"]
+        if !providers.isEmpty {
+            query["provider"] = providers.joined(separator: ",")
+        }
+        if sort == "rating" {
+            query["sort"] = "rating"
+        }
+        if let seed, !seed.isEmpty {
+            query["seed"] = seed
+        }
+        return try await get(path: "/api/streaming", query: query)
     }
 
     // MARK: - Lists
