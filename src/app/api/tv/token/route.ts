@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
-import { listTvTokens, mintTvToken, revokeTvTokens } from "@/lib/server/tv-tokens";
+import { createTvPairing, listTvTokens, revokeTvTokens } from "@/lib/server/tv-tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -16,15 +16,15 @@ export async function GET() {
   }
 }
 
-// POST — mint a new Apple TV token. The plaintext is returned exactly once.
+// POST — create a pairing and return the short-lived 4-digit PIN to display.
 export async function POST() {
   const userEmail = await getSessionUserEmail();
   if (!userEmail) return errorResponse("Unauthorized", 401);
   try {
-    const { token } = await mintTvToken(userEmail);
-    return NextResponse.json({ token });
+    const { pin, expiresInSeconds } = await createTvPairing(userEmail);
+    return NextResponse.json({ pin, expiresInSeconds });
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Unable to create Apple TV token", 500);
+    return errorResponse(error instanceof Error ? error.message : "Unable to create Apple TV code", 500);
   }
 }
 

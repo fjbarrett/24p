@@ -114,6 +114,12 @@ const INCREMENTAL_MIGRATIONS = [
     last_used_at TIMESTAMPTZ
   )`,
   `CREATE INDEX IF NOT EXISTS tv_tokens_user_email_idx ON tv_tokens (user_email)`,
+  // Pairing columns: a short-lived 4-digit PIN is exchanged for the bearer
+  // (held in pending_token until claimed, then nulled).
+  `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS pin TEXT`,
+  `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS pin_expires_at TIMESTAMPTZ`,
+  `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS pending_token TEXT`,
+  `CREATE INDEX IF NOT EXISTS tv_tokens_pin_idx ON tv_tokens (pin)`,
 ];
 
 let migrationPromise: Promise<void> | null = null;
