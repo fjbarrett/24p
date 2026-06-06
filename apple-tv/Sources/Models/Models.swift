@@ -117,6 +117,98 @@ struct WatchLinkOffer: Codable, Identifiable, Hashable {
     }
 }
 
+// MARK: - Session (auth)
+
+struct SessionUser: Codable, Hashable {
+    let id: String?
+    let email: String
+    let name: String?
+    let image: String?
+}
+
+struct SessionProfile: Codable, Hashable {
+    let username: String?
+    let isPublic: Bool?
+}
+
+struct SessionResponse: Codable {
+    let user: SessionUser
+    let profile: SessionProfile?
+}
+
+// MARK: - Streaming Catalog
+
+struct StreamingCatalogMovie: Codable, Identifiable, Hashable {
+    var id: String { justWatchId }
+    let justWatchId: String
+    let tmdbId: Int
+    let imdbId: String?
+    let contentType: String        // "MOVIE" | "SHOW"
+    let title: String
+    let releaseYear: Int?
+    let overview: String?
+    let posterUrl: String?
+    let backdropUrls: [String]
+    let primaryOfferUrl: String?
+    let providerName: String
+    let providerShortName: String
+    let popularity: Double?
+    let imdbRating: Double?
+    let justWatchRating: Double?
+    let chartRank: Int?
+
+    /// Maps JustWatch content type onto the app's `mediaType` convention used by DetailView.
+    var mediaType: String { contentType == "SHOW" ? "tv" : "movie" }
+
+    /// JustWatch catalog posters are already large (`images.justwatch.com`, S718 profile),
+    /// so no resize is needed — use the URL as-is.
+    var posterURL: URL? {
+        guard let posterUrl else { return nil }
+        return URL(string: posterUrl)
+    }
+
+    /// Adapts a catalog entry to the shared `SimplifiedMovie` so it can reuse `PosterCard`.
+    /// The `/w185/` swap inside `SimplifiedMovie.posterURL` is a no-op for JustWatch URLs.
+    var asSimplifiedMovie: SimplifiedMovie {
+        SimplifiedMovie(
+            tmdbId: tmdbId,
+            title: title,
+            mediaType: mediaType,
+            overview: overview,
+            releaseYear: releaseYear,
+            rating: justWatchRating,
+            imdbRating: imdbRating,
+            posterUrl: posterUrl,
+            backdropUrl: backdropUrls.first,
+            runtime: nil,
+            genres: nil,
+            tagline: nil,
+            imdbId: imdbId,
+            director: nil,
+            cast: nil
+        )
+    }
+}
+
+struct StreamingPlatform: Codable, Identifiable, Hashable {
+    var id: String { shortName }
+    let packageId: Int
+    let name: String
+    let technicalName: String
+    let shortName: String
+    let iconUrl: String?
+}
+
+struct StreamingCatalogResponse: Codable {
+    let movies: [StreamingCatalogMovie]
+    let providers: [StreamingPlatform]
+    let selectedProviders: [String]
+    let sort: String
+    let seed: String
+    let page: Int
+    let hasNextPage: Bool
+}
+
 // MARK: - Lists
 
 struct SavedList: Codable, Identifiable, Hashable {

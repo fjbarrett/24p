@@ -2,20 +2,17 @@
 
 A tvOS client for the 24p film tracking webapp. Browse public lists and search movies/TV shows, with streaming provider info pulled from the same backend API.
 
-## Setup in Xcode
+## Build
 
-1. Open Xcode → **File → New → Project**
-2. Choose **tvOS → App**
-3. Name: `24p-tv`, Bundle ID: `com.yourname.24p-tv`
-4. Language: **Swift**, Interface: **SwiftUI**
-5. Uncheck "Include Tests" (optional)
-6. Save the project inside this `apple-tv/` directory
+The Xcode project is generated from `project.yml` with [XcodeGen](https://github.com/yonsm/XcodeGen) (the `.xcodeproj` is git-ignored). From this `apple-tv/` directory:
 
-### Add source files
+```sh
+brew install xcodegen   # once
+xcodegen generate       # regenerate 24p-tv.xcodeproj after pulling or editing project.yml
+open 24p-tv.xcodeproj
+```
 
-Delete the generated `ContentView.swift` and `<AppName>App.swift`, then drag the `Sources/` folder into the Xcode project navigator. When prompted, choose:
-- ✅ Copy items if needed
-- ✅ Add to target: 24p-tv
+The signing team is pinned in `project.yml` (`DEVELOPMENT_TEAM`) so regeneration doesn't reset it.
 
 ### Configure the base URL
 
