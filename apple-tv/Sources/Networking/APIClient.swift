@@ -96,6 +96,43 @@ final class APIClient {
         }
     }
 
+    private func post<T: Decodable>(path: String, body: [String: Any]) async throws -> T {
+        guard let url = URL(string: APIEnvironment.baseURL + path) else { throw APIError.badURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 45
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let authToken, !authToken.isEmpty {
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            log("network error", path: path, detail: error.localizedDescription)
+            throw APIError.networkError(path: path, underlying: error)
+        }
+
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            let body = responseSnippet(from: data)
+            log("bad status \(http.statusCode)", path: path, detail: body)
+            throw APIError.badStatus(path: path, code: http.statusCode, body: body)
+        }
+
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            let body = responseSnippet(from: data)
+            log("decode error", path: path, detail: "\(error.localizedDescription) | \(body ?? "no body")")
+            throw APIError.decodingError(path: path, underlying: error, body: body)
+        }
+    }
+
     // MARK: - Search
 
     func search(query: String) async throws -> [SimplifiedMovie] {
@@ -142,6 +179,12 @@ final class APIClient {
     /// Throws `APIError.badStatus(code: 401, …)` if the token is missing/invalid.
     func session() async throws -> SessionResponse {
         try await get(path: "/api/session")
+    }
+
+    /// Exchanges a 4-digit pairing PIN for a durable bearer token.
+    func claim(pin: String) async throws -> String {
+        let response: ClaimResponse = try await post(path: "/api/tv/claim", body: ["pin": pin])
+        return response.token
     }
 
     // MARK: - Streaming Catalog
