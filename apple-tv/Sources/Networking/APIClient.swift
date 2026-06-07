@@ -220,6 +220,13 @@ final class APIClient {
         return result.lists
     }
 
+    /// The signed-in user's own lists (requires a valid `authToken`). Each list
+    /// already includes its items, so no per-list detail fetch is needed.
+    func myLists() async throws -> [SavedList] {
+        let result: PublicListsResponse = try await get(path: "/api/lists")
+        return result.lists
+    }
+
     func listDetail(username: String, slug: String) async throws -> SavedList {
         let result: ListDetailResponse = try await get(
             path: "/api/lists/public/\(username)/\(slug)"
