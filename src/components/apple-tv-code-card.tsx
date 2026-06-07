@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 
 export function AppleTvCodeCard() {
-  const [token, setToken] = useState<string | null>(null);
+  const [pin, setPin] = useState<string | null>(null);
+  const [expiresInSeconds, setExpiresInSeconds] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -19,8 +20,9 @@ export function AppleTvCodeCard() {
           const body = (await res.json().catch(() => null)) as { error?: string } | null;
           throw new Error(body?.error ?? `Request failed (${res.status})`);
         }
-        const body = (await res.json()) as { token: string };
-        setToken(body.token);
+        const body = (await res.json()) as { pin: string; expiresInSeconds?: number };
+        setPin(body.pin);
+        setExpiresInSeconds(body.expiresInSeconds ?? null);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Unable to create a code.");
       }
@@ -31,7 +33,7 @@ export function AppleTvCodeCard() {
     if (isPending) return;
     startTransition(async () => {
       setMessage(null);
-      setToken(null);
+      setPin(null);
       setCopied(false);
       try {
         const res = await fetch("/api/tv/token", { method: "DELETE" });
@@ -44,14 +46,17 @@ export function AppleTvCodeCard() {
   };
 
   const copy = async () => {
-    if (!token) return;
+    if (!pin) return;
     try {
-      await navigator.clipboard.writeText(token);
+      await navigator.clipboard.writeText(pin);
       setCopied(true);
     } catch {
       setCopied(false);
     }
   };
+
+  const expiryLabel =
+    expiresInSeconds && expiresInSeconds > 0 ? `Expires in ${Math.round(expiresInSeconds / 60)} minutes.` : "";
 
   return (
     <section className="space-y-4 rounded-[20px] border border-white/8 bg-white/[0.03] p-3 sm:p-4">
@@ -60,17 +65,17 @@ export function AppleTvCodeCard() {
       <div className="space-y-0.5">
         <p className="text-sm font-medium text-white">Sign in on Apple TV</p>
         <p className="text-sm text-black-400">
-          Generate a one-time code, then enter it on the 24p Apple TV app&rsquo;s Sign In screen to access your account.
+          Generate a 4-digit code, then enter it on the 24p Apple TV app&rsquo;s Sign In screen to access your account.
         </p>
       </div>
 
-      {token ? (
+      {pin ? (
         <div className="space-y-3">
-          <div className="rounded-2xl border border-white/12 bg-black/40 px-4 py-3 text-center">
-            <p className="font-mono text-2xl tracking-[0.3em] text-white">{token}</p>
+          <div className="rounded-2xl border border-white/12 bg-black/40 px-4 py-4 text-center">
+            <p className="font-mono text-5xl tracking-[0.4em] text-white">{pin}</p>
           </div>
           <p className="text-xs text-black-400">
-            Enter this on your Apple TV now — it won&rsquo;t be shown again. Keep it private; anyone with the code can access your account.
+            Enter this on your Apple TV now. {expiryLabel} It can only be used once.
           </p>
           <div className="flex gap-2">
             <button
@@ -82,7 +87,7 @@ export function AppleTvCodeCard() {
             </button>
             <button
               type="button"
-              onClick={() => setToken(null)}
+              onClick={() => setPin(null)}
               className="rounded-xl border border-white/10 bg-white/6 px-3 py-1.5 text-sm font-medium text-black-300 transition hover:bg-white/10 hover:text-white"
             >
               Done

@@ -136,6 +136,10 @@ struct SessionResponse: Codable {
     let profile: SessionProfile?
 }
 
+struct ClaimResponse: Codable {
+    let token: String
+}
+
 // MARK: - Streaming Catalog
 
 struct StreamingCatalogMovie: Codable, Identifiable, Hashable {
