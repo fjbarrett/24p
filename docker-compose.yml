@@ -29,7 +29,6 @@ services:
       STRAWBERRY_BASE_URL: ${STRAWBERRY_BASE_URL:-}
       TMDB_API_KEY: ${TMDB_API_KEY:-}
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/24p}
-      CRON_SECRET: ${CRON_SECRET:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     depends_on:
       db:
