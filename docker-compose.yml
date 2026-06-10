@@ -35,6 +35,14 @@ services:
       db:
         condition: service_healthy
         required: false
+    healthcheck:
+      # `/` renders without a DB round-trip for anonymous requests, so this is a
+      # cheap liveness probe. start_period covers startup + migrations.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     ports:
       - "127.0.0.1:3000:3000"
 
