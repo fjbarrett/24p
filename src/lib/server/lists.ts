@@ -87,11 +87,18 @@ function slugify(value: string) {
   return (slug || "list").slice(0, 60);
 }
 
-function mapList(row: ListRow): SavedList {
+// `viewerEmail` is the email of whoever this list is being returned to. The
+// owner's email is only ever exposed back to the owner themselves; every other
+// caller (anonymous browsing, shared-with collaborators, the public lists API)
+// receives "" so we never leak a user's email address. UI ownership checks rely
+// on `userEmail === viewerEmail`, which still holds for the owner.
+function mapList(row: ListRow, viewerEmail?: string | null): SavedList {
   const items: ListItem[] = (Array.isArray(row.items) ? row.items : []).map((item) => ({
     tmdbId: item.tmdbId,
     mediaType: item.mediaType === "tv" ? "tv" : "movie",
   }));
+  const ownerEmail = normalizeEmail(row.user_email);
+  const normalizedViewer = viewerEmail ? normalizeEmail(viewerEmail) : null;
   return {
     id: row.id,
     title: row.title,
@@ -101,7 +108,7 @@ function mapList(row: ListRow): SavedList {
     items,
     movies: items.map((item) => item.tmdbId),
     color: normalizeColor(row.color),
-    userEmail: normalizeEmail(row.user_email),
+    userEmail: normalizedViewer === ownerEmail ? ownerEmail : "",
     username: row.username,
     canEdit: row.can_edit,
   };
@@ -221,7 +228,7 @@ async function insertList(
   }
   const created = await fetchListById(listId);
   if (!created) throw new Error("List not found");
-  return mapList({ ...created, can_edit: true });
+  return mapList({ ...created, can_edit: true }, userEmail);
 }
 
 export async function getListByIdForEditor(listId: string, userEmail: string) {
@@ -230,7 +237,7 @@ export async function getListByIdForEditor(listId: string, userEmail: string) {
   const canEdit =
     normalizeEmail(row.user_email) === userEmail || (await isListSharedWithEdit(listId, userEmail));
   if (!canEdit) return null;
-  return mapList({ ...row, can_edit: canEdit });
+  return mapList({ ...row, can_edit: canEdit }, userEmail);
 }
 
 export async function listListsForUser(userEmail: string, includeShared = false) {
@@ -260,7 +267,7 @@ export async function listListsForUser(userEmail: string, includeShared = false)
         ORDER BY lists.created_at DESC
       `;
   const result = await pool.query<ListRow>(query, [userEmail]);
-  return result.rows.map(mapList);
+  return result.rows.map((row) => mapList(row, userEmail));
 }
 
 export async function createListForUser(
@@ -310,7 +317,7 @@ export async function updateListForUser(
   if (!updated) {
     throw new Error("List not found");
   }
-  return mapList({ ...updated, can_edit: true });
+  return mapList({ ...updated, can_edit: true }, userEmail);
 }
 
 export async function addMovieToListForUser(
@@ -343,7 +350,7 @@ export async function addMovieToListForUser(
 
   const updated = await fetchListById(listId);
   if (!updated) throw new Error("List not found");
-  return mapList({ ...updated, can_edit: canEdit });
+  return mapList({ ...updated, can_edit: canEdit }, userEmail);
 }
 
 export async function removeMovieFromListForUser(listId: string, tmdbId: number, userEmail: string) {
@@ -362,7 +369,7 @@ export async function removeMovieFromListForUser(listId: string, tmdbId: number,
 
   const updated = await fetchListById(listId);
   if (!updated) throw new Error("List not found");
-  return mapList({ ...updated, can_edit: canEdit });
+  return mapList({ ...updated, can_edit: canEdit }, userEmail);
 }
 
 export async function deleteListForUser(listId: string, userEmail: string) {
@@ -413,7 +420,7 @@ export async function getListByUsernameSlugForViewer(username: string, slug: str
     return null;
   }
 
-  return mapList({ ...list, can_edit: canEdit });
+  return mapList({ ...list, can_edit: canEdit }, normalizedViewer);
 }
 
 export async function loadPublicLists(limit = 24, username?: string | null) {
@@ -438,7 +445,7 @@ export async function loadPublicLists(limit = 24, username?: string | null) {
       `,
       [ownerEmail, limit],
     );
-    return result.rows.map(mapList);
+    return result.rows.map((row) => mapList(row));
   }
 
   const result = await pool.query<ListRow>(
@@ -452,7 +459,7 @@ export async function loadPublicLists(limit = 24, username?: string | null) {
     `,
     [limit],
   );
-  return result.rows.map(mapList);
+  return result.rows.map((row) => mapList(row));
 }
 
 export async function loadFavoritesForUser(userEmail: string) {
@@ -471,10 +478,13 @@ export async function loadFavoritesForUser(userEmail: string) {
   );
   return Promise.all(
     result.rows.map(async (row) =>
-      mapList({
-        ...row,
-        can_edit: normalizeEmail(row.user_email) === userEmail || (await isListSharedWithEdit(row.id, userEmail)),
-      }),
+      mapList(
+        {
+          ...row,
+          can_edit: normalizeEmail(row.user_email) === userEmail || (await isListSharedWithEdit(row.id, userEmail)),
+        },
+        userEmail,
+      ),
     ),
   );
 }
