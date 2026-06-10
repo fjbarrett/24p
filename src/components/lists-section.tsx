@@ -12,7 +12,7 @@ type ListsSectionProps = {
 
 export function ListsSection({ lists, userEmail, posters }: ListsSectionProps) {
   return (
-    <div className="mx-auto w-full space-y-4 rounded-3xl bg-black-900/30 p-4 backdrop-blur sm:space-y-6 sm:p-6" id="lists">
+    <div className="mx-auto w-full space-y-4 sm:space-y-6" id="lists">
       <ListGallery
         lists={lists}
         posters={posters}
