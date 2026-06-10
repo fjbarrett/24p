@@ -4,7 +4,7 @@ import { cache } from "react";
 import { randomUUID } from "crypto";
 import type { ListItem, ListShare, SavedList } from "@/lib/list-store";
 import { getPool } from "@/lib/server/db";
-import { fetchTmdbArtwork, findTmdbMovieId } from "@/lib/server/tmdb";
+import { fetchTmdbArtwork, fetchTmdbMovies, fetchTmdbShow, findTmdbMovieId } from "@/lib/server/tmdb";
 import { saveRatingsForUser } from "@/lib/server/ratings";
 
 type ListRow = {
@@ -743,3 +743,40 @@ export async function resolveListPreviewPosters(
   }
   return byList;
 }
+
+export type ListPreviewItem = {
+  tmdbId: number;
+  mediaType: "movie" | "tv";
+  title: string;
+  year: number | null;
+  posterUrl: string | null;
+};
+
+// Resolves the first `limit` films of a list with their titles — used for
+// SEO descriptions and the JSON-LD ItemList. Memoized per request and keyed on
+// the (request-cached) list object, so generateMetadata and the page share it.
+export const getListPreviewItems = cache(async (list: SavedList, limit = 12): Promise<ListPreviewItem[]> => {
+  const items = list.items.slice(0, limit);
+  const movieIds = items.filter((item) => item.mediaType !== "tv").map((item) => item.tmdbId);
+  const tvIds = items.filter((item) => item.mediaType === "tv").map((item) => item.tmdbId);
+
+  const [movies, shows] = await Promise.all([
+    fetchTmdbMovies(movieIds),
+    Promise.allSettled(tvIds.map((id) => fetchTmdbShow(id))).then((results) =>
+      results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : [])),
+    ),
+  ]);
+
+  const byKey = new Map<string, { title: string; year: number | null; posterUrl: string | null }>();
+  for (const movie of movies) {
+    byKey.set(`movie:${movie.tmdbId}`, { title: movie.title, year: movie.releaseYear ?? null, posterUrl: movie.posterUrl ?? null });
+  }
+  for (const show of shows) {
+    byKey.set(`tv:${show.tmdbId}`, { title: show.title, year: show.releaseYear ?? null, posterUrl: show.posterUrl ?? null });
+  }
+
+  return items.flatMap((item) => {
+    const found = byKey.get(`${item.mediaType}:${item.tmdbId}`);
+    return found ? [{ tmdbId: item.tmdbId, mediaType: item.mediaType, ...found }] : [];
+  });
+});
