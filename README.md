@@ -38,10 +38,6 @@ A film tracking app for building and sharing movie and TV lists. Search any titl
 - Profile visibility toggle (public / private)
 - Customizable username
 
-### Notifications
-- Email alerts when titles you're watching become available on new streaming services
-- Price drop alerts for rental/purchase titles
-
 ### Other
 - Cast credits with linked filmographies on movie detail pages
 - Watch provider links (streaming, rent, buy) powered by JustWatch
@@ -96,7 +92,6 @@ Services:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) — create an OAuth 2.0 Web Client |
 | `TMDB_API_KEY` | [TMDB API settings](https://www.themoviedb.org/settings/api) — free account required |
 | `DATABASE_URL` | Your PostgreSQL connection string |
-| `CRON_SECRET` | Any random string; the bearer token the notification cron must present |
 | `ANTHROPIC_API_KEY` | [Anthropic Console](https://console.anthropic.com) — powers per-list recommendations |
 
 For Google OAuth, add these redirect URIs in the Cloud Console:

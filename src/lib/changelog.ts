@@ -12,6 +12,18 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "retire-streaming-notifications",
+    date: "2026-06-10",
+    title: "Streaming & price notifications retired",
+    summary:
+      "The email alerts for new streaming availability and price drops have been removed, along with their Settings toggles. Everything else — lists, search, streaming discovery, and recommendations — is unaffected.",
+    type: "Retired",
+    tags: ["notifications", "settings"],
+    removed: [
+      "Streaming-availability and price-drop email notifications, and their Settings toggles, have been removed.",
+    ],
+  },
+  {
     slug: "list-card-redesign",
     date: "2026-06-09",
     title: "Your lists now show their posters at a glance",
