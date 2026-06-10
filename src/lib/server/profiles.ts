@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import type { UserProfile } from "@/lib/profile-store";
 import { getPool } from "@/lib/server/db";
 
@@ -105,7 +106,9 @@ export async function setProfileVisibilityForUser(userEmail: string, isPublic: b
   return mapProfile(result.rows[0]);
 }
 
-export async function getPublicProfileByUsername(username: string) {
+// Memoized per request: public profile + list pages resolve the same username
+// in both generateMetadata and the page body.
+export const getPublicProfileByUsername = cache(async (username: string) => {
   const pool = getPool();
   let normalized: string;
   try {
@@ -118,4 +121,4 @@ export async function getPublicProfileByUsername(username: string) {
     [normalized],
   );
   return result.rows[0] ? mapProfile(result.rows[0]) : null;
-}
+});

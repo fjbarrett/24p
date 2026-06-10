@@ -159,17 +159,23 @@ export function ListMoviesGrid({
     return count;
   }, [listMovieIds, moviesById]);
 
-  const updateListCache = (updatedMovies: number[]) => {
+  const updateListCache = (updatedItems: ListItem[]) => {
     if (!userEmail || !listId || typeof window === "undefined") return;
     try {
       const key = `lists:${userEmail.trim().toLowerCase()}`;
       const existing = window.localStorage.getItem(key);
       if (!existing) return;
-      const parsed = JSON.parse(existing) as SavedList[];
-      const next = parsed.map((entry) =>
-        entry.id === listId ? { ...entry, movies: updatedMovies } : entry,
+      // The store persists a { ts, lists } envelope, not a bare array — parsing
+      // it as SavedList[] threw and the catch swallowed it, so the cache never
+      // actually updated after add/remove (stale "in list" state for ~5 min).
+      const envelope = JSON.parse(existing) as { ts: number; lists: SavedList[] };
+      if (!envelope || !Array.isArray(envelope.lists)) return;
+      const nextLists = envelope.lists.map((entry) =>
+        entry.id === listId
+          ? { ...entry, items: updatedItems, movies: updatedItems.map((item) => item.tmdbId) }
+          : entry,
       );
-      window.localStorage.setItem(key, JSON.stringify(next));
+      window.localStorage.setItem(key, JSON.stringify({ ts: Date.now(), lists: nextLists }));
     } catch {
       // ignore cache errors
     }
@@ -184,7 +190,7 @@ export function ListMoviesGrid({
       });
       const updatedItems = Array.isArray(payload.list.items) ? payload.list.items : [];
       setListItems(updatedItems);
-      updateListCache(updatedItems.map((item) => item.tmdbId));
+      updateListCache(updatedItems);
     } catch {
       // ignore errors for now; could surface toast
     } finally {
