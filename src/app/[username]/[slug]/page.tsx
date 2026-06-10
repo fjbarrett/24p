@@ -7,9 +7,11 @@ import { FavoriteToggle } from "@/components/favorite-toggle";
 import type { Metadata } from "next";
 import { getPublicProfileByUsername } from "@/lib/server/profiles";
 import { getRatingsMapForUser } from "@/lib/server/ratings";
-import { getListByUsernameSlugForViewer, loadFavoritesForUser } from "@/lib/server/lists";
+import { getListByUsernameSlugForViewer, getListPreviewItems, loadFavoritesForUser } from "@/lib/server/lists";
 import { serializeJsonLd } from "@/lib/json-ld";
 import { getAppUrl } from "@/lib/app-url";
+import { toMovieSlug } from "@/lib/slug";
+import { ShareButton } from "@/components/share-button";
 
 export const dynamic = "force-dynamic";
 
@@ -30,16 +32,23 @@ export async function generateMetadata({
   }
 
   const owner = publicList.username ?? username;
+  const count = publicList.movies.length;
+  const previewItems = await getListPreviewItems(publicList, 20);
+  const sampleTitles = previewItems.slice(0, 3).map((item) => item.title);
   const title = `${publicList.title} — @${owner}`;
-  const description = `${publicList.movies.length} films in this 24p list.`;
+  const description =
+    sampleTitles.length > 0
+      ? `${count} ${count === 1 ? "film" : "films"} curated by @${owner} on 24p, including ${sampleTitles.join(", ")}. See where to stream them.`
+      : `${count} ${count === 1 ? "film" : "films"} curated by @${owner} on 24p. See where to stream them.`;
   const canonical = `/${encodeURIComponent(owner)}/${encodeURIComponent(publicList.slug)}`;
 
   return {
     title,
     description,
     alternates: { canonical },
-    openGraph: { title, description, url: canonical },
-    twitter: { title, description },
+    // The poster-collage image comes from opengraph-image.tsx automatically.
+    openGraph: { title, description, url: canonical, type: "website" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -66,13 +75,24 @@ export default async function ListDetail({
   const canFavorite = !!viewerEmail && viewerEmail !== list.userEmail;
 
   const canonical = `/${encodeURIComponent(ownerUsername)}/${encodeURIComponent(list.slug)}`;
+  const shareUrl = new URL(canonical, getAppUrl()).toString();
+  const previewItems = await getListPreviewItems(list, 20);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: list.title,
     description: `${list.movies.length} films curated by @${ownerUsername} on 24p.`,
-    url: new URL(canonical, getAppUrl()).toString(),
+    url: shareUrl,
     numberOfItems: list.movies.length,
+    itemListElement: previewItems.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.title,
+      url: new URL(
+        `${item.mediaType === "tv" ? "/tv" : "/movies"}/${toMovieSlug(item.title, item.year)}`,
+        getAppUrl(),
+      ).toString(),
+    })),
   };
 
   return (
@@ -107,11 +127,14 @@ export default async function ListDetail({
                 </span>
               ) : null}
             </div>
-            {canFavorite && (
-              <div className="flex justify-center pb-4 opacity-70">
-                <FavoriteToggle listId={list.id} userEmail={viewerEmail} initialFavorite={isFavorite} />
-              </div>
-            )}
+            <div className="flex items-center justify-center gap-3 pb-4">
+              <ShareButton url={shareUrl} title={list.title} />
+              {canFavorite && (
+                <div className="opacity-70">
+                  <FavoriteToggle listId={list.id} userEmail={viewerEmail} initialFavorite={isFavorite} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="!mt-0">
