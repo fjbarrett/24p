@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { errorResponse } from "@/lib/server/http";
+import { serverError } from "@/lib/server/http";
 import { getStreamingCatalogPayload } from "@/lib/server/streaming-catalog";
 
 export async function GET(request: Request) {
@@ -15,6 +15,6 @@ export async function GET(request: Request) {
       headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" },
     });
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Unable to load streaming catalog", 500);
+    return serverError("api/streaming", error, "Unable to load streaming catalog");
   }
 }

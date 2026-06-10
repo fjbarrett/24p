@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { setPriceNotificationsForUser } from "@/lib/server/profiles";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, serverError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function PATCH(request: Request) {
@@ -20,6 +20,13 @@ export async function PATCH(request: Request) {
     return errorResponse("enabled must be a boolean", 400);
   }
 
-  const profile = await setPriceNotificationsForUser(userEmail, (body as { enabled: boolean }).enabled);
-  return NextResponse.json({ profile });
+  try {
+    const profile = await setPriceNotificationsForUser(userEmail, (body as { enabled: boolean }).enabled);
+    return NextResponse.json({ profile });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Profile not found") {
+      return errorResponse("Set a username before changing notification settings", 404);
+    }
+    return serverError("api/profiles/price-notifications", error, "Unable to update notifications");
+  }
 }
