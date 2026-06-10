@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import { ImageResponse } from "next/og";
 import { getListByUsernameSlugForViewer, resolveListPreviewPosters } from "@/lib/server/lists";
 
@@ -36,7 +35,7 @@ export default async function Image({ params }: { params: Promise<{ username: st
         <div style={{ display: "flex", position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
           {bigPosters.length > 0 ? (
             bigPosters.map((src, index) => (
-              <img key={index} src={src} style={{ width: "20%", height: "100%", objectFit: "cover" }} />
+              <img key={index} src={src} alt="" style={{ width: "20%", height: "100%", objectFit: "cover" }} />
             ))
           ) : (
             <div
