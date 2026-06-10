@@ -753,31 +753,32 @@ async function fetchStreamingCatalogAllImpl({
   const queryProviders = expandProviderShortNames(normalizedProviders);
   const collected = new Map<number, StreamingCatalogMovie>();
 
-  for (
-    let batch = 0;
-    batch < Math.ceil(RATING_SORT_LIMIT / RATING_SORT_BATCH_SIZE) + 2 && collected.size < RATING_SORT_LIMIT;
-    batch += 1
-  ) {
-    const data = await postJustWatch<JwPopularTitlesResult>(POPULAR_TITLES_QUERY, {
-      country: locale,
-      language: DEFAULT_LANGUAGE,
-      first: RATING_SORT_BATCH_SIZE,
-      offset: batch * RATING_SORT_BATCH_SIZE,
-      popularTitlesFilter: {
-        objectTypes: ["MOVIE", "SHOW"],
-        ...(queryProviders.length ? { packages: queryProviders } : {}),
-      },
-      formatPoster: "JPG",
-      profile: "S718",
-      backdropProfile: "S1920",
-      filter: { bestOnly: true },
-    });
+  // The batches have fixed, independent offsets, so fire them all at once
+  // instead of awaiting each in series (was up to 5 sequential 5s round-trips).
+  const batchCount = Math.ceil(RATING_SORT_LIMIT / RATING_SORT_BATCH_SIZE) + 2;
+  const batchResults = await Promise.all(
+    Array.from({ length: batchCount }, (_unused, batch) =>
+      postJustWatch<JwPopularTitlesResult>(POPULAR_TITLES_QUERY, {
+        country: locale,
+        language: DEFAULT_LANGUAGE,
+        first: RATING_SORT_BATCH_SIZE,
+        offset: batch * RATING_SORT_BATCH_SIZE,
+        popularTitlesFilter: {
+          objectTypes: ["MOVIE", "SHOW"],
+          ...(queryProviders.length ? { packages: queryProviders } : {}),
+        },
+        formatPoster: "JPG",
+        profile: "S718",
+        backdropProfile: "S1920",
+        filter: { bestOnly: true },
+      }),
+    ),
+  );
 
+  for (const data of batchResults) {
     const nodes = (data?.data?.popularTitles?.edges ?? [])
       .map((edge) => edge?.node)
       .filter((node): node is JwMovie => Boolean(node && (node.objectType === "MOVIE" || node.objectType === "SHOW")));
-
-    if (!nodes.length) break;
 
     for (const node of nodes) {
       const offer = getStreamingOffer(node, normalizedProviders);

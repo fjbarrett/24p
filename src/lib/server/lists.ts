@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { randomUUID } from "crypto";
 import type { ListItem, ListShare, SavedList } from "@/lib/list-store";
 import { getPool } from "@/lib/server/db";
@@ -240,7 +241,9 @@ export async function getListByIdForEditor(listId: string, userEmail: string) {
   return mapList({ ...row, can_edit: canEdit }, userEmail);
 }
 
-export async function listListsForUser(userEmail: string, includeShared = false) {
+// Memoized per request: the home page and the layout's GlobalSearchHeader both
+// fetch the signed-in user's lists, and metadata + page can repeat it too.
+export const listListsForUser = cache(async (userEmail: string, includeShared = false) => {
   const pool = getPool();
   const query = includeShared
     ? `
@@ -268,7 +271,7 @@ export async function listListsForUser(userEmail: string, includeShared = false)
       `;
   const result = await pool.query<ListRow>(query, [userEmail]);
   return result.rows.map((row) => mapList(row, userEmail));
-}
+});
 
 export async function createListForUser(
   title: string,
@@ -381,7 +384,9 @@ export async function deleteListForUser(listId: string, userEmail: string) {
   await pool.query("DELETE FROM lists WHERE id = $1", [listId]);
 }
 
-export async function getListByUsernameSlugForViewer(username: string, slug: string, viewerEmail?: string | null) {
+// Memoized per request: list-detail pages resolve the same list in both
+// generateMetadata and the page body (a multi-table join).
+export const getListByUsernameSlugForViewer = cache(async (username: string, slug: string, viewerEmail?: string | null) => {
   const pool = getPool();
   let normalizedUsername: string;
   try {
@@ -421,7 +426,7 @@ export async function getListByUsernameSlugForViewer(username: string, slug: str
   }
 
   return mapList({ ...list, can_edit: canEdit }, normalizedViewer);
-}
+});
 
 export async function loadPublicLists(limit = 24, username?: string | null) {
   const pool = getPool();
@@ -462,7 +467,7 @@ export async function loadPublicLists(limit = 24, username?: string | null) {
   return result.rows.map((row) => mapList(row));
 }
 
-export async function loadFavoritesForUser(userEmail: string) {
+export const loadFavoritesForUser = cache(async (userEmail: string) => {
   const pool = getPool();
   const result = await pool.query<ListRow>(
     `
@@ -487,7 +492,7 @@ export async function loadFavoritesForUser(userEmail: string) {
       ),
     ),
   );
-}
+});
 
 export async function addFavoriteForUser(listId: string, userEmail: string) {
   const pool = getPool();

@@ -11,7 +11,9 @@ export async function GET(request: Request) {
       seed: searchParams.get("seed") ?? undefined,
       page: searchParams.get("page") ?? undefined,
     });
-    return NextResponse.json(payload);
+    return NextResponse.json(payload, {
+      headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" },
+    });
   } catch (error) {
     return errorResponse(error instanceof Error ? error.message : "Unable to load streaming catalog", 500);
   }
