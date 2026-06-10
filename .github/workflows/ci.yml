@@ -21,3 +21,10 @@ jobs:
 
       - name: Type check
         run: bun run tsc --noEmit
+
+      # Mirrors the production Docker build so prerender / RSC-boundary errors
+      # are caught in CI instead of first surfacing during a deploy.
+      - name: Build
+        run: bun run build -- --webpack
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"

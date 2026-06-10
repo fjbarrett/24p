@@ -64,7 +64,6 @@ export function ListExportButton({ tmdbIds, ratingsMap, listSlug, listTitle }: L
         "Your Rating",
         "TMDB Rating",
         "IMDb Rating",
-        "Letterboxd Rating",
       ];
 
       const lines = [headers, ...rows]

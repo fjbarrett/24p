@@ -24,6 +24,32 @@ export const changelogEntries: ChangelogEntry[] = [
     ],
   },
   {
+    slug: "list-card-redesign",
+    date: "2026-06-09",
+    title: "Your lists now show their posters at a glance",
+    summary:
+      "List cards were redesigned to show a strip of film posters from each list, so you can recognize a list by its contents instead of just its color — and it now looks right on mobile, not only when hovering on a desktop.",
+    type: "Improvement",
+    tags: ["lists", "home", "profiles"],
+    changed: [
+      "Logged-in and public list cards now show a preview strip of the list's posters at rest, on every device.",
+      "Posters are prepared ahead of time so cards render faster, and the old hover-only backdrop animation was removed.",
+    ],
+  },
+  {
+    slug: "faster-streaming-and-lists",
+    date: "2026-06-09",
+    title: "Streaming and list pages load faster",
+    summary:
+      "The streaming catalog and list detail pages were sped up — streaming results are cached instead of refetched on every visit, and a list's films now load in a couple of batched requests instead of one per title.",
+    type: "Improvement",
+    tags: ["streaming", "lists", "performance"],
+    changed: [
+      "Streaming catalog responses are cached, so the streaming page no longer re-queries providers on every load.",
+      "Opening a list fetches its films in batches instead of one request per film, so large lists fill in much faster.",
+    ],
+  },
+  {
     slug: "apple-tv-sign-in",
     date: "2026-06-06",
     title: "Sign in to 24p on Apple TV",

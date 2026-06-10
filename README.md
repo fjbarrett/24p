@@ -92,6 +92,7 @@ Services:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) — create an OAuth 2.0 Web Client |
 | `TMDB_API_KEY` | [TMDB API settings](https://www.themoviedb.org/settings/api) — free account required |
 | `DATABASE_URL` | Your PostgreSQL connection string |
+| `ANTHROPIC_API_KEY` | [Anthropic Console](https://console.anthropic.com) — powers per-list recommendations |
 
 For Google OAuth, add these redirect URIs in the Cloud Console:
 - `http://localhost:3000/api/auth/callback/google` (development)
