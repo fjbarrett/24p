@@ -4,7 +4,7 @@ import { cache } from "react";
 import { randomUUID } from "crypto";
 import type { ListItem, ListShare, SavedList } from "@/lib/list-store";
 import { getPool } from "@/lib/server/db";
-import { findTmdbMovieId } from "@/lib/server/tmdb";
+import { fetchTmdbArtwork, findTmdbMovieId } from "@/lib/server/tmdb";
 import { saveRatingsForUser } from "@/lib/server/ratings";
 
 type ListRow = {
@@ -702,4 +702,44 @@ export async function importListForUser(title: string, raw: string, userEmail: s
     await saveRatingsForUser(userEmail, ratings);
   }
   return list;
+}
+
+// Resolves the first `perList` poster images for each list so cards can show
+// their contents at rest. Uses the lightweight artwork-only TMDB fetch (one
+// cached call per unique title, deduped across all lists) — no credits or
+// JustWatch lookups. Returns listId -> ordered poster URLs.
+export async function resolveListPreviewPosters(
+  lists: SavedList[],
+  perList = 5,
+): Promise<Record<string, string[]>> {
+  const wanted = new Map<string, { tmdbId: number; mediaType: "movie" | "tv" }>();
+  for (const list of lists) {
+    for (const item of list.items.slice(0, perList)) {
+      wanted.set(`${item.mediaType}:${item.tmdbId}`, item);
+    }
+  }
+
+  const entries = [...wanted.entries()];
+  const artworks = await Promise.allSettled(
+    entries.map(([, item]) => fetchTmdbArtwork(item.tmdbId, item.mediaType)),
+  );
+
+  const posterByKey = new Map<string, string>();
+  entries.forEach(([key], index) => {
+    const result = artworks[index];
+    if (result.status === "fulfilled" && result.value.posterUrl) {
+      posterByKey.set(key, result.value.posterUrl);
+    }
+  });
+
+  const byList: Record<string, string[]> = {};
+  for (const list of lists) {
+    const urls: string[] = [];
+    for (const item of list.items.slice(0, perList)) {
+      const url = posterByKey.get(`${item.mediaType}:${item.tmdbId}`);
+      if (url) urls.push(url);
+    }
+    byList[list.id] = urls;
+  }
+  return byList;
 }

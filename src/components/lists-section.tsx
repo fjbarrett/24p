@@ -7,13 +7,15 @@ import type { SavedList } from "@/lib/list-store";
 type ListsSectionProps = {
   lists: SavedList[];
   userEmail: string;
+  posters?: Record<string, string[]>;
 };
 
-export function ListsSection({ lists, userEmail }: ListsSectionProps) {
+export function ListsSection({ lists, userEmail, posters }: ListsSectionProps) {
   return (
     <div className="mx-auto w-full space-y-4 rounded-3xl bg-black-900/30 p-4 backdrop-blur sm:space-y-6 sm:p-6" id="lists">
       <ListGallery
         lists={lists}
+        posters={posters}
         title=""
         emptyMessage="No lists yet. Use the buttons below to create or import your first one."
         viewerEmail={userEmail}
