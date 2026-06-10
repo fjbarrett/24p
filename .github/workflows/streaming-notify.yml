@@ -14,11 +14,12 @@ jobs:
       - name: Trigger streaming check
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 290 --retry 2 --retry-delay 10 --retry-all-errors \
             -X POST "${{ secrets.PROD_APP_URL }}/api/cron/streaming-check" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json")
           echo "Response status: $response"
           if [ "$response" != "200" ]; then
-            echo "Streaming check failed with status $response"
+            echo "::error::Streaming check failed with status $response"
             exit 1
           fi

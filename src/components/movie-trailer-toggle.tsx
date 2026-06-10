@@ -17,6 +17,7 @@ export function MovieTrailerToggle({ title, posterUrl }: MovieTrailerToggleProps
             src={posterUrl}
             alt={`${title} poster`}
             fill
+            sizes="220px"
             className="object-cover"
             priority
           />

@@ -39,7 +39,12 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          tags: ${{ env.IMAGE_WEB }}:${{ steps.meta.outputs.tag }}
+          # Push :latest (what prod runs) plus an immutable :<sha> tag so a bad
+          # deploy can be rolled back by setting IMAGE_TAG=<sha> and re-running
+          # `docker compose up -d` — these live in GHCR, not on the server disk.
+          tags: |
+            ${{ env.IMAGE_WEB }}:${{ steps.meta.outputs.tag }}
+            ${{ env.IMAGE_WEB }}:${{ github.sha }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 
@@ -70,8 +75,6 @@ jobs:
           POSTGRES_USER=${{ secrets.PROD_POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.PROD_POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.PROD_POSTGRES_DB }}
-          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
-          EMAIL_FROM=${{ secrets.EMAIL_FROM }}
           CRON_SECRET=${{ secrets.CRON_SECRET }}
           ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
           EOF
@@ -101,5 +104,20 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
+
+            # Smoke test: don't declare the deploy successful until the new
+            # container actually serves 200. If it never comes up, fail the job
+            # (and skip the prune) so the previous image is left in place.
+            for i in $(seq 1 18); do
+              code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/ || true)
+              if [ "$code" = "200" ]; then echo "smoke test ok"; break; fi
+              echo "waiting for app to come up ($i/18): got $code"; sleep 5
+            done
+            if [ "$code" != "200" ]; then
+              echo "::error::post-deploy smoke test failed (last status: $code)"
+              docker compose logs --tail=50 web || true
+              exit 1
+            fi
+
             docker system prune -f
 
