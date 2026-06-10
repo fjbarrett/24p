@@ -75,8 +75,6 @@ jobs:
           POSTGRES_USER=${{ secrets.PROD_POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.PROD_POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.PROD_POSTGRES_DB }}
-          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
-          EMAIL_FROM=${{ secrets.EMAIL_FROM }}
           CRON_SECRET=${{ secrets.CRON_SECRET }}
           ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
           EOF
