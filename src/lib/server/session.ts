@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getServerSession } from "next-auth/next";
@@ -14,7 +15,9 @@ export type SessionUser = {
   image: string | null;
 };
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+// Memoized per request so the layout, pages, and route handlers that each need
+// the session don't repeat getServerSession / the bearer-token DB lookup.
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const session = (await getServerSession(authOptions)) as Session | null;
   const user = session?.user;
   const email = user?.email?.trim().toLowerCase() ?? null;
@@ -35,7 +38,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   }
 
   return null;
-}
+});
 
 async function resolveBearerEmail(): Promise<string | null> {
   const authHeader = (await headers()).get("authorization");

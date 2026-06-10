@@ -1,9 +1,10 @@
 import "server-only";
 
+import { cache } from "react";
 import { randomUUID } from "crypto";
 import type { ListItem, ListShare, SavedList } from "@/lib/list-store";
 import { getPool } from "@/lib/server/db";
-import { findTmdbMovieId } from "@/lib/server/tmdb";
+import { fetchTmdbArtwork, findTmdbMovieId } from "@/lib/server/tmdb";
 import { saveRatingsForUser } from "@/lib/server/ratings";
 
 type ListRow = {
@@ -87,11 +88,18 @@ function slugify(value: string) {
   return (slug || "list").slice(0, 60);
 }
 
-function mapList(row: ListRow): SavedList {
+// `viewerEmail` is the email of whoever this list is being returned to. The
+// owner's email is only ever exposed back to the owner themselves; every other
+// caller (anonymous browsing, shared-with collaborators, the public lists API)
+// receives "" so we never leak a user's email address. UI ownership checks rely
+// on `userEmail === viewerEmail`, which still holds for the owner.
+function mapList(row: ListRow, viewerEmail?: string | null): SavedList {
   const items: ListItem[] = (Array.isArray(row.items) ? row.items : []).map((item) => ({
     tmdbId: item.tmdbId,
     mediaType: item.mediaType === "tv" ? "tv" : "movie",
   }));
+  const ownerEmail = normalizeEmail(row.user_email);
+  const normalizedViewer = viewerEmail ? normalizeEmail(viewerEmail) : null;
   return {
     id: row.id,
     title: row.title,
@@ -101,7 +109,7 @@ function mapList(row: ListRow): SavedList {
     items,
     movies: items.map((item) => item.tmdbId),
     color: normalizeColor(row.color),
-    userEmail: normalizeEmail(row.user_email),
+    userEmail: normalizedViewer === ownerEmail ? ownerEmail : "",
     username: row.username,
     canEdit: row.can_edit,
   };
@@ -221,7 +229,7 @@ async function insertList(
   }
   const created = await fetchListById(listId);
   if (!created) throw new Error("List not found");
-  return mapList({ ...created, can_edit: true });
+  return mapList({ ...created, can_edit: true }, userEmail);
 }
 
 export async function getListByIdForEditor(listId: string, userEmail: string) {
@@ -230,10 +238,12 @@ export async function getListByIdForEditor(listId: string, userEmail: string) {
   const canEdit =
     normalizeEmail(row.user_email) === userEmail || (await isListSharedWithEdit(listId, userEmail));
   if (!canEdit) return null;
-  return mapList({ ...row, can_edit: canEdit });
+  return mapList({ ...row, can_edit: canEdit }, userEmail);
 }
 
-export async function listListsForUser(userEmail: string, includeShared = false) {
+// Memoized per request: the home page and the layout's GlobalSearchHeader both
+// fetch the signed-in user's lists, and metadata + page can repeat it too.
+export const listListsForUser = cache(async (userEmail: string, includeShared = false) => {
   const pool = getPool();
   const query = includeShared
     ? `
@@ -260,8 +270,8 @@ export async function listListsForUser(userEmail: string, includeShared = false)
         ORDER BY lists.created_at DESC
       `;
   const result = await pool.query<ListRow>(query, [userEmail]);
-  return result.rows.map(mapList);
-}
+  return result.rows.map((row) => mapList(row, userEmail));
+});
 
 export async function createListForUser(
   title: string,
@@ -310,7 +320,7 @@ export async function updateListForUser(
   if (!updated) {
     throw new Error("List not found");
   }
-  return mapList({ ...updated, can_edit: true });
+  return mapList({ ...updated, can_edit: true }, userEmail);
 }
 
 export async function addMovieToListForUser(
@@ -343,7 +353,7 @@ export async function addMovieToListForUser(
 
   const updated = await fetchListById(listId);
   if (!updated) throw new Error("List not found");
-  return mapList({ ...updated, can_edit: canEdit });
+  return mapList({ ...updated, can_edit: canEdit }, userEmail);
 }
 
 export async function removeMovieFromListForUser(listId: string, tmdbId: number, userEmail: string) {
@@ -362,7 +372,7 @@ export async function removeMovieFromListForUser(listId: string, tmdbId: number,
 
   const updated = await fetchListById(listId);
   if (!updated) throw new Error("List not found");
-  return mapList({ ...updated, can_edit: canEdit });
+  return mapList({ ...updated, can_edit: canEdit }, userEmail);
 }
 
 export async function deleteListForUser(listId: string, userEmail: string) {
@@ -374,7 +384,9 @@ export async function deleteListForUser(listId: string, userEmail: string) {
   await pool.query("DELETE FROM lists WHERE id = $1", [listId]);
 }
 
-export async function getListByUsernameSlugForViewer(username: string, slug: string, viewerEmail?: string | null) {
+// Memoized per request: list-detail pages resolve the same list in both
+// generateMetadata and the page body (a multi-table join).
+export const getListByUsernameSlugForViewer = cache(async (username: string, slug: string, viewerEmail?: string | null) => {
   const pool = getPool();
   let normalizedUsername: string;
   try {
@@ -413,8 +425,8 @@ export async function getListByUsernameSlugForViewer(username: string, slug: str
     return null;
   }
 
-  return mapList({ ...list, can_edit: canEdit });
-}
+  return mapList({ ...list, can_edit: canEdit }, normalizedViewer);
+});
 
 export async function loadPublicLists(limit = 24, username?: string | null) {
   const pool = getPool();
@@ -438,7 +450,7 @@ export async function loadPublicLists(limit = 24, username?: string | null) {
       `,
       [ownerEmail, limit],
     );
-    return result.rows.map(mapList);
+    return result.rows.map((row) => mapList(row));
   }
 
   const result = await pool.query<ListRow>(
@@ -452,10 +464,10 @@ export async function loadPublicLists(limit = 24, username?: string | null) {
     `,
     [limit],
   );
-  return result.rows.map(mapList);
+  return result.rows.map((row) => mapList(row));
 }
 
-export async function loadFavoritesForUser(userEmail: string) {
+export const loadFavoritesForUser = cache(async (userEmail: string) => {
   const pool = getPool();
   const result = await pool.query<ListRow>(
     `
@@ -471,13 +483,16 @@ export async function loadFavoritesForUser(userEmail: string) {
   );
   return Promise.all(
     result.rows.map(async (row) =>
-      mapList({
-        ...row,
-        can_edit: normalizeEmail(row.user_email) === userEmail || (await isListSharedWithEdit(row.id, userEmail)),
-      }),
+      mapList(
+        {
+          ...row,
+          can_edit: normalizeEmail(row.user_email) === userEmail || (await isListSharedWithEdit(row.id, userEmail)),
+        },
+        userEmail,
+      ),
     ),
   );
-}
+});
 
 export async function addFavoriteForUser(listId: string, userEmail: string) {
   const pool = getPool();
@@ -687,4 +702,44 @@ export async function importListForUser(title: string, raw: string, userEmail: s
     await saveRatingsForUser(userEmail, ratings);
   }
   return list;
+}
+
+// Resolves the first `perList` poster images for each list so cards can show
+// their contents at rest. Uses the lightweight artwork-only TMDB fetch (one
+// cached call per unique title, deduped across all lists) — no credits or
+// JustWatch lookups. Returns listId -> ordered poster URLs.
+export async function resolveListPreviewPosters(
+  lists: SavedList[],
+  perList = 5,
+): Promise<Record<string, string[]>> {
+  const wanted = new Map<string, { tmdbId: number; mediaType: "movie" | "tv" }>();
+  for (const list of lists) {
+    for (const item of list.items.slice(0, perList)) {
+      wanted.set(`${item.mediaType}:${item.tmdbId}`, item);
+    }
+  }
+
+  const entries = [...wanted.entries()];
+  const artworks = await Promise.allSettled(
+    entries.map(([, item]) => fetchTmdbArtwork(item.tmdbId, item.mediaType)),
+  );
+
+  const posterByKey = new Map<string, string>();
+  entries.forEach(([key], index) => {
+    const result = artworks[index];
+    if (result.status === "fulfilled" && result.value.posterUrl) {
+      posterByKey.set(key, result.value.posterUrl);
+    }
+  });
+
+  const byList: Record<string, string[]> = {};
+  for (const list of lists) {
+    const urls: string[] = [];
+    for (const item of list.items.slice(0, perList)) {
+      const url = posterByKey.get(`${item.mediaType}:${item.tmdbId}`);
+      if (url) urls.push(url);
+    }
+    byList[list.id] = urls;
+  }
+  return byList;
 }

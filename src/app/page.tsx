@@ -6,13 +6,14 @@ import type { SavedList } from "@/lib/list-store";
 import { NotebookText, Settings, User } from "@/components/icons";
 import { getSessionUserEmail } from "@/lib/server/session";
 import Link from "next/link";
-import { listListsForUser } from "@/lib/server/lists";
+import { listListsForUser, resolveListPreviewPosters } from "@/lib/server/lists";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const userEmail = (await getSessionUserEmail()) ?? "";
   const lists = userEmail ? await listListsForUser(userEmail, true) : [];
+  const listPosters = lists.length ? await resolveListPreviewPosters(lists) : {};
   const isSignedIn = Boolean(userEmail);
 
   return (
@@ -27,7 +28,7 @@ export default async function Home() {
 
         {isSignedIn ? (
           <main className="mt-0 w-full max-w-[760px] space-y-10">
-            <ListsSection lists={lists} userEmail={userEmail} />
+            <ListsSection lists={lists} userEmail={userEmail} posters={listPosters} />
           </main>
         ) : null}
 

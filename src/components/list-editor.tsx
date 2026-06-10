@@ -37,6 +37,7 @@ export function ListEditor({
   const [isSharing, setIsSharing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(startEditing);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const router = useRouter();
   const canShare = Boolean(list.username);
 
@@ -382,27 +383,52 @@ export function ListEditor({
       ) : null}
 
       <div className="flex flex-col-reverse gap-2 border-t border-white/8 pt-3 sm:flex-row sm:items-center sm:justify-between">
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => {
-            startTransition(async () => {
-              try {
-                setMessage(null);
-                await apiFetch(`/lists/${list.id}`, {
-                  method: "DELETE",
-                });
-                router.push("/");
-                router.refresh();
-              } catch (error) {
-                setMessage(error instanceof Error ? error.message : "Unable to delete");
-              }
-            });
-          }}
-          className="w-full rounded-2xl border border-red-200/14 bg-red-300/8 px-4 py-2 text-sm font-medium text-red-100 transition hover:bg-red-300/12 active:bg-red-300/16 disabled:opacity-50 sm:w-auto"
-        >
-          {isPending ? "Deleting..." : "Delete list"}
-        </button>
+        {confirmingDelete ? (
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <span className="text-xs text-black-300">Delete this list permanently?</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => {
+                  startTransition(async () => {
+                    try {
+                      setMessage(null);
+                      await apiFetch(`/lists/${list.id}`, {
+                        method: "DELETE",
+                      });
+                      router.push("/");
+                      router.refresh();
+                    } catch (error) {
+                      setMessage(error instanceof Error ? error.message : "Unable to delete");
+                      setConfirmingDelete(false);
+                    }
+                  });
+                }}
+                className="rounded-2xl border border-red-200/14 bg-red-300/12 px-4 py-2 text-sm font-medium text-red-100 transition hover:bg-red-300/20 active:bg-red-300/24 disabled:opacity-50"
+              >
+                {isPending ? "Deleting..." : "Confirm delete"}
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => setConfirmingDelete(false)}
+                className="rounded-2xl border border-white/10 bg-white/6 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/12 active:bg-white/16 disabled:opacity-50"
+              >
+                Keep
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => setConfirmingDelete(true)}
+            className="w-full rounded-2xl border border-red-200/14 bg-red-300/8 px-4 py-2 text-sm font-medium text-red-100 transition hover:bg-red-300/12 active:bg-red-300/16 disabled:opacity-50 sm:w-auto"
+          >
+            Delete list
+          </button>
+        )}
 
         <div className="flex flex-col gap-2 sm:flex-row">
           <button

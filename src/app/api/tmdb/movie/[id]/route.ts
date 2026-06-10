@@ -15,7 +15,10 @@ export async function GET(
   }
   try {
     const detail = await fetchTmdbMovie(tmdbId, lite);
-    return NextResponse.json({ detail });
+    return NextResponse.json(
+      { detail },
+      { headers: { "Cache-Control": "public, max-age=3600, s-maxage=21600, stale-while-revalidate=86400" } },
+    );
   } catch (error) {
     const status = tmdbErrorStatus(error);
     return errorResponse(status === 404 ? "Movie not found" : "Unable to load movie", status);

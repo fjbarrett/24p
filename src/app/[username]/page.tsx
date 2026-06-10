@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ListGallery } from "@/components/list-gallery";
 import type { Metadata } from "next";
 import { getPublicProfileByUsername } from "@/lib/server/profiles";
-import { loadPublicLists } from "@/lib/server/lists";
+import { loadPublicLists, resolveListPreviewPosters } from "@/lib/server/lists";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +53,7 @@ export default async function PublicProfilePage({
   }
 
   const lists = await loadPublicLists(48, profile.username);
+  const listPosters = lists.length ? await resolveListPreviewPosters(lists) : {};
 
   return (
     <div className="min-h-screen px-4 py-8 text-black-100 sm:px-8 lg:px-16">
@@ -71,6 +72,7 @@ export default async function PublicProfilePage({
         </header>
         <ListGallery
           lists={lists}
+          posters={listPosters}
           title="Public Lists"
           id="public-lists"
           emptyMessage="No public lists yet."

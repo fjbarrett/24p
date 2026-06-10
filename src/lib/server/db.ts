@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { Pool } from "pg";
 
 declare global {
@@ -124,13 +125,49 @@ const INCREMENTAL_MIGRATIONS = [
 
 let migrationPromise: Promise<void> | null = null;
 
+function migrationId(sql: string) {
+  return createHash("sha1").update(sql).digest("hex").slice(0, 16);
+}
+
+function summarize(sql: string, max = 120) {
+  return sql.replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+// Applies each DDL statement at most once, tracked in schema_migrations so the
+// list isn't blindly replayed on every boot. Statements stay idempotent
+// (IF NOT EXISTS) as a backstop, but failures are now logged loudly instead of
+// silently swallowed — a real schema error (permissions, bad SQL) must be
+// visible in the logs rather than surfacing later as a mystery 500.
 async function runIncrementalMigrations(pool: Pool): Promise<void> {
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS schema_migrations (
+       id         TEXT PRIMARY KEY,
+       statement  TEXT NOT NULL,
+       applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+     )`,
+  );
+
+  const appliedRows = await pool.query<{ id: string }>("SELECT id FROM schema_migrations");
+  const applied = new Set(appliedRows.rows.map((row) => row.id));
+
+  let failures = 0;
   for (const sql of INCREMENTAL_MIGRATIONS) {
+    const id = migrationId(sql);
+    if (applied.has(id)) continue;
     try {
       await pool.query(sql);
-    } catch {
-      // Table may not exist yet in fresh environments — ignore and move on.
+      await pool.query(
+        "INSERT INTO schema_migrations (id, statement) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING",
+        [id, summarize(sql, 500)],
+      );
+    } catch (err) {
+      failures += 1;
+      console.error(`[db] MIGRATION FAILED (${id}): ${summarize(sql)}`, err);
     }
+  }
+
+  if (failures > 0) {
+    console.error(`[db] ${failures} migration statement(s) failed — schema may be out of date`);
   }
 }
 

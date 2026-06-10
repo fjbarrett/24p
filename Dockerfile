@@ -22,10 +22,14 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Next standalone build includes server.js at project root.
-COPY --from=build /app/.next/standalone ./
-COPY --from=build /app/.next/static ./.next/static
-COPY --from=build /app/public ./public
+# Next standalone build includes server.js at project root. Copy as the
+# non-root `node` user (present in the base image) so the server doesn't run
+# as root; `.next` is node-owned so the runtime fetch cache can be written.
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/public ./public
+
+USER node
 
 EXPOSE 3000
 CMD ["node", "server.js"]

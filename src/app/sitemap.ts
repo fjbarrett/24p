@@ -35,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const seenProfiles = new Set<string>();
   const seenLists = new Set<string>();
-  const seenMovies = new Set<number>();
+  const seenTitles = new Set<string>();
 
   for (const list of lists) {
     const username = (list.username ?? "").trim().toLowerCase();
@@ -61,13 +61,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       });
     }
 
-    for (const tmdbId of list.movies) {
-      if (!Number.isFinite(tmdbId)) continue;
-      if (seenMovies.size >= 5000) break;
-      if (seenMovies.has(tmdbId)) continue;
-      seenMovies.add(tmdbId);
+    // Route by media type: TV ids must not be emitted under /movies/ (the id
+    // spaces overlap, so a TV id there resolves to an unrelated movie).
+    for (const item of list.items) {
+      if (!Number.isFinite(item.tmdbId)) continue;
+      const key = `${item.mediaType}:${item.tmdbId}`;
+      if (seenTitles.size >= 5000) break;
+      if (seenTitles.has(key)) continue;
+      seenTitles.add(key);
       entries.push({
-        url: absolute(`/movies/${tmdbId}`),
+        url: absolute(item.mediaType === "tv" ? `/tv/${item.tmdbId}` : `/movies/${item.tmdbId}`),
         changeFrequency: "monthly",
         priority: 0.5,
       });

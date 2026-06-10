@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-// CSP is set dynamically in src/middleware.ts with a per-request nonce.
+// CSP is set dynamically in src/proxy.ts with a per-request nonce.
 // These headers are safe to apply statically.
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },

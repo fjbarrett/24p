@@ -8,8 +8,12 @@ import { fetchPricesForImdbIds } from "@/lib/server/cheapcharts";
 // Only subscription/free/ad-supported offers count for streaming notifications.
 const NOTIFY_ACCESS_MODELS = new Set(["subscription", "free", "ads"]);
 
-// Delay between external API fetches to avoid hammering rate limits.
-const FETCH_DELAY_MS = 300;
+// Bounded parallelism across list items. This replaces the old per-item 300ms
+// sleeps: the concurrency cap is what keeps us polite to TMDB/JustWatch, while
+// letting the whole job finish well inside the cron request timeout. The
+// previous sequential + 2x300ms-sleep loop blew past the ~60s proxy timeout and
+// 504'd every night.
+const FETCH_CONCURRENCY = 6;
 
 
 type TitleSnapshot = {
@@ -33,8 +37,20 @@ type SnapshotRow = {
 };
 
 
-async function sleep(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+// Runs `fn` over `items` with at most `limit` in flight at once, preserving
+// input order in the results array.
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      results[index] = await fn(items[index]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
 }
 
 // ─── Streaming snapshots ─────────────────────────────────────────────────────
@@ -126,99 +142,107 @@ async function loadDistinctListItems(): Promise<Array<{ tmdbId: number; mediaTyp
 
 // ─── Main job ─────────────────────────────────────────────────────────────────
 
+type PriceCheck = {
+  imdbId: string;
+  tmdbId: number;
+  title: string;
+  releaseYear: number | null;
+  posterUrl: string | null;
+};
+
+// Resolves one list item: refresh its title metadata (cached snapshot or TMDB),
+// diff its current streaming providers, upsert the snapshot, and return a price
+// check to batch later. Never throws — failures are logged and the item is
+// skipped so one bad title can't take down the whole run.
+async function checkListItem(
+  item: { tmdbId: number; mediaType: "movie" | "tv" },
+  streamingSnapshots: Map<string, TitleSnapshot>,
+): Promise<{ checked: boolean; price: PriceCheck | null }> {
+  const key = `${item.tmdbId}:${item.mediaType}`;
+  const existing = streamingSnapshots.get(key);
+
+  // ── Resolve title metadata ────────────────────────────────────────────────
+  let title: string;
+  let releaseYear: number | null;
+  let posterUrl: string | null;
+  let imdbId: string | null;
+
+  if (existing?.title) {
+    title = existing.title;
+    releaseYear = existing.releaseYear;
+    posterUrl = existing.posterUrl;
+    imdbId = existing.imdbId;
+  } else {
+    try {
+      const meta =
+        item.mediaType === "tv"
+          ? await fetchTmdbShow(item.tmdbId)
+          : await fetchTmdbMovie(item.tmdbId, true);
+      title = meta.title;
+      releaseYear = meta.releaseYear ?? null;
+      posterUrl = meta.posterUrl ?? null;
+      imdbId = meta.imdbId ?? null;
+    } catch {
+      console.warn(`[notifications] Failed to fetch TMDB metadata for ${item.tmdbId}`);
+      return { checked: false, price: null };
+    }
+  }
+
+  // ── Streaming diff ──────────────────────────────────────────────────────────
+  let currentProviders: string[] = [];
+  try {
+    const jwOffers = await fetchJustWatchOffers(title, releaseYear ?? undefined, "US", item.mediaType);
+    const seen = new Set<string>();
+    for (const offer of jwOffers) {
+      if (NOTIFY_ACCESS_MODELS.has(offer.accessModel) && offer.providerShortName) {
+        seen.add(offer.providerShortName.toLowerCase());
+      }
+    }
+    currentProviders = [...seen];
+  } catch {
+    console.warn(`[notifications] Failed to fetch JustWatch offers for "${title}"`);
+  }
+
+  await upsertStreamingSnapshot({
+    tmdbId: item.tmdbId,
+    mediaType: item.mediaType,
+    title,
+    releaseYear,
+    posterUrl,
+    imdbId,
+    providerShortNames: currentProviders,
+  });
+
+  // Only movies have CheapCharts support; TV seasons are excluded.
+  const price: PriceCheck | null =
+    item.mediaType === "movie" && imdbId
+      ? { imdbId, tmdbId: item.tmdbId, title, releaseYear, posterUrl }
+      : null;
+
+  return { checked: true, price };
+}
+
 export async function runStreamingNotificationCheck(): Promise<{ notified: number; checked: number }> {
   const listItems = await loadDistinctListItems();
   if (!listItems.length) return { notified: 0, checked: 0 };
 
   const streamingSnapshots = await loadStreamingSnapshots();
 
-  let checked = 0;
+  const results = await mapWithConcurrency(listItems, FETCH_CONCURRENCY, (item) =>
+    checkListItem(item, streamingSnapshots),
+  );
 
-  // Collect all resolved metadata as we go so we can batch CheapCharts calls.
-  // Only movies have CheapCharts support; TV seasons are excluded.
-  const priceCheckQueue: Array<{
-    imdbId: string;
-    tmdbId: number;
-    title: string;
-    releaseYear: number | null;
-    posterUrl: string | null;
-  }> = [];
-
-  for (const item of listItems) {
-    const key = `${item.tmdbId}:${item.mediaType}`;
-    const existing = streamingSnapshots.get(key);
-
-    // ── Resolve title metadata ──────────────────────────────────────────────
-    let title: string;
-    let releaseYear: number | null;
-    let posterUrl: string | null;
-    let imdbId: string | null;
-
-    if (existing?.title) {
-      title = existing.title;
-      releaseYear = existing.releaseYear;
-      posterUrl = existing.posterUrl;
-      imdbId = existing.imdbId;
-    } else {
-      try {
-        const meta =
-          item.mediaType === "tv"
-            ? await fetchTmdbShow(item.tmdbId)
-            : await fetchTmdbMovie(item.tmdbId, true);
-        title = meta.title;
-        releaseYear = meta.releaseYear ?? null;
-        posterUrl = meta.posterUrl ?? null;
-        imdbId = meta.imdbId ?? null;
-        await sleep(FETCH_DELAY_MS);
-      } catch {
-        console.warn(`[notifications] Failed to fetch TMDB metadata for ${item.tmdbId}`);
-        continue;
-      }
-    }
-
-    // ── Streaming diff ──────────────────────────────────────────────────────
-    let currentProviders: string[] = [];
-    let jwOffers: Awaited<ReturnType<typeof fetchJustWatchOffers>> = [];
-    try {
-      jwOffers = await fetchJustWatchOffers(title, releaseYear ?? undefined, "US", item.mediaType);
-      const seen = new Set<string>();
-      for (const offer of jwOffers) {
-        if (NOTIFY_ACCESS_MODELS.has(offer.accessModel) && offer.providerShortName) {
-          seen.add(offer.providerShortName.toLowerCase());
-        }
-      }
-      currentProviders = [...seen];
-      await sleep(FETCH_DELAY_MS);
-    } catch {
-      console.warn(`[notifications] Failed to fetch JustWatch offers for "${title}"`);
-    }
-
-    await upsertStreamingSnapshot({
-      tmdbId: item.tmdbId,
-      mediaType: item.mediaType,
-      title,
-      releaseYear,
-      posterUrl,
-      imdbId,
-      providerShortNames: currentProviders,
-    });
-    checked += 1;
-
-    // ── Queue movie for price check (TV not supported by CheapCharts) ────────
-    if (item.mediaType === "movie" && imdbId) {
-      priceCheckQueue.push({ imdbId, tmdbId: item.tmdbId, title, releaseYear, posterUrl });
-    }
-  }
+  const checked = results.filter((result) => result.checked).length;
+  const priceCheckQueue = results.flatMap((result) => (result.price ? [result.price] : []));
 
   // ── Batch price lookups ───────────────────────────────────────────────────
   if (priceCheckQueue.length) {
-    const imdbIds = priceCheckQueue.map((q) => q.imdbId);
+    const imdbIds = priceCheckQueue.map((queued) => queued.imdbId);
     const currentPrices = await fetchPricesForImdbIds(imdbIds);
 
     for (const queued of priceCheckQueue) {
       const current = currentPrices.get(queued.imdbId);
       const newPrice = current?.buyPriceUsd ?? null;
-
       await upsertPriceSnapshot(queued.imdbId, queued.tmdbId, queued.title, queued.posterUrl, newPrice);
     }
   }

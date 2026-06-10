@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, serverError } from "@/lib/server/http";
 import { getProfileForUser } from "@/lib/server/profiles";
 import { getSessionUser } from "@/lib/server/session";
 
@@ -16,6 +16,6 @@ export async function GET() {
       profile,
     });
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Unable to load session", 500);
+    return serverError("api/session", error, "Unable to load session");
   }
 }
