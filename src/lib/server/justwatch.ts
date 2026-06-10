@@ -13,6 +13,39 @@ const PAGE_STRIDE_MULTIPLIER = 3;
 const RATING_SORT_LIMIT = 240;
 const RATING_SORT_BATCH_SIZE = 100;
 
+// In-process response cache. Next's fetch `revalidate` is a no-op for POST
+// requests (JustWatch's GraphQL is POST), so without this every /streaming load
+// hit JustWatch live (~2.3s). TTLs roughly match the old (ineffective)
+// revalidate intent. Empty/failed results are intentionally NOT cached so a
+// transient JustWatch outage can't poison the cache.
+type CacheEntry<T> = { value: T; expires: number };
+const responseCache = new Map<string, CacheEntry<unknown>>();
+const CATALOG_TTL_MS = 6 * 60 * 60 * 1000;
+const PLATFORMS_TTL_MS = 24 * 60 * 60 * 1000;
+
+async function cachedResponse<T>(
+  key: string,
+  ttlMs: number,
+  fn: () => Promise<T>,
+  isCacheable: (value: T) => boolean = () => true,
+): Promise<T> {
+  const now = Date.now();
+  const hit = responseCache.get(key);
+  if (hit && hit.expires > now) return hit.value as T;
+  const value = await fn();
+  if (isCacheable(value)) {
+    responseCache.set(key, { value, expires: now + ttlMs });
+    if (responseCache.size > 500) {
+      for (const [k, entry] of responseCache) if (entry.expires <= now) responseCache.delete(k);
+    }
+  }
+  return value;
+}
+
+function providerCacheKey(providerShortNames?: string[]) {
+  return [...new Set((providerShortNames ?? []).map((p) => p.trim().toLowerCase()).filter(Boolean))].sort().join(",");
+}
+
 type JwOffer = {
   standardWebURL: string;
   monetizationType?: string | null;
@@ -564,27 +597,46 @@ export async function fetchJustWatchOffers(
 }
 
 export async function listStreamingPlatforms(locale = DEFAULT_LOCALE): Promise<StreamingPlatform[]> {
-  const data = await postJustWatch<JwPackagesResult>(PACKAGES_QUERY, {
-    country: locale,
-    platform: DEFAULT_PLATFORM,
-    formatOfferIcon: "PNG",
-  });
+  // Called on every /streaming request for the provider chips — cache hard.
+  return cachedResponse(
+    `platforms:${locale}`,
+    PLATFORMS_TTL_MS,
+    async () => {
+      const data = await postJustWatch<JwPackagesResult>(PACKAGES_QUERY, {
+        country: locale,
+        platform: DEFAULT_PLATFORM,
+        formatOfferIcon: "PNG",
+      });
 
-  const packages = (data?.data?.packages ?? [])
-    .filter((pkg): pkg is JwPackage => Boolean(pkg?.shortName && pkg.clearName && pkg.technicalName))
-    .filter((pkg) => isAllowedProviderPackage(pkg))
-    .sort((a, b) => a.clearName.localeCompare(b.clearName));
+      const packages = (data?.data?.packages ?? [])
+        .filter((pkg): pkg is JwPackage => Boolean(pkg?.shortName && pkg.clearName && pkg.technicalName))
+        .filter((pkg) => isAllowedProviderPackage(pkg))
+        .sort((a, b) => a.clearName.localeCompare(b.clearName));
 
-  return packages.map((pkg) => ({
-    packageId: pkg.packageId,
-    name: pkg.clearName,
-    technicalName: pkg.technicalName,
-    shortName: pkg.shortName,
-    iconUrl: pkg.icon ? `${JUSTWATCH_ICON_IMAGES}${pkg.icon}` : null,
-  }));
+      return packages.map((pkg) => ({
+        packageId: pkg.packageId,
+        name: pkg.clearName,
+        technicalName: pkg.technicalName,
+        shortName: pkg.shortName,
+        iconUrl: pkg.icon ? `${JUSTWATCH_ICON_IMAGES}${pkg.icon}` : null,
+      }));
+    },
+    (platforms) => platforms.length > 0,
+  );
 }
 
-export async function fetchStreamingCatalog({
+export async function fetchStreamingCatalog(params: {
+  providerShortNames?: string[];
+  seed?: string;
+  locale?: string;
+  limit?: number;
+  page?: number;
+}): Promise<StreamingCatalogMovie[]> {
+  const key = `catalog:${params.locale ?? DEFAULT_LOCALE}:${providerCacheKey(params.providerShortNames)}:${params.seed ?? "0"}:${params.page ?? 1}:${params.limit ?? DEFAULT_PAGE_SIZE}`;
+  return cachedResponse(key, CATALOG_TTL_MS, () => fetchStreamingCatalogImpl(params), (movies) => movies.length > 0);
+}
+
+async function fetchStreamingCatalogImpl({
   providerShortNames,
   seed = "0",
   locale = DEFAULT_LOCALE,
@@ -678,7 +730,15 @@ export async function fetchStreamingCatalog({
 
 // Fetches a large pool of catalog entries (no seed randomisation) for global sorting.
 // Used by the rating sort so the entire result set is ranked before pagination.
-export async function fetchStreamingCatalogAll({
+export async function fetchStreamingCatalogAll(params: {
+  providerShortNames?: string[];
+  locale?: string;
+}): Promise<StreamingCatalogMovie[]> {
+  const key = `catalog-all:${params.locale ?? DEFAULT_LOCALE}:${providerCacheKey(params.providerShortNames)}`;
+  return cachedResponse(key, CATALOG_TTL_MS, () => fetchStreamingCatalogAllImpl(params), (movies) => movies.length > 0);
+}
+
+async function fetchStreamingCatalogAllImpl({
   providerShortNames,
   locale = DEFAULT_LOCALE,
 }: {
