@@ -99,34 +99,48 @@ export function ListMoviesGrid({
         flushTimer = setTimeout(flush, 50);
       };
 
-      async function fetchOne(tmdbId: number) {
+      // Batch lookups: one request per ~50 titles instead of one per title
+      // (a 100-film list previously fired 100 requests from the browser).
+      const BATCH_SIZE = 50;
+      const batches: number[][] = [];
+      for (let start = 0; start < missing.length; start += BATCH_SIZE) {
+        batches.push(missing.slice(start, start + BATCH_SIZE));
+      }
+
+      async function fetchBatch(ids: number[]) {
+        const movieIds = ids.filter((id) => mediaTypeMap[id] !== "tv");
+        const tvIds = ids.filter((id) => mediaTypeMap[id] === "tv");
+        const query = new URLSearchParams();
+        if (movieIds.length) query.set("movies", movieIds.join(","));
+        if (tvIds.length) query.set("tv", tvIds.join(","));
         try {
-          const isShow = mediaTypeMap[tmdbId] === "tv";
-          const endpoint = isShow ? `/tmdb/tv/${tmdbId}` : `/tmdb/movie/${tmdbId}?lite=true`;
-          const result = await apiFetch<{ detail: SimplifiedMovie }>(endpoint, {
+          const result = await apiFetch<{ titles: SimplifiedMovie[] }>(`/tmdb/titles?${query.toString()}`, {
             signal: controller.signal,
           });
-          if (!result?.detail) return;
-          pending.push(result.detail);
+          const titles = result?.titles ?? [];
+          if (!titles.length) return;
+          pending.push(...titles);
           scheduleFlush();
-          try {
-            window.sessionStorage.setItem(`tmdb:${tmdbId}`, JSON.stringify(result.detail));
-          } catch {
-            // ignore cache write errors
+          for (const title of titles) {
+            try {
+              window.sessionStorage.setItem(`tmdb:${title.tmdbId}`, JSON.stringify(title));
+            } catch {
+              // ignore cache write errors
+            }
           }
         } catch {
-          // ignore individual lookup failures
+          // ignore batch lookup failures
         }
       }
 
-      const concurrency = Math.min(8, missing.length);
+      const concurrency = Math.min(3, batches.length);
       let cursor = 0;
       const workers = Array.from({ length: concurrency }, async () => {
         while (!cancelled) {
           const index = cursor;
           cursor += 1;
-          if (index >= missing.length) break;
-          await fetchOne(missing[index]);
+          if (index >= batches.length) break;
+          await fetchBatch(batches[index]);
         }
       });
 
