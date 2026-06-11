@@ -29,7 +29,7 @@ export function ShareButton({ url, title }: { url: string; title: string }) {
       type="button"
       onClick={handleShare}
       aria-label="Share this list"
-      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/6 px-3.5 py-1.5 text-sm font-medium text-white/80 transition hover:bg-white/12 hover:text-white active:scale-[0.98]"
+      className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 transition hover:text-white active:scale-[0.98]"
     >
       <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
         <path

@@ -102,29 +102,25 @@ export default async function ListDetail({
         <div className="relative mb-2">
           <div className="relative z-10 space-y-3 px-5 pb-0 pt-3 text-center sm:px-6 sm:pt-4">
             <h1 className="text-4xl font-semibold leading-[1.05] text-white sm:text-5xl">{list.title}</h1>
-            <div className="mb-1 flex flex-wrap items-center justify-center gap-1.5 text-sm text-black-400 opacity-70">
+            <div className="mb-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-black-400 opacity-70">
               {ownerIsPublic ? (
                 <Link
                   href={`/${encodeURIComponent(ownerUsername)}`}
-                  className="inline-flex items-center rounded-full bg-black-900 px-2.5 py-1 font-medium text-black-200 hover:text-white"
+                  className="font-medium text-black-200 hover:text-white"
                 >
                   @{ownerUsername}
                 </Link>
               ) : (
-                <span className="inline-flex items-center rounded-full bg-black-900 px-2.5 py-1 font-medium text-black-200">
-                  @{ownerUsername}
-                </span>
+                <span className="font-medium text-black-200">@{ownerUsername}</span>
               )}
-              <span className="inline-flex items-center rounded-full bg-black-900 px-2.5 py-1 font-medium text-black-100">
+              <span className="font-medium text-black-100">
                 {list.movies.length} {list.movies.length === 1 ? "film" : "films"}
               </span>
-              <span className="inline-flex items-center rounded-full bg-black-900 px-2.5 py-1 font-medium text-black-200">
+              <span className="font-medium text-black-200">
                 {list.visibility === "public" ? "Public list" : "Private list"}
               </span>
               {list.canEdit && viewerEmail && viewerEmail !== list.userEmail ? (
-                <span className="inline-flex items-center rounded-full bg-black-900 px-2.5 py-1 font-medium text-black-200">
-                  Shared with you
-                </span>
+                <span className="font-medium text-black-200">Shared with you</span>
               ) : null}
             </div>
             <div className="flex items-center justify-center gap-3 pb-4">

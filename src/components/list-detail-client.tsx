@@ -67,7 +67,7 @@ export function ListDetailClient({
         </div>
       ) : null}
 
-      <section className="!mt-0 rounded-2xl bg-black-950/60 p-4 sm:p-5">
+      <section className="!mt-0">
         {!isEditing && !isOwner ? (
           <div className="mb-4">
             <ListEditor
