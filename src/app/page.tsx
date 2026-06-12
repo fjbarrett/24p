@@ -27,7 +27,7 @@ export default async function Home() {
         <Header isSignedIn={isSignedIn} centered={!isSignedIn} lists={lists} userEmail={userEmail} />
 
         {isSignedIn ? (
-          <main className="mt-0 w-full max-w-[760px] space-y-10">
+          <main className="mt-10 w-full max-w-[760px] space-y-10">
             <ListsSection lists={lists} userEmail={userEmail} posters={listPosters} />
           </main>
         ) : null}

@@ -68,7 +68,7 @@ export function ListSuggestionsPanel({ listId }: Props) {
       <div className="flex justify-center">
         <button
           onClick={load}
-          className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-white/50 transition hover:border-white/20 hover:text-white/80"
+          className="flex items-center gap-1.5 rounded-full border border-white/10 px-4 py-2 text-sm text-white/50 transition hover:border-white/20 hover:text-white/80"
         >
           <SparkleIcon />
           Suggest more
@@ -102,7 +102,7 @@ export function ListSuggestionsPanel({ listId }: Props) {
   const visible = panel.movies.filter((m) => !panel.added.has(m.tmdbId));
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-black-950/60 p-4 sm:p-5">
+    <div>
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-1.5 text-sm font-medium text-white/60">
           <SparkleIcon />
