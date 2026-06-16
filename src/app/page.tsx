@@ -93,7 +93,10 @@ function Header({
       <div className={`w-full ${isSignedIn ? "max-w-[560px]" : "max-w-[480px]"}`}>
         <TmdbSearchBar lists={lists} userEmail={userEmail} bordered />
       </div>
-      <div className="flex justify-center">
+      {/* gap-6 (24px) above + mt-4 (16px) = 40px, matching the main's mt-10 below
+          so the Streaming Availability link sits symmetrically between the search
+          bar and the list cards */}
+      <div className="mt-4 flex justify-center">
         <Link
           href="/streaming"
           className="text-sm text-white/62 underline-offset-4 transition hover:text-white hover:underline"

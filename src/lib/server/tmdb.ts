@@ -64,6 +64,7 @@ type TmdbMovieCredit = {
   job?: string | null;
   department?: string | null;
   popularity?: number | null;
+  vote_average?: number | null;
   vote_count?: number | null;
 };
 
@@ -760,6 +761,8 @@ export async function fetchTmdbPersonWithFilmography(
     imdbId: null,
     imdbRating: undefined,
     popularity: typeof credit.popularity === "number" ? credit.popularity : undefined,
+    tmdbRating: typeof credit.vote_average === "number" && credit.vote_average > 0 ? credit.vote_average : undefined,
+    voteCount: typeof credit.vote_count === "number" ? credit.vote_count : undefined,
   }));
 
   // Deduplicate: one entry per tmdbId, keeping the highest-priority role
