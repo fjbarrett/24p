@@ -12,6 +12,19 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "artist-top-rated-sort",
+    date: "2026-06-16",
+    title: "Sort an artist's films by their best",
+    summary:
+      "Artist filmographies are now a poster grid like the streaming page, with a rating on each poster and a Newest / Top rated sort that surfaces a person's greatest work. Low-vote obscurities are weighted down so a 9.8 from a dozen votes can't outrank a beloved classic.",
+    type: "Improvement",
+    tags: ["artists", "discovery"],
+    added: [
+      "A Newest / Top rated sort selector on artist filmographies.",
+      "Filmographies now show as a poster grid with each film's rating.",
+    ],
+  },
+  {
     slug: "shareable-list-previews",
     date: "2026-06-10",
     title: "Public lists look great when you share them",

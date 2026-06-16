@@ -73,6 +73,8 @@ export type FilmographyEntry = {
   imdbRating?: number;
   imdbId?: string | null;
   popularity?: number;
+  tmdbRating?: number;
+  voteCount?: number;
 };
 
 export type TmdbPersonDetail = {
