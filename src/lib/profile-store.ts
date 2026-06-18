@@ -7,6 +7,9 @@ export type UserProfile = {
   createdAt: string;
 };
 
+// A profile as exposed on public/unauthenticated surfaces — never carries email.
+export type PublicProfile = Omit<UserProfile, "userEmail">;
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
@@ -49,13 +52,13 @@ export async function setProfileVisibility(userEmail: string, isPublic: boolean)
   return data.profile;
 }
 
-export async function getPublicProfile(username: string): Promise<UserProfile | null> {
+export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
   const normalized = username.trim().toLowerCase();
   if (!normalized) {
     throw new Error("username is required to load a public profile");
   }
   try {
-    const data = await apiFetch<{ profile: UserProfile }>(
+    const data = await apiFetch<{ profile: PublicProfile }>(
       `/profiles/public/${encodeURIComponent(normalized)}`,
     );
     return data.profile ?? null;

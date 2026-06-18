@@ -4,7 +4,7 @@ import { fetchWatchProviders } from "@/lib/server/tmdb";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const tmdbId = Number(searchParams.get("tmdbId"));
-  if (!tmdbId || Number.isNaN(tmdbId)) {
+  if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
     return NextResponse.json({ providers: [], justWatchLink: null });
   }
   const mediaType = searchParams.get("mediaType") === "tv" ? "tv" : "movie";

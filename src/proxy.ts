@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { clientIp } from "@/lib/server/client-ip";
 
 // Per-IP fixed-window limiter for unauthenticated public-read endpoints.
 // State is per-isolate; a single-container deploy is fine, multi-replica needs
@@ -18,8 +19,7 @@ function rateLimitedPath(pathname: string) {
 }
 
 function clientKey(request: NextRequest) {
-  const forwarded = request.headers.get("x-forwarded-for");
-  return forwarded?.split(",")[0]?.trim() || "unknown";
+  return clientIp(request.headers);
 }
 
 function consume(key: string) {

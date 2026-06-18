@@ -167,8 +167,13 @@ function isJustWatchHostname(hostname: string) {
 function resolveDirectOfferUrl(rawUrl?: string | null): string | null {
   if (!rawUrl) return null;
 
+  // Only ever return http(s) links — these flow straight into an anchor href,
+  // so a poisoned upstream returning e.g. `javascript:`/`data:` must be dropped.
+  const isHttp = (url: URL) => url.protocol === "http:" || url.protocol === "https:";
+
   try {
     const parsed = new URL(rawUrl);
+    if (!isHttp(parsed)) return null;
     const hostname = parsed.hostname.toLowerCase();
 
     if (hostname === "click.justwatch.com") {
@@ -176,6 +181,7 @@ function resolveDirectOfferUrl(rawUrl?: string | null): string | null {
       if (!redirectTarget) return null;
 
       const directTarget = new URL(redirectTarget);
+      if (!isHttp(directTarget)) return null;
       if (isJustWatchHostname(directTarget.hostname)) return null;
       return directTarget.toString();
     }

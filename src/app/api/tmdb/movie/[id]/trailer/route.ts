@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { id } = await context.params;
   const tmdbId = Number(id);
-  if (!Number.isFinite(tmdbId)) {
+  if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
     return errorResponse("Invalid TMDB id");
   }
 

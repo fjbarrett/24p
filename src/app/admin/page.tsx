@@ -2,15 +2,13 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getSessionUserEmail } from "@/lib/server/session";
-import { getAdminStats } from "@/lib/server/admin";
+import { getAdminStats, isAdminEmail } from "@/lib/server/admin";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Dashboard",
   robots: { index: false, follow: false },
 };
-
-const ADMIN_EMAIL = "frank.e.barrett@gmail.com";
 
 function fmt(n: string | number) {
   return Number(n).toLocaleString();
@@ -29,7 +27,7 @@ function relativeDate(iso: string) {
 
 export default async function AdminPage() {
   const email = await getSessionUserEmail();
-  if (email !== ADMIN_EMAIL) redirect("/");
+  if (!isAdminEmail(email)) redirect("/");
 
   const { overview, users, recentLists, topLists, week } = await getAdminStats();
 

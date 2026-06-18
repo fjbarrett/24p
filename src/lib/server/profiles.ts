@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import type { UserProfile } from "@/lib/profile-store";
+import type { PublicProfile, UserProfile } from "@/lib/profile-store";
 import { getPool } from "@/lib/server/db";
 
 type ProfileRow = {
@@ -14,6 +14,17 @@ type ProfileRow = {
 function mapProfile(row: ProfileRow): UserProfile {
   return {
     userEmail: row.user_email.trim().toLowerCase(),
+    username: row.username,
+    isPublic: row.is_public,
+    createdAt: new Date(row.created_at).toISOString(),
+  };
+}
+
+// Public projection: never includes the owner's email. Used by the
+// unauthenticated /api/profiles/public/[username] surface and the public
+// profile pages so an anonymous caller can never resolve a username -> email.
+function mapPublicProfile(row: ProfileRow): PublicProfile {
+  return {
     username: row.username,
     isPublic: row.is_public,
     createdAt: new Date(row.created_at).toISOString(),
@@ -92,5 +103,5 @@ export const getPublicProfileByUsername = cache(async (username: string) => {
     "SELECT * FROM profiles WHERE username = $1 AND is_public = true",
     [normalized],
   );
-  return result.rows[0] ? mapProfile(result.rows[0]) : null;
+  return result.rows[0] ? mapPublicProfile(result.rows[0]) : null;
 });

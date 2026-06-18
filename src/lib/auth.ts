@@ -5,6 +5,21 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
 
+// Fail loudly if a production runtime is missing its signing secret or OAuth
+// credentials, instead of silently booting with a derived key / placeholder
+// creds (which would let an operator ship forgeable sessions or a broken login
+// without noticing). Skipped during `next build`, which runs with NODE_ENV=
+// production but no secrets injected (see Dockerfile), and in dev where the
+// placeholders below keep local boot working.
+if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
+  if (!NEXTAUTH_SECRET) {
+    throw new Error("NEXTAUTH_SECRET is required in production");
+  }
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required in production");
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   secret: NEXTAUTH_SECRET,
   providers: [
