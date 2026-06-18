@@ -9,12 +9,23 @@ import { getPool } from "@/lib/server/db";
 // short-lived + single-use + rate-limited at the route is what makes a
 // 4-digit (10k-space) code safe against brute force.
 const PAIRING_TTL_MS = 10 * 60 * 1000;
+// Issued bearers expire 180 days after their last use (sliding window): an
+// actively-used Apple TV is refreshed on every request and never logs out,
+// while a leaked-then-idle token stops working once the window lapses.
+const TOKEN_TTL_MS = 180 * 24 * 60 * 60 * 1000;
 
 export type TvTokenSummary = {
+  // Public, non-secret handle for a device (a prefix of the SHA-256 token hash,
+  // which is one-way) — used to revoke a single device without the bearer.
+  id: string;
   label: string;
   createdAt: string;
   lastUsedAt: string | null;
+  expiresAt: string | null;
 };
+
+// Length of the public device id derived from token_hash (64-bit prefix).
+const TOKEN_ID_LEN = 16;
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -84,11 +95,13 @@ export async function claimTvPairing(rawPin: string): Promise<{ token: string } 
        FOR UPDATE
      )
      UPDATE tv_tokens t
-       SET pending_token = NULL, pin = NULL, pin_expires_at = NULL
+       SET pending_token = NULL, pin = NULL, pin_expires_at = NULL,
+           last_used_at = NOW(),
+           expires_at = NOW() + ($2 || ' milliseconds')::interval
        FROM claimed
        WHERE t.token_hash = claimed.token_hash
        RETURNING claimed.pending_token`,
-    [pin],
+    [pin, String(TOKEN_TTL_MS)],
   );
 
   const token = result.rows[0]?.pending_token;
@@ -100,11 +113,17 @@ export async function resolveTvToken(rawToken: string): Promise<string | null> {
   const token = rawToken.trim();
   if (!token) return null;
   const pool = getPool();
+  // Reject expired tokens; slide the window forward on every successful use so
+  // an active device stays signed in. NULL expires_at (pre-migration tokens) is
+  // accepted and backfilled here.
   const result = await pool.query<{ user_email: string }>(
-    `UPDATE tv_tokens SET last_used_at = NOW()
+    `UPDATE tv_tokens
+       SET last_used_at = NOW(),
+           expires_at = NOW() + ($2 || ' milliseconds')::interval
      WHERE token_hash = $1 AND pending_token IS NULL
+       AND (expires_at IS NULL OR expires_at > NOW())
      RETURNING user_email`,
-    [hashToken(token)],
+    [hashToken(token), String(TOKEN_TTL_MS)],
   );
   const email = result.rows[0]?.user_email;
   return email ? email.trim().toLowerCase() : null;
@@ -112,17 +131,37 @@ export async function resolveTvToken(rawToken: string): Promise<string | null> {
 
 export async function listTvTokens(userEmail: string): Promise<TvTokenSummary[]> {
   const pool = getPool();
-  const result = await pool.query<{ label: string; created_at: string; last_used_at: string | null }>(
-    `SELECT label, created_at, last_used_at FROM tv_tokens
+  const result = await pool.query<{
+    token_hash: string;
+    label: string;
+    created_at: string;
+    last_used_at: string | null;
+    expires_at: string | null;
+  }>(
+    `SELECT token_hash, label, created_at, last_used_at, expires_at FROM tv_tokens
      WHERE user_email = $1 AND pending_token IS NULL
      ORDER BY created_at DESC`,
     [userEmail],
   );
   return result.rows.map((row) => ({
+    id: row.token_hash.slice(0, TOKEN_ID_LEN),
     label: row.label,
     createdAt: new Date(row.created_at).toISOString(),
     lastUsedAt: row.last_used_at ? new Date(row.last_used_at).toISOString() : null,
+    expiresAt: row.expires_at ? new Date(row.expires_at).toISOString() : null,
   }));
+}
+
+/** Revokes a single device by its public id (token_hash prefix). */
+export async function revokeTvTokenById(userEmail: string, id: string): Promise<number> {
+  // The id is a hex prefix of the SHA-256 token hash — never the bearer itself.
+  if (!new RegExp(`^[a-f0-9]{${TOKEN_ID_LEN}}$`).test(id)) return 0;
+  const pool = getPool();
+  const result = await pool.query(
+    `DELETE FROM tv_tokens WHERE user_email = $1 AND LEFT(token_hash, ${TOKEN_ID_LEN}) = $2`,
+    [userEmail, id],
+  );
+  return result.rowCount ?? 0;
 }
 
 /** Revokes every Apple TV token and pending pairing for the user. */

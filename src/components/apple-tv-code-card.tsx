@@ -1,13 +1,43 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
+
+type TvDevice = {
+  id: string;
+  label: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+};
+
+function lastUsedLabel(device: TvDevice) {
+  const iso = device.lastUsedAt ?? device.createdAt;
+  const date = new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return device.lastUsedAt ? `Last used ${date}` : `Paired ${date} · not used yet`;
+}
 
 export function AppleTvCodeCard() {
   const [pin, setPin] = useState<string | null>(null);
   const [expiresInSeconds, setExpiresInSeconds] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [devices, setDevices] = useState<TvDevice[]>([]);
   const [isPending, startTransition] = useTransition();
+
+  const loadDevices = useCallback(async () => {
+    try {
+      const res = await fetch("/api/tv/token");
+      if (!res.ok) return;
+      const body = (await res.json()) as { tokens?: TvDevice[] };
+      setDevices(body.tokens ?? []);
+    } catch {
+      // Non-fatal: the device list is informational.
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadDevices();
+  }, [loadDevices]);
 
   const generate = () => {
     if (isPending) return;
@@ -29,6 +59,21 @@ export function AppleTvCodeCard() {
     });
   };
 
+  const removeDevice = (id: string) => {
+    if (isPending) return;
+    startTransition(async () => {
+      setMessage(null);
+      try {
+        const res = await fetch(`/api/tv/token?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(`Request failed (${res.status})`);
+        setMessage("Device removed. That Apple TV will be signed out.");
+        await loadDevices();
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Unable to remove device.");
+      }
+    });
+  };
+
   const revoke = () => {
     if (isPending) return;
     startTransition(async () => {
@@ -39,6 +84,7 @@ export function AppleTvCodeCard() {
         const res = await fetch("/api/tv/token", { method: "DELETE" });
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         setMessage("All Apple TV codes revoked. Any signed-in Apple TV will be signed out.");
+        await loadDevices();
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Unable to revoke codes.");
       }
@@ -103,6 +149,36 @@ export function AppleTvCodeCard() {
         >
           {isPending ? "Generating…" : "Generate code"}
         </button>
+      )}
+
+      {devices.length > 0 && (
+        <>
+          <div className="border-t border-white/6" />
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-white">Signed-in devices</p>
+            <ul className="space-y-2">
+              {devices.map((device) => (
+                <li
+                  key={device.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-black/20 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-white">{device.label}</p>
+                    <p className="text-xs text-black-400">{lastUsedLabel(device)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeDevice(device.id)}
+                    disabled={isPending}
+                    className="shrink-0 rounded-lg border border-white/10 bg-white/6 px-2.5 py-1 text-xs font-medium text-black-300 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
       )}
 
       <div className="border-t border-white/6" />
