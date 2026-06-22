@@ -13,7 +13,7 @@ export async function GET(
   }
   const { id } = await context.params;
   const personId = Number(id);
-  if (!Number.isFinite(personId)) {
+  if (!Number.isInteger(personId) || personId <= 0) {
     return errorResponse("Invalid person id");
   }
   try {

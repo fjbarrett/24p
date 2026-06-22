@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
-import { createTvPairing, listTvTokens, revokeTvTokens } from "@/lib/server/tv-tokens";
+import { createTvPairing, listTvTokens, revokeTvTokenById, revokeTvTokens } from "@/lib/server/tv-tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +28,15 @@ export async function POST() {
   }
 }
 
-// DELETE — revoke all of the user's Apple TV tokens.
-export async function DELETE() {
+// DELETE — revoke one device (?id=) or, with no id, all of the user's tokens.
+export async function DELETE(request: Request) {
   const userEmail = await getSessionUserEmail();
   if (!userEmail) return errorResponse("Unauthorized", 401);
+  const id = new URL(request.url).searchParams.get("id");
   try {
-    const revoked = await revokeTvTokens(userEmail);
+    const revoked = id
+      ? await revokeTvTokenById(userEmail, id)
+      : await revokeTvTokens(userEmail);
     return NextResponse.json({ revoked });
   } catch (error) {
     return errorResponse(error instanceof Error ? error.message : "Unable to revoke Apple TV tokens", 500);

@@ -97,6 +97,9 @@ const INCREMENTAL_MIGRATIONS = [
   `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS pin_expires_at TIMESTAMPTZ`,
   `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS pending_token TEXT`,
   `CREATE INDEX IF NOT EXISTS tv_tokens_pin_idx ON tv_tokens (pin)`,
+  // Sliding absolute-expiry for issued bearers (refreshed on each use). NULL on
+  // pre-existing rows is treated as "no expiry yet" and backfilled on first use.
+  `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`,
 ];
 
 let migrationPromise: Promise<void> | null = null;

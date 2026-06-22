@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { searchTmdb } from "@/lib/server/tmdb";
 import { errorResponse } from "@/lib/server/http";
 import { consume } from "@/lib/server/rate-limit";
+import { clientIp } from "@/lib/server/client-ip";
 
 export async function GET(request: Request) {
   // Unauthenticated and fans out to 3 TMDB calls + Wikipedia lookups per query,
   // so cap per-IP to blunt outbound amplification.
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = clientIp(request.headers);
   const limit = consume(`tmdb-search:${ip}`, 30, 60_000);
   if (!limit.ok) {
     return NextResponse.json(
