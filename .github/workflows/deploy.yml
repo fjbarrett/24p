@@ -76,6 +76,7 @@ jobs:
           POSTGRES_PASSWORD=${{ secrets.PROD_POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.PROD_POSTGRES_DB }}
           ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+          OMDB_API_KEY=${{ secrets.OMDB_API_KEY }}
           EOF
           chmod 600 .env
 
