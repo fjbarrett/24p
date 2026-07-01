@@ -12,6 +12,16 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "home-button",
+    date: "2026-06-30",
+    title: "Jump home from any page",
+    summary:
+      "Detail pages now have a Home button next to Back, so you can get to the start in one tap instead of stepping back through where you came from.",
+    type: "Improvement",
+    tags: ["navigation"],
+    added: ["A Home button in the header on detail pages, next to Back."],
+  },
+  {
     slug: "reliable-imdb-ratings",
     date: "2026-06-30",
     title: "IMDb ratings you can count on",
