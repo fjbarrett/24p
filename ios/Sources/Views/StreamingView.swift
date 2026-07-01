@@ -104,7 +104,7 @@ struct StreamingView: View {
     }
 
     private var controls: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             Picker("Sort", selection: $vm.sort) {
                 Text("Popular").tag("popularity")
                 Text("Top rated").tag("rating")
@@ -115,26 +115,34 @@ struct StreamingView: View {
 
             if !vm.providers.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(vm.providers) { provider in
-                            let on = vm.selected.contains(provider.shortName)
-                            Button {
-                                vm.toggle(provider.shortName)
-                                Task { await vm.reload() }
-                            } label: {
-                                Text(provider.name)
-                                    .font(.caption).fontWeight(.medium)
-                                    .padding(.horizontal, 12).padding(.vertical, 7)
-                                    .background(on ? Color.white : Color(white: 0.16), in: Capsule())
-                                    .foregroundStyle(on ? Color.black : Color.white)
+                    GlassEffectContainer(spacing: 8) {
+                        HStack(spacing: 8) {
+                            ForEach(vm.providers) { provider in
+                                chip(provider)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal)
                 }
             }
         }
-        .padding(.top, 4)
+        .padding(.top, 6)
+    }
+
+    private func chip(_ provider: StreamingPlatform) -> some View {
+        let on = vm.selected.contains(provider.shortName)
+        return Button {
+            vm.toggle(provider.shortName)
+            Task { await vm.reload() }
+        } label: {
+            Text(provider.name)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(on ? .black : .white)
+                .padding(.horizontal, 14).padding(.vertical, 8)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(
+            on ? .regular.tint(.white).interactive() : .regular.interactive(),
+            in: .capsule)
     }
 }

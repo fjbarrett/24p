@@ -30,7 +30,7 @@ struct ListDetailView: View {
     let list: SavedList
 
     @StateObject private var vm = ListDetailViewModel()
-    private let columns = [GridItem(.adaptive(minimum: 104), spacing: 14)]
+    private let columns = [GridItem(.adaptive(minimum: Theme.posterGridMin), spacing: Theme.gridSpacing)]
 
     var body: some View {
         ScrollView {
@@ -41,7 +41,7 @@ struct ListDetailView: View {
                                        description: Text("This list has no titles yet."))
                     .padding(.top, 40)
             } else {
-                LazyVGrid(columns: columns, spacing: 18) {
+                LazyVGrid(columns: columns, spacing: 20) {
                     ForEach(vm.movies) { movie in
                         NavigationLink(value: MediaRef(tmdbId: movie.tmdbId, mediaType: movie.resolvedMediaType)) {
                             PosterCard(movie: movie)
@@ -53,7 +53,12 @@ struct ListDetailView: View {
             }
         }
         .navigationTitle(list.title)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationSubtitle(subtitle)
         .task { await vm.load(list) }
+    }
+
+    private var subtitle: String {
+        let n = list.items.count
+        return "\(n) \(n == 1 ? "title" : "titles")" + (list.username.map { " · @\($0)" } ?? "")
     }
 }

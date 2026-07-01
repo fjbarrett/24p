@@ -1,37 +1,37 @@
 import SwiftUI
 
+/// Shared visual constants so cards, grids, and glass surfaces stay consistent.
+enum Theme {
+    static let posterRadius: CGFloat = 14
+    static let cardRadius: CGFloat = 18
+    static let posterGridMin: CGFloat = 110
+    static let gridSpacing: CGFloat = 16
+}
+
 /// A lightweight reference used for value-based navigation to a detail page.
 struct MediaRef: Hashable {
     let tmdbId: Int
     let mediaType: String
 }
 
-/// Poster + title cell used in grids. Maintains a 2:3 aspect ratio.
+/// Poster + title cell used in grids. Maintains a 2:3 aspect ratio with a
+/// frosted Liquid Glass rating badge.
 struct PosterCard: View {
     let title: String
     let posterURL: URL?
     var badge: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ZStack(alignment: .topTrailing) {
-                ZStack {
-                    Color(white: 0.14)
-                    AsyncImage(url: posterURL) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        Image(systemName: "film").font(.title2).foregroundStyle(.secondary)
-                    }
-                }
-                .aspectRatio(2.0 / 3.0, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-
+        VStack(alignment: .leading, spacing: 7) {
+            ZStack(alignment: .bottomTrailing) {
+                poster
                 if let badge {
                     Text(badge)
-                        .font(.caption2).fontWeight(.semibold).foregroundStyle(.white)
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(.black.opacity(0.65), in: Capsule())
-                        .padding(6)
+                        .font(.caption2).fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .glassEffect(.regular, in: .capsule)
+                        .padding(7)
                 }
             }
 
@@ -42,6 +42,29 @@ struct PosterCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
+
+    private var poster: some View {
+        ZStack {
+            Rectangle().fill(Color(white: 0.14))
+            AsyncImage(url: posterURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                case .empty:
+                    ProgressView().tint(.secondary)
+                default:
+                    Image(systemName: "film").font(.title2).foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .aspectRatio(2.0 / 3.0, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.posterRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.posterRadius, style: .continuous)
+                .strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.35), radius: 8, y: 4)
+    }
 }
 
 extension PosterCard {
@@ -50,13 +73,13 @@ extension PosterCard {
     }
 }
 
-/// Reusable two-column poster grid that navigates to a detail page on tap.
+/// Reusable poster grid that navigates to a detail page on tap.
 struct PosterGrid: View {
     let movies: [SimplifiedMovie]
-    private let columns = [GridItem(.adaptive(minimum: 104), spacing: 14)]
+    private let columns = [GridItem(.adaptive(minimum: Theme.posterGridMin), spacing: Theme.gridSpacing)]
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 18) {
+        LazyVGrid(columns: columns, spacing: 20) {
             ForEach(movies) { movie in
                 NavigationLink(value: MediaRef(tmdbId: movie.tmdbId, mediaType: movie.resolvedMediaType)) {
                     PosterCard(movie: movie, badge: movie.imdbRating.map { String(format: "★ %.1f", $0) })
@@ -72,21 +95,29 @@ struct ListRowView: View {
     let list: SavedList
 
     var body: some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color(hex: list.color ?? "") ?? Color(white: 0.3))
-                .frame(width: 10, height: 36)
+        HStack(spacing: 13) {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [chipColor, chipColor.opacity(0.55)],
+                        startPoint: .top, endPoint: .bottom)
+                )
+                .frame(width: 5, height: 38)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(list.title).font(.body).fontWeight(.medium).lineLimit(1)
-                Text("\(list.items.count) \(list.items.count == 1 ? "title" : "titles")"
-                     + (list.username.map { " · @\($0)" } ?? ""))
-                    .font(.caption).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(list.title).font(.body.weight(.semibold)).lineLimit(1)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
         }
         .contentShape(Rectangle())
+    }
+
+    private var chipColor: Color { Color(hex: list.color ?? "") ?? Color(white: 0.4) }
+
+    private var subtitle: String {
+        let n = list.items.count
+        return "\(n) \(n == 1 ? "title" : "titles")" + (list.username.map { " · @\($0)" } ?? "")
     }
 }
 

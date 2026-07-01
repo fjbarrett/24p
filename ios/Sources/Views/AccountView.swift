@@ -9,14 +9,22 @@ struct AccountView: View {
         NavigationStack {
             Form {
                 if auth.isSignedIn, let user = auth.user {
-                    Section("Signed in") {
-                        if let name = user.name, !name.isEmpty {
-                            LabeledContent("Name", value: name)
+                    Section {
+                        HStack(spacing: 14) {
+                            avatar(user)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(user.name?.isEmpty == false ? user.name! : "24p member")
+                                    .font(.headline)
+                                if let username = auth.profile?.username {
+                                    Text("@\(username)")
+                                        .font(.subheadline).foregroundStyle(.secondary)
+                                }
+                                Text(user.email)
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
                         }
-                        LabeledContent("Email", value: user.email)
-                        if let username = auth.profile?.username {
-                            LabeledContent("Username", value: "@\(username)")
-                        }
+                        .padding(.vertical, 4)
                     }
                     Section {
                         Button("Sign Out", role: .destructive) { auth.signOut() }
@@ -60,5 +68,18 @@ struct AccountView: View {
             }
             .navigationTitle(auth.isSignedIn ? "Account" : "Sign In")
         }
+    }
+
+    private func avatar(_ user: SessionUser) -> some View {
+        AsyncImage(url: user.image.flatMap(URL.init(string:))) { image in
+            image.resizable().scaledToFill()
+        } placeholder: {
+            Image(systemName: "person.crop.circle.fill")
+                .resizable().scaledToFit()
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: 56, height: 56)
+        .clipShape(Circle())
+        .overlay(Circle().strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
     }
 }
