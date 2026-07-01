@@ -179,7 +179,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
             }}
             onFocus={() => setPanelDismissed(false)}
             type="text"
-            placeholder={pathname.split("/").filter(Boolean).length >= 2 ? "Search" : "Search for movies, tv, cast and crew"}
+            placeholder={pathname.split("/").filter(Boolean).length >= 2 ? "Search" : "Search for movies, TV, cast and crew"}
             aria-label="Search movies and shows"
             aria-controls={resultsId}
             aria-describedby={error ? errorId : undefined}

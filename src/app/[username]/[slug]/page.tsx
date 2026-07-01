@@ -11,7 +11,6 @@ import { getListByUsernameSlugForViewer, getListPreviewItems, loadFavoritesForUs
 import { serializeJsonLd } from "@/lib/json-ld";
 import { getAppUrl } from "@/lib/app-url";
 import { toMovieSlug } from "@/lib/slug";
-import { ShareButton } from "@/components/share-button";
 
 export const dynamic = "force-dynamic";
 
@@ -124,7 +123,6 @@ export default async function ListDetail({
               ) : null}
             </div>
             <div className="flex items-center justify-center gap-3 pb-4">
-              <ShareButton url={shareUrl} title={list.title} />
               {canFavorite && (
                 <div className="opacity-70">
                   <FavoriteToggle listId={list.id} userEmail={viewerEmail} initialFavorite={isFavorite} />

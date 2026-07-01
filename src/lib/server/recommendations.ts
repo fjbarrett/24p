@@ -89,10 +89,10 @@ export async function getRecommendationsForList(listId: string, userEmail: strin
     .map((m) => (m.releaseYear ? `${m.title} (${m.releaseYear})` : m.title))
     .join("\n");
 
-  // Ask Haiku to suggest films that would fit this list
+  // Ask Opus to suggest films that would fit this list
   const client = getAnthropicClient();
   const message = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: "claude-opus-4-8",
     max_tokens: 512,
     messages: [
       {
