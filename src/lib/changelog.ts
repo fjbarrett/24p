@@ -41,11 +41,10 @@ export const changelogEntries: ChangelogEntry[] = [
     date: "2026-06-10",
     title: "Public lists look great when you share them",
     summary:
-      "Sharing a public list link now unfurls into a poster collage of the list's films with its title, and every public list has a one-tap Share button.",
+      "Sharing a public list link now unfurls into a poster collage of the list's films with its title.",
     type: "Improvement",
     tags: ["lists", "sharing"],
     added: [
-      "A Share button on public list pages — uses your device's share sheet, or copies the link.",
       "Pasted list links now show a poster-collage preview card instead of a generic icon.",
     ],
   },
