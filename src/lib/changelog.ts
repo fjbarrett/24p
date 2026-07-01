@@ -12,6 +12,18 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "reliable-imdb-ratings",
+    date: "2026-06-30",
+    title: "IMDb ratings you can count on",
+    summary:
+      "The IMDb rating on movie and show pages now comes from IMDb's own scores and is cached, so it shows up reliably instead of dropping off for titles we hadn't loaded recently.",
+    type: "Improvement",
+    tags: ["movies", "ratings"],
+    changed: [
+      "IMDb ratings are sourced from OMDb by IMDb id and cached, so they load consistently across titles.",
+    ],
+  },
+  {
     slug: "artist-top-rated-sort",
     date: "2026-06-16",
     title: "Sort an artist's films by their best",

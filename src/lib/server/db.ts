@@ -100,6 +100,14 @@ const INCREMENTAL_MIGRATIONS = [
   // Sliding absolute-expiry for issued bearers (refreshed on each use). NULL on
   // pre-existing rows is treated as "no expiry yet" and backfilled on first use.
   `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`,
+  // Read-through cache of public IMDb ratings fetched from OMDb, keyed by imdb
+  // id. rating is NULL when OMDb has no score (so we don't re-fetch on every
+  // view); fetched_at drives the refresh TTL.
+  `CREATE TABLE IF NOT EXISTS imdb_rating_cache (
+    imdb_id    TEXT PRIMARY KEY,
+    rating     REAL,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
 ];
 
 let migrationPromise: Promise<void> | null = null;
