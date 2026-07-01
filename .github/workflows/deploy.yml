@@ -95,28 +95,50 @@ jobs:
           username: deploy
           key: ${{ secrets.PROD_DEPLOY_SSH_KEY }}
           script: |
-            # Fail loudly on any error (incl. a failed `docker compose pull`).
-            # Previously the trailing prune masked pull failures, so deploys
-            # reported success while prod stayed on a stale image.
+            # Health-gated deploy with rollback. `docker compose up` recreates the
+            # single web container in place, so a NEW container that fails to start
+            # is a live outage, not a no-op — the old one is already gone. If the
+            # new container never serves 200 we restore the previous image so prod
+            # is never left down. (A failed pull, by contrast, never touches the
+            # running container, so we just fail fast and leave prod as-is.)
             set -eo pipefail
             cd /opt/24p
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull
-            docker compose up -d --remove-orphans
 
-            # Smoke test: don't declare the deploy successful until the new
-            # container actually serves 200. If it never comes up, fail the job
-            # (and skip the prune) so the previous image is left in place.
+            # Image the currently-running web container uses; empty on first deploy.
+            prev_image=$(docker inspect --format '{{.Image}}' "$(docker compose ps -q web 2>/dev/null)" 2>/dev/null || true)
+            echo "running image before deploy: ${prev_image:-<none>}"
+
+            # Pull up front (does not disturb the running container), then cut over.
+            docker compose pull web
+            docker compose up -d --remove-orphans || echo "compose up exited non-zero; health gate will decide"
+
+            # The deploy is only a success once the new container serves 200.
+            code=000
             for i in $(seq 1 18); do
               code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/ || true)
-              if [ "$code" = "200" ]; then echo "smoke test ok"; break; fi
+              if [ "$code" = "200" ]; then echo "smoke test ok after $((i * 5))s"; break; fi
               echo "waiting for app to come up ($i/18): got $code"; sleep 5
             done
+
             if [ "$code" != "200" ]; then
               echo "::error::post-deploy smoke test failed (last status: $code)"
-              docker compose logs --tail=50 web || true
+              docker compose logs --tail=80 web || true
+              if [ -n "$prev_image" ]; then
+                echo "rolling back to previous image $prev_image"
+                docker tag "$prev_image" ${{ env.IMAGE_WEB }}:latest
+                docker compose up -d --force-recreate --remove-orphans || true
+                sleep 8
+                echo "status after rollback: $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/ || true)"
+              else
+                echo "no previous image recorded — cannot auto-roll back"
+              fi
               exit 1
             fi
 
-            docker system prune -f
+            # Success. Prune only dangling images + week-old build cache; keep the
+            # previous image around so a fast manual rollback stays possible, and
+            # avoid nuking reusable layers on every deploy.
+            docker image prune -f
+            docker builder prune -f --filter 'until=168h' || true
 
