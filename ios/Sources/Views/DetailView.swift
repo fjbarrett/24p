@@ -58,21 +58,26 @@ struct DetailView: View {
     @ViewBuilder
     private func content(_ movie: SimplifiedMovie) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                backdrop(movie)
-                VStack(alignment: .leading, spacing: 18) {
-                    header(movie)
+            VStack(alignment: .leading, spacing: 20) {
+                hero(movie)
 
+                VStack(alignment: .leading, spacing: 18) {
                     Button {
                         showAddSheet = true
                     } label: {
                         Label("Add to a List", systemImage: "plus")
+                            .fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .buttonStyle(.glassProminent)
                     .tint(.white)
                     .foregroundStyle(.black)
 
+                    if let genres = movie.genres, !genres.isEmpty {
+                        Text(genres.prefix(3).joined(separator: " · "))
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
                     if let tagline = movie.tagline, !tagline.isEmpty {
                         Text(tagline).font(.callout).italic().foregroundStyle(.secondary)
                     }
@@ -82,12 +87,46 @@ struct DetailView: View {
                     credits(movie)
                     watchSection
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
-                .padding(.bottom, 28)
+                .padding(.bottom, 32)
             }
         }
         .navigationTitle(movie.title)
+        .ignoresSafeArea(edges: .top)
     }
+
+    /// Full-bleed backdrop with a scrim, the poster overlapping its lower edge,
+    /// and the title + meta capsules sitting on the photo. The backdrop is sized
+    /// to the exact container width so `scaledToFill` overflow can't widen the layout.
+    private func hero(_ movie: SimplifiedMovie) -> some View {
+        backdrop(movie)
+            .frame(height: heroHeight)
+            .containerRelativeFrame(.horizontal)
+            .clipped()
+            .overlay {
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.35), .black.opacity(0.92)],
+                    startPoint: .top, endPoint: .bottom)
+            }
+            .overlay(alignment: .bottomLeading) {
+                HStack(alignment: .bottom, spacing: 14) {
+                    poster(movie)
+                    VStack(alignment: .leading, spacing: 9) {
+                        Text(movie.title)
+                            .font(.title2.bold())
+                            .lineLimit(3)
+                        metaRow(movie)
+                    }
+                    .padding(.bottom, 4)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 16)
+            }
+    }
+
+    private let heroHeight: CGFloat = 340
 
     @ViewBuilder
     private func backdrop(_ movie: SimplifiedMovie) -> some View {
@@ -95,42 +134,39 @@ struct DetailView: View {
             AsyncImage(url: url) { image in
                 image.resizable().scaledToFill()
             } placeholder: {
-                Color(white: 0.12)
+                Rectangle().fill(Color(white: 0.12))
             }
-            .frame(height: 210)
-            .frame(maxWidth: .infinity)
-            .clipped()
+        } else {
+            LinearGradient(
+                colors: [Color(white: 0.18), Color(white: 0.08)],
+                startPoint: .top, endPoint: .bottom)
         }
     }
 
-    private func header(_ movie: SimplifiedMovie) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            ZStack {
-                Color(white: 0.14)
-                AsyncImage(url: movie.posterURL(size: "w342")) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Image(systemName: "film").foregroundStyle(.secondary)
-                }
+    private func poster(_ movie: SimplifiedMovie) -> some View {
+        ZStack {
+            Color(white: 0.14)
+            AsyncImage(url: movie.posterURL(size: "w342")) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Image(systemName: "film").foregroundStyle(.secondary)
             }
-            .frame(width: 96, height: 144)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .frame(width: 104, height: 156)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.5), radius: 10, y: 6)
+    }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text(movie.title).font(.title3).fontWeight(.bold)
-                HStack(spacing: 8) {
-                    if let year = movie.releaseYear { metaTag(String(year)) }
-                    if let runtime = movie.runtime, runtime > 0 { metaTag(formatRuntime(runtime)) }
-                    if let rating = movie.imdbRating ?? movie.rating {
-                        metaTag(String(format: "★ %.1f", rating))
-                    }
-                }
-                if let genres = movie.genres, !genres.isEmpty {
-                    Text(genres.prefix(3).joined(separator: " · "))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+    private func metaRow(_ movie: SimplifiedMovie) -> some View {
+        HStack(spacing: 7) {
+            if let year = movie.releaseYear { metaTag(String(year)) }
+            if let runtime = movie.runtime, runtime > 0 { metaTag(formatRuntime(runtime)) }
+            if let rating = movie.imdbRating ?? movie.rating {
+                metaTag(String(format: "★ %.1f", rating))
             }
-            Spacer(minLength: 0)
         }
     }
 
@@ -170,7 +206,7 @@ struct DetailView: View {
                             Image(systemName: "arrow.up.right").font(.caption).foregroundStyle(.tertiary)
                         }
                         .padding(12)
-                        .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
+                        .glassEffect(.regular, in: .rect(cornerRadius: 14))
                     }
                     .buttonStyle(.plain)
                 }
@@ -209,9 +245,9 @@ struct DetailView: View {
 
     private func metaTag(_ text: String) -> some View {
         Text(text)
-            .font(.caption).foregroundStyle(.secondary)
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Color(white: 0.2), in: Capsule())
+            .font(.caption.weight(.medium)).foregroundStyle(.white)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .glassEffect(.regular, in: .capsule)
     }
 
     private func formatRuntime(_ minutes: Int) -> String {

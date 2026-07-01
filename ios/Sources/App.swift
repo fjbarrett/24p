@@ -20,14 +20,19 @@ struct RootView: View {
 
     var body: some View {
         TabView {
-            HomeView()
-                .tabItem { Label("Home", systemImage: "square.stack") }
-            SearchView()
-                .tabItem { Label("Search", systemImage: "magnifyingglass") }
-            StreamingView()
-                .tabItem { Label("Streaming", systemImage: "play.tv") }
-            AccountView()
-                .tabItem { Label(auth.isSignedIn ? "Account" : "Sign In", systemImage: "person.crop.circle") }
+            Tab("Home", systemImage: "square.stack") {
+                HomeView()
+            }
+            Tab("Streaming", systemImage: "play.tv") {
+                StreamingView()
+            }
+            Tab(auth.isSignedIn ? "Account" : "Sign In", systemImage: "person.crop.circle") {
+                AccountView()
+            }
+            Tab("Search", systemImage: "magnifyingglass", role: .search) {
+                SearchView()
+            }
         }
+        .tabBarMinimizeBehavior(.onScrollDown)
     }
 }

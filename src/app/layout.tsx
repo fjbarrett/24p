@@ -32,14 +32,16 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   icons: {
+    // ?v=2 busts Cloudflare edge + sticky browser favicon caches after the
+    // film-strip redraw; bump the version on any future icon change.
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico" },
-      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
-      { url: "/favicon-16.png", type: "image/png", sizes: "16x16" },
+      { url: "/favicon.svg?v=2", type: "image/svg+xml" },
+      { url: "/favicon.ico?v=2" },
+      { url: "/favicon-32.png?v=2", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16.png?v=2", type: "image/png", sizes: "16x16" },
     ],
     apple: [
-      { url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" },
+      { url: "/apple-touch-icon.png?v=2", type: "image/png", sizes: "180x180" },
     ],
   },
   manifest: "/manifest.webmanifest",

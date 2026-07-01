@@ -2,7 +2,7 @@ name: 24p-ios
 
 options:
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "26.0"
   createIntermediateGroups: true
 
 settings:
