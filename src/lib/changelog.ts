@@ -12,6 +12,18 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "reliable-imdb-ratings",
+    date: "2026-06-30",
+    title: "IMDb ratings you can count on",
+    summary:
+      "The IMDb rating on movie and show pages now comes from IMDb's own scores and is cached, so it shows up reliably instead of dropping off for titles we hadn't loaded recently.",
+    type: "Improvement",
+    tags: ["movies", "ratings"],
+    changed: [
+      "IMDb ratings are sourced from OMDb by IMDb id and cached, so they load consistently across titles.",
+    ],
+  },
+  {
     slug: "artist-top-rated-sort",
     date: "2026-06-16",
     title: "Sort an artist's films by their best",
@@ -29,11 +41,10 @@ export const changelogEntries: ChangelogEntry[] = [
     date: "2026-06-10",
     title: "Public lists look great when you share them",
     summary:
-      "Sharing a public list link now unfurls into a poster collage of the list's films with its title, and every public list has a one-tap Share button.",
+      "Sharing a public list link now unfurls into a poster collage of the list's films with its title.",
     type: "Improvement",
     tags: ["lists", "sharing"],
     added: [
-      "A Share button on public list pages — uses your device's share sheet, or copies the link.",
       "Pasted list links now show a poster-collage preview card instead of a generic icon.",
     ],
   },
