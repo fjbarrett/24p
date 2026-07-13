@@ -1,20 +1,18 @@
 import { NextResponse } from "next/server";
 import { searchTmdb } from "@/lib/server/tmdb";
-import { errorResponse } from "@/lib/server/http";
-import { consume } from "@/lib/server/rate-limit";
+import { errorResponse, routeError } from "@/lib/server/http";
+import { enforceDurableLimits } from "@/lib/server/rate-limit";
 import { clientIp } from "@/lib/server/client-ip";
 
 export async function GET(request: Request) {
   // Unauthenticated and fans out to 3 TMDB calls + Wikipedia lookups per query,
-  // so cap per-IP to blunt outbound amplification.
+  // so cap per-IP and globally to blunt outbound amplification.
   const ip = clientIp(request.headers);
-  const limit = consume(`tmdb-search:${ip}`, 30, 60_000);
-  if (!limit.ok) {
-    return NextResponse.json(
-      { error: "Too many requests" },
-      { status: 429, headers: { "retry-after": String(limit.retryAfterSeconds) } },
-    );
-  }
+  const blocked = await enforceDurableLimits([
+    { key: `tmdb-search:${ip}`, max: 30, windowMs: 60_000 },
+    { key: "tmdb-search:global", max: 600, windowMs: 60_000 },
+  ]);
+  if (blocked) return blocked;
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query") ?? "";
@@ -23,7 +21,7 @@ export async function GET(request: Request) {
   }
   try {
     return NextResponse.json(await searchTmdb(query));
-  } catch {
-    return errorResponse("Unable to search TMDB", 500);
+  } catch (error) {
+    return routeError("api/tmdb/search", error, "Unable to search TMDB");
   }
 }

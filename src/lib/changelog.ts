@@ -12,6 +12,22 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "device-approval-sign-in",
+    date: "2026-07-13",
+    title: "Safer, simpler sign-in on Apple TV and iPhone",
+    summary:
+      "Signing in on an Apple device is now approve-from-the-web: the device shows a 6-digit code, and you enter it under Settings → Apple devices to approve it. No more generating a code on the web and typing it with the TV remote.",
+    type: "Improvement",
+    tags: ["apple-tv", "ios", "account"],
+    added: [
+      "Devices show a 6-digit approval code and finish signing in automatically once you approve them.",
+    ],
+    changed: [
+      "Settings → Apple TV is now Settings → Apple devices, where you approve codes and manage signed-in devices.",
+    ],
+    removed: ["Generating a 4-digit code on the web and typing it into the device."],
+  },
+  {
     slug: "home-button",
     date: "2026-06-30",
     title: "Jump home from any page",

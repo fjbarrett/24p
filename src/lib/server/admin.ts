@@ -1,12 +1,11 @@
 import "server-only";
 
 import { getPool } from "@/lib/server/db";
-import { getSessionUserEmail } from "@/lib/server/session";
+import { getBrowserSessionUserEmail } from "@/lib/server/session";
 
-// Admin allowlist. Configurable via ADMIN_EMAILS (comma-separated); falls back
-// to the original sole admin so existing deploys keep working.
+// Admin access is deny-by-default. Production must configure ADMIN_EMAILS.
 const ADMIN_EMAILS = new Set(
-  (process.env.ADMIN_EMAILS ?? "frank.e.barrett@gmail.com")
+  (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean),
@@ -20,7 +19,7 @@ export function isAdminEmail(email: string | null | undefined): boolean {
 // getAdminStats() so the admin data set can never be returned without this
 // check, even if a future caller forgets to gate the entry point.
 export async function requireAdmin(): Promise<string> {
-  const email = await getSessionUserEmail();
+  const email = await getBrowserSessionUserEmail();
   if (!isAdminEmail(email)) {
     throw new Error("Forbidden");
   }

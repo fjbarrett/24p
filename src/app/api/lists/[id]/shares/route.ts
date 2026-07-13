@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { addListShareForUser, loadListSharesForUser } from "@/lib/server/lists";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
+import { consumeDurable } from "@/lib/server/rate-limit";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function GET(
@@ -17,8 +18,7 @@ export async function GET(
     const shares = await loadListSharesForUser(id, userEmail);
     return NextResponse.json({ shares });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load shares";
-    return errorResponse(message, message === "List not found" ? 404 : 400);
+    return routeError("api/lists/shares:get", error, "Unable to load shares");
   }
 }
 
@@ -32,12 +32,20 @@ export async function POST(
   }
 
   try {
+    // Adding a share resolves a username to an account, so cap attempts per
+    // account to keep username enumeration and share spam impractical.
+    const limit = await consumeDurable(`list-share:${userEmail}`, 30, 60 * 60 * 1000);
+    if (!limit.ok) {
+      return NextResponse.json(
+        { error: "Too many share requests. Try again later." },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+      );
+    }
     const { id } = await context.params;
     const payload = (await request.json()) as { username?: string; canEdit?: boolean };
     const shares = await addListShareForUser(id, userEmail, payload.username ?? "", payload.canEdit ?? false);
     return NextResponse.json({ shares });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update shares";
-    return errorResponse(message, message === "List not found" ? 404 : 400);
+    return routeError("api/lists/shares:post", error, "Unable to update shares");
   }
 }

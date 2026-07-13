@@ -3,7 +3,6 @@ import SwiftUI
 struct AccountView: View {
     @EnvironmentObject private var auth: AuthStore
     @Environment(\.openURL) private var openURL
-    @State private var pin = ""
 
     var body: some View {
         NavigationStack {
@@ -33,7 +32,7 @@ struct AccountView: View {
                     Section {
                         Text("Pair this app with your 24p account:")
                             .font(.subheadline)
-                        Text("1. Sign in at 24p.mov, open Settings → Apple TV.\n2. Generate a 4-digit code.\n3. Enter it below.")
+                        Text("1. Generate a code below.\n2. Sign in at 24p.mov and open Settings → Apple devices.\n3. Enter the code there to approve this iPhone.")
                             .font(.footnote).foregroundStyle(.secondary)
                         Button {
                             if let url = URL(string: "https://24p.mov/settings") { openURL(url) }
@@ -42,22 +41,21 @@ struct AccountView: View {
                         }
                     }
                     Section("Pairing code") {
-                        TextField("4-digit code", text: $pin)
-                            .keyboardType(.numberPad)
-                            .textContentType(.oneTimeCode)
-                        Button {
-                            Task {
-                                await auth.signIn(pin: pin)
-                                if auth.isSignedIn { pin = "" }
+                        if let code = auth.pairingCode {
+                            Text(code)
+                                .font(.system(.largeTitle, design: .monospaced, weight: .semibold))
+                                .tracking(8)
+                                .textSelection(.enabled)
+                            Text("Waiting for approval at 24p.mov/settings")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        } else {
+                            Button {
+                                auth.beginPairing()
+                            } label: {
+                                if auth.isWorking { ProgressView() } else { Text("Generate Pairing Code") }
                             }
-                        } label: {
-                            if auth.isWorking {
-                                ProgressView()
-                            } else {
-                                Text("Sign In")
-                            }
+                            .disabled(auth.isWorking)
                         }
-                        .disabled(auth.isWorking || pin.trimmingCharacters(in: .whitespaces).count < 4)
                     }
                     if let error = auth.error {
                         Section {

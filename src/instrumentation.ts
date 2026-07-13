@@ -4,14 +4,9 @@
 // only ran fire-and-forget on the first getPool() call).
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  try {
-    const { getPool, waitForMigrations } = await import("@/lib/server/db");
-    getPool(); // kicks off runIncrementalMigrations()
-    await waitForMigrations();
-  } catch (err) {
-    // Never block server startup on migration issues — they're logged loudly
-    // inside runIncrementalMigrations; a boot loop would be worse than a
-    // degraded schema for a single-container deploy.
-    console.error("[instrumentation] migration bootstrap failed", err);
-  }
+  const { getPool, waitForMigrations } = await import("@/lib/server/db");
+  getPool();
+  // A process with a partially migrated security schema must not receive
+  // traffic. Container health gating will retain or restore the prior image.
+  await waitForMigrations();
 }

@@ -18,8 +18,15 @@ const RATING_SORT_BATCH_SIZE = 100;
 // hit JustWatch live (~2.3s). TTLs roughly match the old (ineffective)
 // revalidate intent. Empty/failed results are intentionally NOT cached so a
 // transient JustWatch outage can't poison the cache.
+//
+// The cache is a hard-capped LRU (Map iteration order = insertion order;
+// hits are re-inserted to refresh recency) so request-derived keys can never
+// grow memory without bound, and concurrent misses on the same key share one
+// upstream call instead of stampeding JustWatch.
 type CacheEntry<T> = { value: T; expires: number };
 const responseCache = new Map<string, CacheEntry<unknown>>();
+const inFlight = new Map<string, Promise<unknown>>();
+const CACHE_MAX_ENTRIES = 500;
 const CATALOG_TTL_MS = 6 * 60 * 60 * 1000;
 const PLATFORMS_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -29,17 +36,58 @@ async function cachedResponse<T>(
   fn: () => Promise<T>,
   isCacheable: (value: T) => boolean = () => true,
 ): Promise<T> {
-  const now = Date.now();
   const hit = responseCache.get(key);
-  if (hit && hit.expires > now) return hit.value as T;
-  const value = await fn();
-  if (isCacheable(value)) {
-    responseCache.set(key, { value, expires: now + ttlMs });
-    if (responseCache.size > 500) {
-      for (const [k, entry] of responseCache) if (entry.expires <= now) responseCache.delete(k);
-    }
+  if (hit && hit.expires > Date.now()) {
+    responseCache.delete(key);
+    responseCache.set(key, hit);
+    return hit.value as T;
   }
-  return value;
+
+  const pending = inFlight.get(key);
+  if (pending) return pending as Promise<T>;
+
+  const promise = (async () => {
+    try {
+      const value = await fn();
+      if (isCacheable(value)) {
+        responseCache.delete(key);
+        responseCache.set(key, { value, expires: Date.now() + ttlMs });
+        while (responseCache.size > CACHE_MAX_ENTRIES) {
+          const oldest = responseCache.keys().next().value;
+          if (oldest === undefined) break;
+          responseCache.delete(oldest);
+        }
+      }
+      return value;
+    } finally {
+      inFlight.delete(key);
+    }
+  })();
+  inFlight.set(key, promise);
+  return promise;
+}
+
+// Bounded fan-out for upstream lookups; failures resolve to null.
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<Array<R | null>> {
+  const results = new Array<R | null>(items.length).fill(null);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (next < items.length) {
+        const index = next++;
+        try {
+          results[index] = await fn(items[index]);
+        } catch {
+          results[index] = null;
+        }
+      }
+    }),
+  );
+  return results;
 }
 
 function providerCacheKey(providerShortNames?: string[]) {
@@ -699,33 +747,27 @@ async function fetchStreamingCatalogImpl({
     }
   }
 
-  const movies = Array.from(collected.values()).slice(0, limit);
+  return backfillArtwork(Array.from(collected.values()).slice(0, limit));
+}
+
+// Fills in posters/backdrops from TMDB for entries JustWatch returned without
+// art. Fan-out is bounded so a big rating-sort pool can't burst hundreds of
+// concurrent TMDB requests.
+const ARTWORK_CONCURRENCY = 8;
+
+async function backfillArtwork(movies: StreamingCatalogMovie[]): Promise<StreamingCatalogMovie[]> {
   const missingArt = movies.filter((movie) => !movie.posterUrl && movie.backdropUrls.length === 0);
+  if (!missingArt.length) return movies;
 
-  if (!missingArt.length) {
-    return movies;
-  }
-
-  const artworkResults = await Promise.allSettled(
-    missingArt.map((movie) =>
-      fetchTmdbArtwork(movie.tmdbId, movie.contentType === "SHOW" ? "tv" : "movie"),
-    ),
+  const artworkResults = await mapWithConcurrency(missingArt, ARTWORK_CONCURRENCY, (movie) =>
+    fetchTmdbArtwork(movie.tmdbId, movie.contentType === "SHOW" ? "tv" : "movie"),
   );
+  const artworkByTmdbId = new Map(missingArt.map((movie, index) => [movie.tmdbId, artworkResults[index]]));
 
   return movies.map((movie) => {
-    if (movie.posterUrl || movie.backdropUrls.length > 0) {
-      return movie;
-    }
-
-    const missingIndex = missingArt.findIndex((candidate) => candidate.tmdbId === movie.tmdbId);
-    const artwork = missingIndex >= 0 && artworkResults[missingIndex]?.status === "fulfilled"
-      ? artworkResults[missingIndex].value
-      : null;
-
-    if (!artwork) {
-      return movie;
-    }
-
+    if (movie.posterUrl || movie.backdropUrls.length > 0) return movie;
+    const artwork = artworkByTmdbId.get(movie.tmdbId);
+    if (!artwork) return movie;
     return {
       ...movie,
       posterUrl: movie.posterUrl ?? artwork.posterUrl,
@@ -795,29 +837,5 @@ async function fetchStreamingCatalogAllImpl({
     }
   }
 
-  const movies = Array.from(collected.values()).slice(0, RATING_SORT_LIMIT);
-  const missingArt = movies.filter((movie) => !movie.posterUrl && movie.backdropUrls.length === 0);
-
-  if (!missingArt.length) return movies;
-
-  const artworkResults = await Promise.allSettled(
-    missingArt.map((movie) =>
-      fetchTmdbArtwork(movie.tmdbId, movie.contentType === "SHOW" ? "tv" : "movie"),
-    ),
-  );
-
-  return movies.map((movie) => {
-    if (movie.posterUrl || movie.backdropUrls.length > 0) return movie;
-    const missingIndex = missingArt.findIndex((candidate) => candidate.tmdbId === movie.tmdbId);
-    const artwork =
-      missingIndex >= 0 && artworkResults[missingIndex]?.status === "fulfilled"
-        ? artworkResults[missingIndex].value
-        : null;
-    if (!artwork) return movie;
-    return {
-      ...movie,
-      posterUrl: movie.posterUrl ?? artwork.posterUrl,
-      backdropUrls: movie.backdropUrls.length ? movie.backdropUrls : artwork.backdropUrl ? [artwork.backdropUrl] : [],
-    };
-  });
+  return backfillArtwork(Array.from(collected.values()).slice(0, RATING_SORT_LIMIT));
 }

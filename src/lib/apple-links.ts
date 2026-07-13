@@ -39,9 +39,25 @@ function normalizePrice(price?: string | null) {
   return trimmed.startsWith("$") ? trimmed : `$${trimmed}`;
 }
 
+// Upstream results flow straight into anchor hrefs (web) and openURL (native).
+// Only accept HTTPS links on apple.com hosts so a poisoned upstream can't
+// hand out arbitrary or javascript: URLs under our UI.
+function sanitizeAppleUrl(raw?: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "https:") return null;
+    const host = parsed.hostname.toLowerCase();
+    if (host !== "apple.com" && !host.endsWith(".apple.com")) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 function toLinkResult(payload?: CheapChartsPayload | null): AppleTvLinkResult {
   return {
-    url: payload?.productPageUrl ?? payload?.itunesUrl ?? null,
+    url: sanitizeAppleUrl(payload?.productPageUrl) ?? sanitizeAppleUrl(payload?.itunesUrl),
     price: normalizePrice(payload?.price),
   };
 }
@@ -90,7 +106,11 @@ async function readAppleCache(imdbId: string): Promise<AppleTvLinkResult | null>
     const row = result.rows[0];
     if (!row) return null;
     if (Date.now() - new Date(row.fetched_at).getTime() > CACHE_TTL_MS) return null;
-    return { url: row.url, price: row.price };
+    // Rows cached before host validation existed may hold non-Apple URLs;
+    // treat those as misses so they get re-resolved and overwritten.
+    const url = sanitizeAppleUrl(row.url);
+    if (!url) return null;
+    return { url, price: row.price };
   } catch {
     return null;
   }

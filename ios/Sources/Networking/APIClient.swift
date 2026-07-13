@@ -171,10 +171,18 @@ final class APIClient {
         try await get("/api/session")
     }
 
-    func claim(pin: String) async throws -> String {
-        struct Body: Encodable { let pin: String }
-        let result: ClaimResponse = try await request("POST", path: "/api/tv/claim", body: Body(pin: pin))
-        return result.token
+    func startPairing() async throws -> DevicePairingResponse {
+        struct Body: Encodable { let label: String }
+        return try await request("POST", path: "/api/tv/pairing", body: Body(label: "iPhone"))
+    }
+
+    func checkPairing(_ pairing: DevicePairingResponse) async throws -> ClaimResponse {
+        struct Body: Encodable { let pairingId: String; let deviceToken: String }
+        return try await request(
+            "POST",
+            path: "/api/tv/claim",
+            body: Body(pairingId: pairing.pairingId, deviceToken: pairing.deviceToken)
+        )
     }
 
     // MARK: - Authenticated list management

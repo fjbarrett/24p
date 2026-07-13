@@ -3,16 +3,10 @@ import "server-only";
 import { createHash, randomBytes, randomInt } from "crypto";
 import { getPool } from "@/lib/server/db";
 
-// A short 4-digit PIN is shown to the user; it is a *pairing* code, not the
-// credential. The Apple TV exchanges it (once, within the window) for a long
-// random bearer token that is what actually stays signed in. Keeping the PIN
-// short-lived + single-use + rate-limited at the route is what makes a
-// 4-digit (10k-space) code safe against brute force.
 const PAIRING_TTL_MS = 10 * 60 * 1000;
-// Issued bearers expire 180 days after their last use (sliding window): an
-// actively-used Apple TV is refreshed on every request and never logs out,
-// while a leaked-then-idle token stops working once the window lapses.
-const TOKEN_TTL_MS = 180 * 24 * 60 * 60 * 1000;
+const TOKEN_IDLE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const TOKEN_MAX_TTL_MS = 180 * 24 * 60 * 60 * 1000;
+const PAIRING_PIN_LENGTH = 6;
 
 export type TvTokenSummary = {
   // Public, non-secret handle for a device (a prefix of the SHA-256 token hash,
@@ -22,6 +16,7 @@ export type TvTokenSummary = {
   createdAt: string;
   lastUsedAt: string | null;
   expiresAt: string | null;
+  absoluteExpiresAt: string | null;
 };
 
 // Length of the public device id derived from token_hash (64-bit prefix).
@@ -32,80 +27,110 @@ function hashToken(token: string): string {
 }
 
 function generateBearer(): string {
-  return randomBytes(24).toString("hex");
+  return randomBytes(32).toString("hex");
 }
 
 function generatePin(): string {
-  return String(randomInt(0, 10000)).padStart(4, "0");
+  return String(randomInt(0, 10 ** PAIRING_PIN_LENGTH)).padStart(PAIRING_PIN_LENGTH, "0");
 }
 
 function normalizePin(raw: string): string {
   return raw.replace(/\D/g, "");
 }
 
-/**
- * Creates a pairing: a 4-digit PIN tied to a freshly generated bearer token.
- * Returns the PIN to display; the bearer is handed out later via `claimTvPairing`.
- */
-export async function createTvPairing(
-  userEmail: string,
-  label = "Apple TV",
-): Promise<{ pin: string; expiresInSeconds: number }> {
+/** Starts device authorization. The device keeps its bearer and pairing id;
+ * only the six-digit approval code is shown to the signed-in browser. */
+export async function startTvPairing(
+  label = "Apple device",
+): Promise<{ pairingId: string; deviceToken: string; pin: string; expiresInSeconds: number }> {
   const pool = getPool();
-  // Drop stale unclaimed pairings so PINs stay scarce.
-  await pool.query(`DELETE FROM tv_tokens WHERE pending_token IS NOT NULL AND pin_expires_at < NOW()`);
+  await pool.query("DELETE FROM tv_pairings WHERE expires_at < NOW()");
 
-  const bearer = generateBearer();
-  // Avoid an active-PIN collision (rare, but retry a few times to be safe).
-  let pin = generatePin();
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const clash = await pool.query(
-      `SELECT 1 FROM tv_tokens WHERE pin = $1 AND pin_expires_at > NOW() AND pending_token IS NOT NULL LIMIT 1`,
-      [pin],
-    );
-    if (clash.rowCount === 0) break;
-    pin = generatePin();
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const pairingId = randomBytes(16).toString("hex");
+    const deviceToken = generateBearer();
+    const pin = generatePin();
+    try {
+      await pool.query(
+        `INSERT INTO tv_pairings (pairing_id, token_hash, pin, label, expires_at)
+         VALUES ($1, $2, $3, $4, NOW() + ($5 || ' milliseconds')::interval)`,
+        [pairingId, hashToken(deviceToken), pin, label.slice(0, 80), String(PAIRING_TTL_MS)],
+      );
+      return {
+        pairingId,
+        deviceToken,
+        pin,
+        expiresInSeconds: Math.floor(PAIRING_TTL_MS / 1000),
+      };
+    } catch (error) {
+      if ((error as { code?: string }).code !== "23505") throw error;
+    }
   }
-
-  await pool.query(
-    `INSERT INTO tv_tokens (token_hash, user_email, label, pin, pin_expires_at, pending_token)
-     VALUES ($1, $2, $3, $4, NOW() + ($5 || ' milliseconds')::interval, $6)`,
-    [hashToken(bearer), userEmail, label, pin, String(PAIRING_TTL_MS), bearer],
-  );
-
-  return { pin, expiresInSeconds: Math.floor(PAIRING_TTL_MS / 1000) };
+  throw new Error("Unable to allocate a unique device approval code");
 }
 
-/**
- * Exchanges a PIN for its bearer token, exactly once and only within the window.
- * Returns the plaintext bearer (never stored in plaintext after this) or null.
- */
-export async function claimTvPairing(rawPin: string): Promise<{ token: string } | null> {
+/** Approves a device from an authenticated browser session. */
+export async function approveTvPairing(userEmail: string, rawPin: string): Promise<boolean> {
   const pin = normalizePin(rawPin);
-  if (pin.length !== 4) return null;
+  if (pin.length !== PAIRING_PIN_LENGTH) return false;
 
   const pool = getPool();
-  const result = await pool.query<{ pending_token: string }>(
-    `WITH claimed AS (
-       SELECT token_hash, pending_token
-       FROM tv_tokens
-       WHERE pin = $1 AND pin_expires_at > NOW() AND pending_token IS NOT NULL
-       ORDER BY pin_expires_at DESC
-       LIMIT 1
-       FOR UPDATE
+  const result = await pool.query(
+    `WITH approved AS (
+       UPDATE tv_pairings
+       SET user_email = $1, approved_at = NOW()
+       WHERE pairing_id = (
+         SELECT pairing_id FROM tv_pairings
+         WHERE pin = $2 AND expires_at > NOW() AND approved_at IS NULL
+         FOR UPDATE SKIP LOCKED
+         LIMIT 1
+       )
+       RETURNING token_hash, label
      )
-     UPDATE tv_tokens t
-       SET pending_token = NULL, pin = NULL, pin_expires_at = NULL,
-           last_used_at = NOW(),
-           expires_at = NOW() + ($2 || ' milliseconds')::interval
-       FROM claimed
-       WHERE t.token_hash = claimed.token_hash
-       RETURNING claimed.pending_token`,
-    [pin, String(TOKEN_TTL_MS)],
+     INSERT INTO tv_tokens (
+       token_hash, user_email, label, last_used_at, expires_at, absolute_expires_at
+     )
+     SELECT token_hash, $1, label, NOW(),
+            NOW() + ($3 || ' milliseconds')::interval,
+            NOW() + ($4 || ' milliseconds')::interval
+     FROM approved
+     ON CONFLICT (token_hash) DO NOTHING
+     RETURNING token_hash`,
+    [userEmail, pin, String(TOKEN_IDLE_TTL_MS), String(TOKEN_MAX_TTL_MS)],
   );
+  return (result.rowCount ?? 0) > 0;
+}
 
-  const token = result.rows[0]?.pending_token;
-  return token ? { token } : null;
+export type TvPairingClaim =
+  | { status: "pending" }
+  | { status: "approved"; token: string }
+  | { status: "invalid" };
+
+/** Polls approval using both high-entropy values held only by the device. */
+export async function claimTvPairing(pairingIdRaw: string, deviceTokenRaw: string): Promise<TvPairingClaim> {
+  const pairingId = pairingIdRaw.trim().toLowerCase();
+  const deviceToken = deviceTokenRaw.trim().toLowerCase();
+  if (!/^[a-f0-9]{32}$/.test(pairingId) || !/^[a-f0-9]{64}$/.test(deviceToken)) {
+    return { status: "invalid" };
+  }
+
+  const pool = getPool();
+  const tokenHash = hashToken(deviceToken);
+  const claimed = await pool.query(
+    `DELETE FROM tv_pairings
+     WHERE pairing_id = $1 AND token_hash = $2 AND expires_at > NOW()
+       AND approved_at IS NOT NULL AND user_email IS NOT NULL
+     RETURNING pairing_id`,
+    [pairingId, tokenHash],
+  );
+  if ((claimed.rowCount ?? 0) > 0) return { status: "approved", token: deviceToken };
+
+  const pending = await pool.query(
+    `SELECT 1 FROM tv_pairings
+     WHERE pairing_id = $1 AND token_hash = $2 AND expires_at > NOW() AND approved_at IS NULL`,
+    [pairingId, tokenHash],
+  );
+  return (pending.rowCount ?? 0) > 0 ? { status: "pending" } : { status: "invalid" };
 }
 
 /** Resolves a presented bearer token to its owner's email, or null if unknown. */
@@ -113,17 +138,24 @@ export async function resolveTvToken(rawToken: string): Promise<string | null> {
   const token = rawToken.trim();
   if (!token) return null;
   const pool = getPool();
-  // Reject expired tokens; slide the window forward on every successful use so
-  // an active device stays signed in. NULL expires_at (pre-migration tokens) is
-  // accepted and backfilled here.
+  // Reject expired tokens. Successful use refreshes the idle window without
+  // extending the credential past its absolute lifetime.
   const result = await pool.query<{ user_email: string }>(
     `UPDATE tv_tokens
        SET last_used_at = NOW(),
-           expires_at = NOW() + ($2 || ' milliseconds')::interval
-     WHERE token_hash = $1 AND pending_token IS NULL
+           absolute_expires_at = COALESCE(
+             absolute_expires_at,
+             created_at + ($3 || ' milliseconds')::interval
+           ),
+           expires_at = LEAST(
+             NOW() + ($2 || ' milliseconds')::interval,
+             COALESCE(absolute_expires_at, created_at + ($3 || ' milliseconds')::interval)
+           )
+     WHERE token_hash = $1
        AND (expires_at IS NULL OR expires_at > NOW())
+       AND COALESCE(absolute_expires_at, created_at + ($3 || ' milliseconds')::interval) > NOW()
      RETURNING user_email`,
-    [hashToken(token), String(TOKEN_TTL_MS)],
+    [hashToken(token), String(TOKEN_IDLE_TTL_MS), String(TOKEN_MAX_TTL_MS)],
   );
   const email = result.rows[0]?.user_email;
   return email ? email.trim().toLowerCase() : null;
@@ -137,9 +169,10 @@ export async function listTvTokens(userEmail: string): Promise<TvTokenSummary[]>
     created_at: string;
     last_used_at: string | null;
     expires_at: string | null;
+    absolute_expires_at: string | null;
   }>(
-    `SELECT token_hash, label, created_at, last_used_at, expires_at FROM tv_tokens
-     WHERE user_email = $1 AND pending_token IS NULL
+    `SELECT token_hash, label, created_at, last_used_at, expires_at, absolute_expires_at FROM tv_tokens
+     WHERE user_email = $1
      ORDER BY created_at DESC`,
     [userEmail],
   );
@@ -149,6 +182,7 @@ export async function listTvTokens(userEmail: string): Promise<TvTokenSummary[]>
     createdAt: new Date(row.created_at).toISOString(),
     lastUsedAt: row.last_used_at ? new Date(row.last_used_at).toISOString() : null,
     expiresAt: row.expires_at ? new Date(row.expires_at).toISOString() : null,
+    absoluteExpiresAt: row.absolute_expires_at ? new Date(row.absolute_expires_at).toISOString() : null,
   }));
 }
 
@@ -157,16 +191,40 @@ export async function revokeTvTokenById(userEmail: string, id: string): Promise<
   // The id is a hex prefix of the SHA-256 token hash — never the bearer itself.
   if (!new RegExp(`^[a-f0-9]{${TOKEN_ID_LEN}}$`).test(id)) return 0;
   const pool = getPool();
-  const result = await pool.query(
-    `DELETE FROM tv_tokens WHERE user_email = $1 AND LEFT(token_hash, ${TOKEN_ID_LEN}) = $2`,
-    [userEmail, id],
-  );
-  return result.rowCount ?? 0;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query<{ token_hash: string }>(
+      `DELETE FROM tv_tokens WHERE user_email = $1 AND LEFT(token_hash, ${TOKEN_ID_LEN}) = $2
+       RETURNING token_hash`,
+      [userEmail, id],
+    );
+    const hashes = result.rows.map((row) => row.token_hash);
+    if (hashes.length) await client.query("DELETE FROM tv_pairings WHERE token_hash = ANY($1::text[])", [hashes]);
+    await client.query("COMMIT");
+    return result.rowCount ?? 0;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 /** Revokes every Apple TV token and pending pairing for the user. */
 export async function revokeTvTokens(userEmail: string): Promise<number> {
   const pool = getPool();
-  const result = await pool.query(`DELETE FROM tv_tokens WHERE user_email = $1`, [userEmail]);
-  return result.rowCount ?? 0;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM tv_pairings WHERE user_email = $1", [userEmail]);
+    const result = await client.query("DELETE FROM tv_tokens WHERE user_email = $1", [userEmail]);
+    await client.query("COMMIT");
+    return result.rowCount ?? 0;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }

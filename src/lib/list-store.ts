@@ -20,7 +20,6 @@ export type SavedList = {
 
 export type ListShare = {
   listId: string;
-  userEmail: string;
   username?: string | null;
   createdAt: string;
   canEdit: boolean;

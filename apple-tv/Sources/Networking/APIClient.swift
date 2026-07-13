@@ -181,10 +181,15 @@ final class APIClient {
         try await get(path: "/api/session")
     }
 
-    /// Exchanges a 4-digit pairing PIN for a durable bearer token.
-    func claim(pin: String) async throws -> String {
-        let response: ClaimResponse = try await post(path: "/api/tv/claim", body: ["pin": pin])
-        return response.token
+    func startPairing() async throws -> DevicePairingResponse {
+        try await post(path: "/api/tv/pairing", body: ["label": "Apple TV"])
+    }
+
+    func checkPairing(_ pairing: DevicePairingResponse) async throws -> ClaimResponse {
+        try await post(path: "/api/tv/claim", body: [
+            "pairingId": pairing.pairingId,
+            "deviceToken": pairing.deviceToken,
+        ])
     }
 
     // MARK: - Streaming Catalog

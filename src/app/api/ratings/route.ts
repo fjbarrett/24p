@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRatingsForUser, saveRatingsForUser } from "@/lib/server/ratings";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function GET() {
@@ -33,6 +33,6 @@ export async function POST(request: Request) {
     );
     return NextResponse.json({ updated });
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Unable to save ratings");
+    return routeError("api/ratings:post", error, "Unable to save ratings");
   }
 }

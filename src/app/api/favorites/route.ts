@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { addFavoriteForUser, loadFavoritesForUser } from "@/lib/server/lists";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function GET() {
@@ -26,7 +26,6 @@ export async function POST(request: Request) {
     await addFavoriteForUser(payload.listId, userEmail);
     return NextResponse.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to favorite list";
-    return errorResponse(message, message === "List not found" ? 404 : 400);
+    return routeError("api/favorites:post", error, "Unable to favorite list");
   }
 }

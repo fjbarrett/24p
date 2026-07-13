@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { setProfileVisibilityForUser } from "@/lib/server/profiles";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function PATCH(request: Request) {
@@ -17,7 +17,6 @@ export async function PATCH(request: Request) {
     const profile = await setProfileVisibilityForUser(userEmail, payload.isPublic);
     return NextResponse.json({ profile });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update profile";
-    return errorResponse(message, message === "Profile not found" ? 404 : 400);
+    return routeError("api/profiles/visibility:patch", error, "Unable to update profile");
   }
 }
