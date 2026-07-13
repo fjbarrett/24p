@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { fetchTmdbTrailerForShow } from "@/lib/server/tmdb";
 import { errorResponse } from "@/lib/server/http";
+import { enforceDurableLimits } from "@/lib/server/rate-limit";
+import { clientIp } from "@/lib/server/client-ip";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const blocked = await enforceDurableLimits([
+    { key: `tmdb-detail:${clientIp(request.headers)}`, max: 120, windowMs: 60_000 },
+  ]);
+  if (blocked) return blocked;
+
   const { id } = await context.params;
   const tmdbId = Number(id);
   if (!Number.isInteger(tmdbId) || tmdbId <= 0) {

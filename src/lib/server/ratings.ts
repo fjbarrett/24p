@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getPool } from "@/lib/server/db";
+import { publicError } from "@/lib/server/http";
 
 type RatingInput = {
   tmdbId: number;
@@ -19,10 +20,10 @@ export async function saveRatingsForUser(userEmail: string, ratings: RatingInput
   const pool = getPool();
   for (const entry of ratings) {
     if (!Number.isInteger(entry.tmdbId)) {
-      throw new Error("tmdbId is required");
+      publicError("tmdbId is required", 400);
     }
     if (!Number.isInteger(entry.rating) || entry.rating < 1 || entry.rating > 10) {
-      throw new Error("rating must be between 1 and 10");
+      publicError("rating must be between 1 and 10", 400);
     }
     await pool.query(
       `

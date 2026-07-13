@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { removeMovieFromListForUser } from "@/lib/server/lists";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function DELETE(
@@ -17,7 +17,6 @@ export async function DELETE(
     const list = await removeMovieFromListForUser(id, Number(tmdbId), userEmail);
     return NextResponse.json({ list });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update list";
-    return errorResponse(message, message === "List not found" ? 404 : 400);
+    return routeError("api/lists/items:delete", error, "Unable to update list");
   }
 }

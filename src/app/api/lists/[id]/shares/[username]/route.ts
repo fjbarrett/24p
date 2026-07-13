@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { removeListShareForUser, updateListSharePermissionForUser } from "@/lib/server/lists";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function PATCH(
@@ -21,8 +21,7 @@ export async function PATCH(
     const shares = await updateListSharePermissionForUser(id, userEmail, username, payload.canEdit);
     return NextResponse.json({ shares });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update shares";
-    return errorResponse(message, message === "List not found" ? 404 : 400);
+    return routeError("api/lists/shares:patch", error, "Unable to update shares");
   }
 }
 
@@ -40,7 +39,6 @@ export async function DELETE(
     const shares = await removeListShareForUser(id, userEmail, username);
     return NextResponse.json({ shares });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update shares";
-    return errorResponse(message, message === "List not found" ? 404 : 400);
+    return routeError("api/lists/shares:delete", error, "Unable to update shares");
   }
 }

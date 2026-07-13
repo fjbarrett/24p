@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRecommendationsForList } from "@/lib/server/recommendations";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 import { consume } from "@/lib/server/rate-limit";
 
@@ -26,7 +26,6 @@ export async function GET(
     const movies = await getRecommendationsForList(id, userEmail);
     return NextResponse.json({ movies });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to fetch recommendations";
-    return errorResponse(message, 500);
+    return routeError("api/lists/recommendations:get", error, "Unable to fetch recommendations");
   }
 }

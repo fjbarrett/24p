@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createListForUser, listListsForUser } from "@/lib/server/lists";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function GET(request: Request) {
@@ -36,6 +36,6 @@ export async function POST(request: Request) {
     const list = await createListForUser(payload.title ?? "", userEmail, movies, payload.color, mediaType);
     return NextResponse.json({ list });
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Unable to create list");
+    return routeError("api/lists:post", error, "Unable to create list");
   }
 }

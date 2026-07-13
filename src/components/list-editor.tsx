@@ -68,8 +68,7 @@ export function ListEditor({
   }, [isEditing, isOwner, list.id, list.userEmail]);
 
   function formatShareLabel(share: ListShare) {
-    if (share.username) return `@${share.username}`;
-    return share.userEmail;
+    return share.username ? `@${share.username}` : "Unknown user";
   }
 
   async function handleAddShare() {
@@ -341,7 +340,7 @@ export function ListEditor({
           <div className="space-y-2">
             {shares.map((share) => (
               <div
-                key={share.userEmail}
+                key={share.username ?? share.createdAt}
                 className="flex flex-col gap-3 rounded-[24px] border border-white/8 bg-black/35 p-3.5 text-xs text-black-200 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">

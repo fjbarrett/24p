@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPublicProfileByUsername } from "@/lib/server/profiles";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 
 export async function GET(
   _request: Request,
@@ -14,6 +14,6 @@ export async function GET(
     }
     return NextResponse.json({ profile });
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Unable to load profile");
+    return routeError("api/profiles/public:get", error, "Unable to load profile");
   }
 }

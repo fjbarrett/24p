@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import type { PublicProfile, UserProfile } from "@/lib/profile-store";
 import { getPool } from "@/lib/server/db";
+import { publicError } from "@/lib/server/http";
 
 type ProfileRow = {
   user_email: string;
@@ -34,10 +35,10 @@ function mapPublicProfile(row: ProfileRow): PublicProfile {
 function normalizeUsername(raw: string) {
   const value = raw.trim().toLowerCase();
   if (value.length < 3) {
-    throw new Error("username must be at least 3 characters");
+    publicError("username must be at least 3 characters", 400);
   }
   if (!/^[a-z0-9]+$/.test(value)) {
-    throw new Error("username must be alphanumeric only");
+    publicError("username must be alphanumeric only", 400);
   }
   return value;
 }
@@ -56,7 +57,7 @@ export async function setUsernameForUser(userEmail: string, username: string) {
   ]);
   const owner = existing.rows[0]?.user_email?.trim().toLowerCase();
   if (owner && owner !== userEmail) {
-    throw new Error("Username is already taken");
+    publicError("Username is already taken", 409);
   }
 
   const result = await pool.query<ProfileRow>(
@@ -84,7 +85,7 @@ export async function setProfileVisibilityForUser(userEmail: string, isPublic: b
     [isPublic, userEmail],
   );
   if (!result.rows[0]) {
-    throw new Error("Profile not found");
+    publicError("Profile not found", 404);
   }
   return mapProfile(result.rows[0]);
 }

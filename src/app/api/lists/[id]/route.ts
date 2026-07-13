@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteListForUser, updateListForUser } from "@/lib/server/lists";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function PATCH(
@@ -23,8 +23,7 @@ export async function PATCH(
     const list = await updateListForUser(id, userEmail, payload);
     return NextResponse.json({ list });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update list";
-    return errorResponse(message, message === "List not found" ? 404 : 400);
+    return routeError("api/lists:patch", error, "Unable to update list");
   }
 }
 
@@ -42,7 +41,6 @@ export async function DELETE(
     await deleteListForUser(id, userEmail);
     return NextResponse.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to delete list";
-    return errorResponse(message, message === "List not found" ? 404 : 400);
+    return routeError("api/lists:delete", error, "Unable to delete list");
   }
 }

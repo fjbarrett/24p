@@ -24,7 +24,7 @@ export async function getStreamingCatalogPayload(params: {
   const providers = await listStreamingPlatforms();
   const selectedProviders = parseProviders(readQueryValue(params.provider), providers);
   const sort = readQueryValue(params.sort)?.toLowerCase() === "rating" ? "rating" : "popularity";
-  const seed = readQueryValue(params.seed) ?? Date.now().toString();
+  const seed = parseSeed(readQueryValue(params.seed));
   const page = parsePage(readQueryValue(params.page));
 
   let movies: Awaited<ReturnType<typeof fetchStreamingCatalog>>;
@@ -88,9 +88,19 @@ function parseProviders(
     .filter((entry, index, all) => Boolean(entry) && allowed.has(entry) && all.indexOf(entry) === index);
 }
 
+// Seed and page feed JustWatch queries and cache keys, so both are bounded:
+// arbitrary seeds would mint unlimited cache entries and deep pages would
+// drive expensive upstream offsets.
+const MAX_PAGE = 50;
+
+function parseSeed(value: string | undefined) {
+  return value && /^\d{1,16}$/.test(value) ? value : Date.now().toString();
+}
+
 function parsePage(value: string | undefined) {
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : 1;
+  if (!Number.isFinite(parsed) || parsed < 1) return 1;
+  return Math.min(Math.floor(parsed), MAX_PAGE);
 }
 
 function sortStreamingMovies(

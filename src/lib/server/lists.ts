@@ -4,6 +4,7 @@ import { cache } from "react";
 import { randomUUID } from "crypto";
 import type { ListItem, ListShare, SavedList } from "@/lib/list-store";
 import { getPool } from "@/lib/server/db";
+import { publicError } from "@/lib/server/http";
 import { fetchTmdbArtwork, fetchTmdbMovies, fetchTmdbShow, findTmdbMovieId } from "@/lib/server/tmdb";
 import { saveRatingsForUser } from "@/lib/server/ratings";
 
@@ -63,7 +64,7 @@ function normalizeVisibility(value?: string | null) {
   const normalized = value?.trim().toLowerCase();
   if (!normalized) return "private";
   if (normalized !== "public" && normalized !== "private") {
-    throw new Error("visibility must be public or private");
+    publicError("visibility must be public or private", 400);
   }
   return normalized as "public" | "private";
 }
@@ -71,10 +72,10 @@ function normalizeVisibility(value?: string | null) {
 function normalizeUsername(value: string) {
   const normalized = value.trim().toLowerCase();
   if (normalized.length < 3) {
-    throw new Error("username must be at least 3 characters");
+    publicError("username must be at least 3 characters", 400);
   }
   if (!/^[a-z0-9]+$/.test(normalized)) {
-    throw new Error("username must be alphanumeric only");
+    publicError("username must be alphanumeric only", 400);
   }
   return normalized;
 }
@@ -115,10 +116,11 @@ function mapList(row: ListRow, viewerEmail?: string | null): SavedList {
   };
 }
 
+// Collaborators are addressed by username only; the share's email is a private
+// account identifier and must never be projected to any client.
 function mapShare(row: ShareRow): ListShare {
   return {
     listId: row.list_id,
-    userEmail: normalizeEmail(row.shared_with_email),
     username: row.username,
     createdAt: new Date(row.created_at).toISOString(),
     canEdit: row.can_edit,
@@ -129,7 +131,7 @@ async function ensureUserHasUsername(userEmail: string) {
   const pool = getPool();
   const result = await pool.query<{ username: string }>("SELECT username FROM profiles WHERE user_email = $1", [userEmail]);
   if (!result.rows[0]?.username) {
-    throw new Error("Set a username before making lists public");
+    publicError("Set a username before making lists public");
   }
 }
 
@@ -228,7 +230,7 @@ async function insertList(
     );
   }
   const created = await fetchListById(listId);
-  if (!created) throw new Error("List not found");
+  if (!created) publicError("List not found", 404);
   return mapList({ ...created, can_edit: true }, userEmail);
 }
 
@@ -282,7 +284,7 @@ export async function createListForUser(
 ) {
   const normalizedTitle = title.trim();
   if (!normalizedTitle) {
-    throw new Error("Title is required");
+    publicError("Title is required", 400);
   }
   const uniqueIds = Array.from(new Set(movies));
   const items = uniqueIds.map((id) => ({ tmdbId: id, mediaType }));
@@ -297,7 +299,7 @@ export async function updateListForUser(
   const pool = getPool();
   const existing = await fetchListById(listId);
   if (!existing || normalizeEmail(existing.user_email) !== userEmail) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
 
   const nextTitle = data.title?.trim() || existing.title;
@@ -318,7 +320,7 @@ export async function updateListForUser(
 
   const updated = await fetchListById(listId);
   if (!updated) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
   return mapList({ ...updated, can_edit: true }, userEmail);
 }
@@ -332,12 +334,12 @@ export async function addMovieToListForUser(
   const pool = getPool();
   const existing = await fetchListById(listId);
   if (!existing) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
   const canEdit =
     normalizeEmail(existing.user_email) === userEmail || (await isListSharedWithEdit(listId, userEmail));
   if (!canEdit) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
 
   const nextPosition = await pool
@@ -352,7 +354,7 @@ export async function addMovieToListForUser(
   );
 
   const updated = await fetchListById(listId);
-  if (!updated) throw new Error("List not found");
+  if (!updated) publicError("List not found", 404);
   return mapList({ ...updated, can_edit: canEdit }, userEmail);
 }
 
@@ -360,18 +362,18 @@ export async function removeMovieFromListForUser(listId: string, tmdbId: number,
   const pool = getPool();
   const existing = await fetchListById(listId);
   if (!existing) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
   const canEdit =
     normalizeEmail(existing.user_email) === userEmail || (await isListSharedWithEdit(listId, userEmail));
   if (!canEdit) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
 
   await pool.query("DELETE FROM list_items WHERE list_id = $1 AND tmdb_id = $2", [listId, tmdbId]);
 
   const updated = await fetchListById(listId);
-  if (!updated) throw new Error("List not found");
+  if (!updated) publicError("List not found", 404);
   return mapList({ ...updated, can_edit: canEdit }, userEmail);
 }
 
@@ -379,7 +381,7 @@ export async function deleteListForUser(listId: string, userEmail: string) {
   const pool = getPool();
   const existing = await fetchListById(listId);
   if (!existing || normalizeEmail(existing.user_email) !== userEmail) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
   await pool.query("DELETE FROM lists WHERE id = $1", [listId]);
 }
@@ -498,10 +500,10 @@ export async function addFavoriteForUser(listId: string, userEmail: string) {
   const pool = getPool();
   const list = await fetchListById(listId);
   if (!list) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
   if (list.visibility !== "public" && normalizeEmail(list.user_email) !== userEmail) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
   await pool.query(
     `
@@ -521,7 +523,7 @@ export async function removeFavoriteForUser(listId: string, userEmail: string) {
 export async function loadListSharesForUser(listId: string, userEmail: string) {
   const list = await fetchListById(listId);
   if (!list || normalizeEmail(list.user_email) !== userEmail) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
   await ensureUserHasUsername(userEmail);
   return fetchListShares(listId);
@@ -531,7 +533,7 @@ export async function addListShareForUser(listId: string, userEmail: string, use
   const pool = getPool();
   const list = await fetchListById(listId);
   if (!list || normalizeEmail(list.user_email) !== userEmail) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
   await ensureUserHasUsername(userEmail);
   const normalizedUsername = normalizeUsername(username);
@@ -540,10 +542,10 @@ export async function addListShareForUser(listId: string, userEmail: string, use
   ]);
   const shareEmail = share.rows[0]?.user_email ? normalizeEmail(share.rows[0].user_email) : null;
   if (!shareEmail) {
-    throw new Error("username not found");
+    publicError("username not found", 404);
   }
   if (shareEmail === userEmail) {
-    throw new Error("cannot share with yourself");
+    publicError("cannot share with yourself");
   }
   await pool.query(
     `
@@ -560,7 +562,7 @@ export async function updateListSharePermissionForUser(listId: string, userEmail
   const pool = getPool();
   const list = await fetchListById(listId);
   if (!list || normalizeEmail(list.user_email) !== userEmail) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
   const normalizedUsername = normalizeUsername(username);
   const share = await pool.query<{ user_email: string }>("SELECT user_email FROM profiles WHERE username = $1", [
@@ -568,7 +570,7 @@ export async function updateListSharePermissionForUser(listId: string, userEmail
   ]);
   const shareEmail = share.rows[0]?.user_email ? normalizeEmail(share.rows[0].user_email) : null;
   if (!shareEmail) {
-    throw new Error("username not found");
+    publicError("username not found", 404);
   }
   await pool.query("UPDATE list_shares SET can_edit = $3 WHERE list_id = $1 AND shared_with_email = $2", [
     listId,
@@ -582,7 +584,7 @@ export async function removeListShareForUser(listId: string, userEmail: string, 
   const pool = getPool();
   const list = await fetchListById(listId);
   if (!list || normalizeEmail(list.user_email) !== userEmail) {
-    throw new Error("List not found");
+    publicError("List not found", 404);
   }
   const normalizedUsername = normalizeUsername(username);
   const share = await pool.query<{ user_email: string }>("SELECT user_email FROM profiles WHERE username = $1", [
@@ -590,7 +592,7 @@ export async function removeListShareForUser(listId: string, userEmail: string, 
   ]);
   const shareEmail = share.rows[0]?.user_email ? normalizeEmail(share.rows[0].user_email) : null;
   if (!shareEmail) {
-    throw new Error("username not found");
+    publicError("username not found", 404);
   }
   await pool.query("DELETE FROM list_shares WHERE list_id = $1 AND shared_with_email = $2", [listId, shareEmail]);
   return fetchListShares(listId);
@@ -673,12 +675,12 @@ function parseImportedTitles(raw: string): ParsedEntry[] {
 export async function importListForUser(title: string, raw: string, userEmail: string) {
   const normalizedTitle = title.trim();
   if (!normalizedTitle || !raw.trim()) {
-    throw new Error("Title and data are required");
+    publicError("Title and data are required", 400);
   }
 
   const entries = parseImportedTitles(raw).slice(0, 500);
   if (!entries.length) {
-    throw new Error("No movies could be parsed from the import data");
+    publicError("No movies could be parsed from the import data", 400);
   }
 
   const ids: number[] = [];
@@ -694,7 +696,7 @@ export async function importListForUser(title: string, raw: string, userEmail: s
   }
 
   if (!ids.length) {
-    throw new Error("No movies could be matched");
+    publicError("No movies could be matched", 400);
   }
 
   const list = await insertList(normalizedTitle, ids.map((id) => ({ tmdbId: id, mediaType: "movie" as const })), null, userEmail);

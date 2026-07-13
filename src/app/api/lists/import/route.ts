@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { importListForUser } from "@/lib/server/lists";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 import { consume } from "@/lib/server/rate-limit";
 
@@ -30,6 +30,6 @@ export async function POST(request: Request) {
     const list = await importListForUser(payload.title ?? "", payload.data ?? "", userEmail);
     return NextResponse.json({ list });
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Unable to import list");
+    return routeError("api/lists/import:post", error, "Unable to import list");
   }
 }
