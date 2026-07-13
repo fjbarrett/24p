@@ -17,6 +17,7 @@
 | Date | Agent | Action |
 | ---- | ----- | ------ |
 | 2026-07-13 | Codex GPT-5 | Assessed application, deployment, dependency, secret, and CI/CD security; reported prioritized findings without changing code. |
+| 2026-07-13 | Claude Fable 5 | Completed comprehensive security remediation: device-approval pairing protocol (6-digit code approved from the web, high-entropy device credentials, 30d idle/180d absolute token expiry), browser-only privileged sessions, deny-by-default admin allowlist, DB TLS verify-full with CA + SHA-256 pin, Postgres-backed durable rate limits on public/expensive routes, JustWatch LRU + single-flight cache, Apple-link host validation, raw-error-message hygiene (publicError/routeError), share email removal, dependency bumps, SHA-pinned actions + tests + Dependabot + Trivy schedule, deploy timeouts, GitHub security features enabled, and Cloudflare-only origin (nginx real-IP overwrite + UFW allowlist, verified live). |
 
 ---
 
@@ -35,6 +36,8 @@
 
 **Outstanding Tasks:**
 
-- Address the prioritized security findings from the 2026-07-13 assessment.
+- Watch the next Let's Encrypt renewal for 24p.mov (nginx authenticator now runs behind the Cloudflare-only UFW allowlist; renewal traffic flows through Cloudflare and should succeed — cert valid to 2026-09-08).
+- Historical gitleaks hit: a generic API key in `examples/reelgood-source.html` at commit 93f1eeb (file long deleted). Rewriting history would require force-push approval; rotate the key if it was ever real.
+- Refresh the UFW/nginx Cloudflare ranges occasionally via `scripts/server/harden-origin.sh`.
 
 **Feature Ideas:**
