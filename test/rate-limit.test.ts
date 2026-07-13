@@ -1,13 +1,8 @@
-import { describe, expect, mock, test } from "bun:test";
-
-// The in-memory limiter never touches the pool, but the module imports it.
-mock.module("@/lib/server/db", () => ({
-  getPool: () => {
-    throw new Error("unit tests must not reach the database");
-  },
-}));
-
-const { consume } = await import("@/lib/server/rate-limit");
+import { describe, expect, test } from "bun:test";
+// NOTE: no mock.module here — bun module mocks are process-global and would
+// leak into the DB-backed integration tests that run in the same invocation.
+// The in-memory `consume` never touches the pool.
+import { consume } from "@/lib/server/rate-limit";
 
 describe("consume (in-memory fixed window)", () => {
   test("allows up to max requests, then blocks with a retry hint", () => {
