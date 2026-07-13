@@ -17,24 +17,24 @@ jobs:
     outputs:
       image_tag: ${{ steps.meta.outputs.tag }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: Resolve image tag
         id: meta
         run: echo "tag=latest" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
 
       - name: Build and push
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: Dockerfile
@@ -58,7 +58,7 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: Write env file
         run: |
@@ -72,6 +72,10 @@ jobs:
           GOOGLE_CLIENT_SECRET=${{ secrets.PROD_GOOGLE_CLIENT_SECRET }}
           TMDB_API_KEY=${{ secrets.PROD_TMDB_API_KEY }}
           DATABASE_URL=${{ secrets.PROD_DATABASE_URL }}
+          DB_SSLMODE=${{ secrets.PROD_DB_SSLMODE }}
+          DB_CA_CERT_BASE64=${{ secrets.PROD_DB_CA_CERT_BASE64 }}
+          DB_CERT_FINGERPRINT_SHA256=${{ secrets.PROD_DB_CERT_FINGERPRINT_SHA256 }}
+          ADMIN_EMAILS=${{ secrets.PROD_ADMIN_EMAILS }}
           POSTGRES_USER=${{ secrets.PROD_POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.PROD_POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.PROD_POSTGRES_DB }}
@@ -81,7 +85,7 @@ jobs:
           chmod 600 .env
 
       - name: Copy files to prod server
-        uses: appleboy/scp-action@v1
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1
         with:
           host: ${{ secrets.PROD_DEPLOY_HOST }}
           username: deploy
@@ -90,7 +94,7 @@ jobs:
           target: /opt/24p/
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.5
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
           host: ${{ secrets.PROD_DEPLOY_HOST }}
           username: deploy
@@ -110,9 +114,12 @@ jobs:
             prev_image=$(docker inspect --format '{{.Image}}' "$(docker compose ps -q web 2>/dev/null)" 2>/dev/null || true)
             echo "running image before deploy: ${prev_image:-<none>}"
 
-            # Pull up front (does not disturb the running container), then cut over.
+            # Pull up front (does not disturb the running container), then cut
+            # over. `timeout` bounds the cutover: a wedged container removal once
+            # hung `compose up` indefinitely and served 502 until Docker was
+            # restarted — better to fail fast and let the health gate roll back.
             docker compose pull web
-            docker compose up -d --remove-orphans || echo "compose up exited non-zero; health gate will decide"
+            timeout 180 docker compose up -d --remove-orphans || echo "compose up exited non-zero or timed out; health gate will decide"
 
             # The deploy is only a success once the new container serves 200.
             code=000
@@ -128,7 +135,7 @@ jobs:
               if [ -n "$prev_image" ]; then
                 echo "rolling back to previous image $prev_image"
                 docker tag "$prev_image" ${{ env.IMAGE_WEB }}:latest
-                docker compose up -d --force-recreate --remove-orphans || true
+                timeout 180 docker compose up -d --force-recreate --remove-orphans || true
                 sleep 8
                 echo "status after rollback: $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/ || true)"
               else

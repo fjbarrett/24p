@@ -8,10 +8,23 @@ jobs:
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: 24p_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -21,6 +34,13 @@ jobs:
 
       - name: Type check
         run: bun run tsc --noEmit
+
+      # Unit tests plus DB-backed integration tests (migrations, device
+      # pairing flow, durable rate limiter) against the service container.
+      - name: Test
+        run: bun test
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/24p_test
 
       # Mirrors the production Docker build so prerender / RSC-boundary errors
       # are caught in CI instead of first surfacing during a deploy.
