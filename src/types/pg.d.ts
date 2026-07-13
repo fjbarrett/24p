@@ -6,11 +6,20 @@ declare module "pg" {
     rowCount: number;
   };
 
+  export class PoolClient {
+    query<R extends QueryResultRow = QueryResultRow>(
+      text: string,
+      values?: unknown[],
+    ): Promise<QueryResult<R>>;
+    release(): void;
+  }
+
   export class Pool {
     constructor(config?: Record<string, unknown>);
     query<R extends QueryResultRow = QueryResultRow>(
       text: string,
       values?: unknown[],
     ): Promise<QueryResult<R>>;
+    connect(): Promise<PoolClient>;
   }
 }

@@ -2,10 +2,6 @@ import SwiftUI
 
 struct SignInView: View {
     @EnvironmentObject private var auth: AuthStore
-    @State private var code = ""
-
-    private var digits: String { code.filter(\.isNumber) }
-
     var body: some View {
         VStack(spacing: 28) {
             Image(systemName: "person.crop.circle.badge.checkmark")
@@ -17,25 +13,21 @@ struct SignInView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
 
-                Text("On your phone or computer, open **24p.mov → Settings → Apple TV**, tap “Generate code,” then enter the 4-digit code below.")
+                Text("Generate a code here, then open **24p.mov → Settings → Apple devices** on your phone or computer and approve this Apple TV.")
                     .font(.headline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 760)
             }
 
-            TextField("0000", text: $code)
-                .textContentType(.oneTimeCode)
-                .autocorrectionDisabled()
-                .font(.system(size: 56, weight: .semibold, design: .monospaced))
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 360)
-                .onChange(of: code) {
-                    // Keep digits only, cap at 4.
-                    let filtered = String(code.filter(\.isNumber).prefix(4))
-                    if filtered != code { code = filtered }
-                }
-                .onSubmit(submit)
+            if let code = auth.pairingCode {
+                Text(code)
+                    .font(.system(size: 64, weight: .semibold, design: .monospaced))
+                    .tracking(12)
+                Text("Waiting for approval")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+            }
 
             if let err = auth.error {
                 Text(err)
@@ -45,23 +37,21 @@ struct SignInView: View {
                     .frame(maxWidth: 640)
             }
 
-            Button(action: submit) {
+            Button {
+                auth.beginPairing()
+            } label: {
                 if auth.isWorking {
                     ProgressView()
                 } else {
-                    Text("Sign In")
+                    Text(auth.pairingCode == nil ? "Generate Pairing Code" : "Generate New Code")
                         .frame(minWidth: 200)
                 }
             }
             .buttonStyle(.borderedProminent)
-            .disabled(auth.isWorking || digits.count != 4)
+            .disabled(auth.isWorking)
         }
         .padding(60)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func submit() {
-        Task { await auth.signIn(pin: code) }
     }
 }
 

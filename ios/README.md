@@ -43,14 +43,18 @@ value-based (`NavigationStack` + `navigationDestination`). No third-party deps.
 
 ## Auth
 
-Reuses the existing Apple TV pairing flow — no new backend work:
+Device authorization, shared with the Apple TV client:
 
-1. Sign in on the web at `24p.mov`, open **Settings → Apple TV**, generate a
-   4-digit PIN (`POST /api/tv/token`).
-2. Enter the PIN in the **Sign In** tab. The app exchanges it for a long-lived
-   bearer (`POST /api/tv/claim`) stored in the Keychain.
-3. `getSessionUser` on the backend accepts `Authorization: Bearer`, so the
-   authenticated routes (your lists, add-to-list, create list) work.
+1. Tap **Generate Pairing Code** in the Account tab. The app requests a
+   pairing (`POST /api/tv/pairing`), keeps its high-entropy device token
+   private, and displays a 6-digit approval code.
+2. Sign in on the web at `24p.mov`, open **Settings → Apple devices**, and
+   enter the code to approve the device.
+3. The app polls `POST /api/tv/claim` with its pairing id + device token and,
+   once approved, stores the long-lived bearer in the Keychain.
+4. `getSessionUser` on the backend accepts `Authorization: Bearer`, so the
+   authenticated routes (your lists, add-to-list, create list) work. Device
+   management (list/revoke) stays browser-session-only.
 
 A future enhancement is on-device Google OAuth via `ASWebAuthenticationSession`,
 which would remove the web round-trip.
@@ -62,7 +66,7 @@ which would remove the web round-trip.
 - Streaming catalog with provider filters, popular/top-rated sort, pagination
 - Title detail with metadata, cast, and watch providers/links (open in browser)
 - **Add a title to a list, or create a new list** (the touch-first feature)
-- PIN sign-in, session restore, sign out
+- Device-approval sign-in, session restore, sign out
 
 ## Not yet implemented
 

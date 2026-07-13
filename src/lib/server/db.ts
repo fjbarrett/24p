@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
+import { checkServerIdentity as defaultCheckServerIdentity, type PeerCertificate } from "node:tls";
 import { Pool } from "pg";
 
 declare global {
@@ -15,7 +16,8 @@ function resolveDbConfig() {
 
   const url = new URL(raw);
   const sslModeFromUrl = url.searchParams.get("sslmode")?.toLowerCase();
-  const sslMode = (process.env.DB_SSLMODE ?? sslModeFromUrl ?? "disable").toLowerCase();
+  // `||` (not ??): docker-compose passes unset vars through as empty strings.
+  const sslMode = (process.env.DB_SSLMODE || sslModeFromUrl || "disable").toLowerCase();
 
   url.searchParams.delete("sslmode");
 
@@ -24,19 +26,47 @@ function resolveDbConfig() {
   // need to skip verification must opt in via DB_SSLMODE=no-verify / allow /
   // prefer — the legacy behavior silently disabled verification for
   // sslmode=require, giving encryption without authentication.
-  const ca = process.env.DB_CA_CERT;
+  const ca = process.env.DB_CA_CERT ?? decodeBase64Certificate(process.env.DB_CA_CERT_BASE64);
+  const pinnedFingerprint = normalizeFingerprint(process.env.DB_CERT_FINGERPRINT_SHA256);
   const insecureModes = new Set(["no-verify", "allow", "prefer"]);
+  if (process.env.NODE_ENV === "production" && insecureModes.has(sslMode)) {
+    throw new Error("Production database TLS verification cannot be disabled");
+  }
   const ssl =
     sslMode === "disable"
       ? undefined
       : insecureModes.has(sslMode)
         ? { rejectUnauthorized: false }
-        : { rejectUnauthorized: true, ...(ca ? { ca } : {}) };
+        : {
+            rejectUnauthorized: true,
+            ...(ca ? { ca } : {}),
+            checkServerIdentity: (host: string, cert: PeerCertificate) => {
+              if (!pinnedFingerprint) return defaultCheckServerIdentity(host, cert);
+              const actual = normalizeFingerprint(cert.fingerprint256);
+              return actual === pinnedFingerprint
+                ? undefined
+                : new Error("Database certificate fingerprint does not match the configured pin");
+            },
+          };
 
   return {
     connectionString: url.toString(),
     ssl,
   };
+}
+
+function decodeBase64Certificate(value: string | undefined) {
+  if (!value?.trim()) return undefined;
+  try {
+    const decoded = Buffer.from(value.trim(), "base64").toString("utf8");
+    return decoded.includes("BEGIN CERTIFICATE") ? decoded : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeFingerprint(value: string | undefined) {
+  return value?.replace(/[^a-f0-9]/gi, "").toUpperCase() || undefined;
 }
 
 // DDL that is safe to run on every startup via IF NOT EXISTS.
@@ -91,15 +121,46 @@ const INCREMENTAL_MIGRATIONS = [
     last_used_at TIMESTAMPTZ
   )`,
   `CREATE INDEX IF NOT EXISTS tv_tokens_user_email_idx ON tv_tokens (user_email)`,
-  // Pairing columns: a short-lived 4-digit PIN is exchanged for the bearer
-  // (held in pending_token until claimed, then nulled).
-  `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS pin TEXT`,
-  `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS pin_expires_at TIMESTAMPTZ`,
-  `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS pending_token TEXT`,
-  `CREATE INDEX IF NOT EXISTS tv_tokens_pin_idx ON tv_tokens (pin)`,
   // Sliding absolute-expiry for issued bearers (refreshed on each use). NULL on
   // pre-existing rows is treated as "no expiry yet" and backfilled on first use.
   `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`,
+  `ALTER TABLE tv_tokens ADD COLUMN IF NOT EXISTS absolute_expires_at TIMESTAMPTZ`,
+  // Native device authorization. The device owns the high-entropy token while
+  // the browser approves only a short display code; plaintext credentials are
+  // never persisted in PostgreSQL.
+  `CREATE TABLE IF NOT EXISTS tv_pairings (
+    pairing_id  TEXT PRIMARY KEY,
+    token_hash  TEXT NOT NULL UNIQUE,
+    pin         TEXT NOT NULL UNIQUE,
+    label       TEXT NOT NULL DEFAULT 'Apple device',
+    user_email  TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at  TIMESTAMPTZ NOT NULL,
+    approved_at TIMESTAMPTZ
+  )`,
+  `CREATE INDEX IF NOT EXISTS tv_pairings_expires_at_idx ON tv_pairings (expires_at)`,
+  // Shared fixed-window counters for public endpoints. Keys are SHA-256 hashes,
+  // so client IPs and account identifiers are not retained in plaintext.
+  `CREATE TABLE IF NOT EXISTS api_rate_limits (
+    key       TEXT PRIMARY KEY,
+    count     INTEGER NOT NULL,
+    reset_at TIMESTAMPTZ NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS api_rate_limits_reset_at_idx ON api_rate_limits (reset_at)`,
+  // Remove the legacy global-PIN flow, including plaintext pending bearers.
+  `DO $$
+   BEGIN
+     IF EXISTS (
+       SELECT 1 FROM information_schema.columns
+       WHERE table_name = 'tv_tokens' AND column_name = 'pending_token'
+     ) THEN
+       DELETE FROM tv_tokens WHERE pending_token IS NOT NULL;
+     END IF;
+   END $$`,
+  `DROP INDEX IF EXISTS tv_tokens_pin_idx`,
+  `ALTER TABLE tv_tokens DROP COLUMN IF EXISTS pin`,
+  `ALTER TABLE tv_tokens DROP COLUMN IF EXISTS pin_expires_at`,
+  `ALTER TABLE tv_tokens DROP COLUMN IF EXISTS pending_token`,
   // Read-through cache of public IMDb ratings fetched from OMDb, keyed by imdb
   // id. rating is NULL when OMDb has no score (so we don't re-fetch on every
   // view); fetched_at drives the refresh TTL.
@@ -153,9 +214,7 @@ async function runIncrementalMigrations(pool: Pool): Promise<void> {
     }
   }
 
-  if (failures > 0) {
-    console.error(`[db] ${failures} migration statement(s) failed — schema may be out of date`);
-  }
+  if (failures > 0) throw new Error(`${failures} migration statement(s) failed`);
 }
 
 export function getPool() {

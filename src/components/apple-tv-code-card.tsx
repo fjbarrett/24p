@@ -17,10 +17,9 @@ function lastUsedLabel(device: TvDevice) {
 }
 
 export function AppleTvCodeCard() {
-  const [pin, setPin] = useState<string | null>(null);
-  const [expiresInSeconds, setExpiresInSeconds] = useState<number | null>(null);
+  const [code, setCode] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [approved, setApproved] = useState(false);
   const [devices, setDevices] = useState<TvDevice[]>([]);
   const [isPending, startTransition] = useTransition();
 
@@ -39,22 +38,27 @@ export function AppleTvCodeCard() {
     void loadDevices();
   }, [loadDevices]);
 
-  const generate = () => {
-    if (isPending) return;
+  const approve = () => {
+    if (isPending || code.length !== 6) return;
     startTransition(async () => {
       setMessage(null);
-      setCopied(false);
+      setApproved(false);
       try {
-        const res = await fetch("/api/tv/token", { method: "POST" });
+        const res = await fetch("/api/tv/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin: code }),
+        });
         if (!res.ok) {
           const body = (await res.json().catch(() => null)) as { error?: string } | null;
           throw new Error(body?.error ?? `Request failed (${res.status})`);
         }
-        const body = (await res.json()) as { pin: string; expiresInSeconds?: number };
-        setPin(body.pin);
-        setExpiresInSeconds(body.expiresInSeconds ?? null);
+        setApproved(true);
+        setCode("");
+        setMessage("Device approved. It will finish signing in on its own within a few seconds.");
+        await loadDevices();
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Unable to create a code.");
+        setMessage(error instanceof Error ? error.message : "Unable to approve the device.");
       }
     });
   };
@@ -66,7 +70,7 @@ export function AppleTvCodeCard() {
       try {
         const res = await fetch(`/api/tv/token?id=${encodeURIComponent(id)}`, { method: "DELETE" });
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
-        setMessage("Device removed. That Apple TV will be signed out.");
+        setMessage("Device removed. It will be signed out.");
         await loadDevices();
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Unable to remove device.");
@@ -78,78 +82,55 @@ export function AppleTvCodeCard() {
     if (isPending) return;
     startTransition(async () => {
       setMessage(null);
-      setPin(null);
-      setCopied(false);
       try {
         const res = await fetch("/api/tv/token", { method: "DELETE" });
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
-        setMessage("All Apple TV codes revoked. Any signed-in Apple TV will be signed out.");
+        setMessage("All devices revoked. Any signed-in Apple TV, iPhone, or iPad will be signed out.");
         await loadDevices();
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Unable to revoke codes.");
+        setMessage(error instanceof Error ? error.message : "Unable to revoke devices.");
       }
     });
   };
 
-  const copy = async () => {
-    if (!pin) return;
-    try {
-      await navigator.clipboard.writeText(pin);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  };
-
-  const expiryLabel =
-    expiresInSeconds && expiresInSeconds > 0 ? `Expires in ${Math.round(expiresInSeconds / 60)} minutes.` : "";
-
   return (
     <section className="space-y-4 rounded-[20px] border border-white/8 bg-white/[0.03] p-3 sm:p-4">
-      <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">Apple TV</span>
+      <span className="text-[11px] uppercase tracking-[0.28em] text-black-500">Apple devices</span>
 
       <div className="space-y-0.5">
-        <p className="text-sm font-medium text-white">Sign in on Apple TV</p>
+        <p className="text-sm font-medium text-white">Sign in on Apple TV, iPhone, or iPad</p>
         <p className="text-sm text-black-400">
-          Generate a 4-digit code, then enter it on the 24p Apple TV app&rsquo;s Sign In screen to access your account.
+          Open the 24p app on your device and choose Sign In. It will show a 6-digit code — enter it here to
+          approve the device.
         </p>
       </div>
 
-      {pin ? (
-        <div className="space-y-3">
-          <div className="rounded-2xl border border-white/12 bg-black/40 px-4 py-4 text-center">
-            <p className="font-mono text-5xl tracking-[0.4em] text-white">{pin}</p>
-          </div>
-          <p className="text-xs text-black-400">
-            Enter this on your Apple TV now. {expiryLabel} It can only be used once.
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={copy}
-              className="rounded-xl border border-white/20 bg-white/14 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-white/20"
-            >
-              {copied ? "Copied" : "Copy"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPin(null)}
-              className="rounded-xl border border-white/10 bg-white/6 px-3 py-1.5 text-sm font-medium text-black-300 transition hover:bg-white/10 hover:text-white"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      ) : (
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          approve();
+        }}
+        className="flex gap-2"
+      >
+        <input
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          value={code}
+          onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+          placeholder="000000"
+          aria-label="6-digit device code"
+          className="w-40 rounded-xl border border-white/12 bg-black/40 px-3 py-1.5 text-center font-mono text-lg tracking-[0.3em] text-white placeholder:text-black-600 focus:border-white/30 focus:outline-none"
+        />
         <button
-          type="button"
-          onClick={generate}
-          disabled={isPending}
+          type="submit"
+          disabled={isPending || code.length !== 6}
           className="rounded-xl border border-white/20 bg-white/14 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-white/20 disabled:opacity-50"
         >
-          {isPending ? "Generating…" : "Generate code"}
+          {isPending ? "Approving…" : "Approve"}
         </button>
-      )}
+      </form>
 
       {devices.length > 0 && (
         <>
@@ -184,19 +165,25 @@ export function AppleTvCodeCard() {
       <div className="border-t border-white/6" />
 
       <div className="space-y-2">
-        <p className="text-sm text-black-400">Signed in on an Apple TV you no longer have? Revoke all codes.</p>
+        <p className="text-sm text-black-400">Signed in on a device you no longer have? Revoke everything.</p>
         <button
           type="button"
           onClick={revoke}
           disabled={isPending}
           className="rounded-xl border border-white/10 bg-white/6 px-3 py-1.5 text-sm font-medium text-black-300 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
         >
-          Revoke all Apple TV codes
+          Revoke all devices
         </button>
       </div>
 
       {message && (
-        <p className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3 text-xs text-black-300">{message}</p>
+        <p
+          className={`rounded-2xl border px-4 py-3 text-xs ${
+            approved ? "border-white/12 bg-white/6 text-white" : "border-white/8 bg-black/30 text-black-300"
+          }`}
+        >
+          {message}
+        </p>
       )}
     </section>
   );

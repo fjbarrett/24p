@@ -4,6 +4,7 @@ import SwiftUI
 final class AuthStore: ObservableObject {
     @Published private(set) var user: SessionUser?
     @Published private(set) var profile: SessionProfile?
+    @Published private(set) var pairingCode: String?
     @Published var isWorking = false
     @Published var error: String?
 
@@ -22,35 +23,63 @@ final class AuthStore: ObservableObject {
         await validate(surfaceError: false)
     }
 
-    /// Exchanges the 4-digit pairing PIN (minted on the web at 24p.mov) for a
-    /// long-lived bearer, stores it, then loads the session.
-    func signIn(pin: String) async {
-        let trimmed = pin.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 4 else {
-            error = "Enter the 4-digit code shown on 24p.mov."
-            return
-        }
+    private var pairingTask: Task<Void, Never>?
+
+    /// Starts a device-bound authorization request, then polls until a signed-in
+    /// browser approves the six-digit code shown by this device. Requesting a
+    /// new code cancels any pairing already being polled.
+    func beginPairing() {
+        pairingTask?.cancel()
+        pairingTask = Task { await runPairing() }
+    }
+
+    private func runPairing() async {
         isWorking = true
         error = nil
         do {
-            let token = try await APIClient.shared.claim(pin: trimmed)
-            APIClient.shared.authToken = token
-            Keychain.save(token)
-            await validate(surfaceError: true)
+            let pairing = try await APIClient.shared.startPairing()
+            guard !Task.isCancelled else { return }
+            pairingCode = pairing.pin
+            isWorking = false
+            let deadline = Date().addingTimeInterval(TimeInterval(pairing.expiresInSeconds))
+            while Date() < deadline && !Task.isCancelled {
+                do {
+                    let claim = try await APIClient.shared.checkPairing(pairing)
+                    if claim.status == "approved", let token = claim.token {
+                        APIClient.shared.authToken = token
+                        Keychain.save(token)
+                        pairingCode = nil
+                        await validate(surfaceError: true)
+                        return
+                    }
+                } catch {
+                    // 404 means the pairing was consumed or expired server-side;
+                    // anything else is transient — keep polling until the deadline.
+                    if (error as? APIError)?.statusCode == 404 { break }
+                }
+                try await Task.sleep(for: .seconds(5))
+            }
+            if !Task.isCancelled {
+                pairingCode = nil
+                error = "That code expired. Generate a new one."
+            }
         } catch {
-            APIClient.shared.authToken = nil
-            self.error = (error as? APIError)?.statusCode == 404
-                ? "That code is invalid or expired. Generate a new one."
-                : error.localizedDescription
+            if !Task.isCancelled {
+                pairingCode = nil
+                self.error = error.localizedDescription
+            }
         }
-        isWorking = false
+        if !Task.isCancelled { isWorking = false }
     }
 
     func signOut() {
+        pairingTask?.cancel()
+        pairingTask = nil
         Keychain.delete()
         APIClient.shared.authToken = nil
         user = nil
         profile = nil
+        pairingCode = nil
         error = nil
     }
 

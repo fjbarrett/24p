@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getSessionUserEmail } from "@/lib/server/session";
+import { getBrowserSessionUserEmail } from "@/lib/server/session";
 import { getAdminStats, isAdminEmail } from "@/lib/server/admin";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ function relativeDate(iso: string) {
 }
 
 export default async function AdminPage() {
-  const email = await getSessionUserEmail();
+  const email = await getBrowserSessionUserEmail();
   if (!isAdminEmail(email)) redirect("/");
 
   const { overview, users, recentLists, topLists, week } = await getAdminStats();

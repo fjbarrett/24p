@@ -13,6 +13,7 @@ export type SessionUser = {
   email: string;
   name: string | null;
   image: string | null;
+  authMethod: "browser" | "native";
 };
 
 // Memoized per request so the layout, pages, and route handlers that each need
@@ -27,6 +28,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
       email,
       name: user?.name?.trim() ?? null,
       image: user?.image?.trim() ?? null,
+      authMethod: "browser",
     };
   }
 
@@ -34,7 +36,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   // instead of the browser session cookie.
   const bearerEmail = await resolveBearerEmail();
   if (bearerEmail) {
-    return { id: null, email: bearerEmail, name: null, image: null };
+    return { id: null, email: bearerEmail, name: null, image: null, authMethod: "native" };
   }
 
   return null;
@@ -52,8 +54,19 @@ export async function getSessionUserEmail() {
   return (await getSessionUser())?.email ?? null;
 }
 
+export async function getBrowserSessionUserEmail() {
+  const user = await getSessionUser();
+  return user?.authMethod === "browser" ? user.email : null;
+}
+
 export async function requireSessionEmail(): Promise<string> {
   const email = await getSessionUserEmail();
+  if (!email) redirect("/");
+  return email;
+}
+
+export async function requireBrowserSessionEmail(): Promise<string> {
+  const email = await getBrowserSessionUserEmail();
   if (!email) redirect("/");
   return email;
 }

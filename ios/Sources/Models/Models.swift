@@ -117,7 +117,15 @@ struct SessionResponse: Codable {
 }
 
 struct ClaimResponse: Codable {
-    let token: String
+    let status: String
+    let token: String?
+}
+
+struct DevicePairingResponse: Codable {
+    let pairingId: String
+    let deviceToken: String
+    let pin: String
+    let expiresInSeconds: Int
 }
 
 // MARK: - Streaming Catalog

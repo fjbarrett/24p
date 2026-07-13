@@ -1,50 +1,53 @@
 import { NextResponse } from "next/server";
-import { errorResponse } from "@/lib/server/http";
-import { consume } from "@/lib/server/rate-limit";
+import { errorResponse, routeError } from "@/lib/server/http";
+import { consumeDurable } from "@/lib/server/rate-limit";
 import { claimTvPairing } from "@/lib/server/tv-tokens";
 import { clientIp } from "@/lib/server/client-ip";
 
 export const dynamic = "force-dynamic";
 
-const WINDOW_MS = 10 * 60 * 1000;
-// A claim matches a PIN against the GLOBAL pool of live pairings, so a per-IP
-// cap alone can be defeated by rotating IPs. This global ceiling bounds total
-// guesses across all IPs: at 60 / 10 min an attacker can never cover enough of
-// the 10k PIN space within a pairing's 10-min lifetime, while legitimate claims
-// (rare — one per device pairing) sail through. NOTE: in-memory + per-isolate;
-// the durable fix is to scope the claim to a high-entropy pairing id rather
-// than a global PIN match (tracked as a follow-up).
-const GLOBAL_MAX_ATTEMPTS = 60;
-
-// POST — exchange a 4-digit pairing PIN for a long-lived bearer token.
-// Public + rate-limited: the PIN space is small, so we throttle guessing.
+// POST — poll browser approval using the high-entropy pairing id and token that
+// were issued together to the device. Both limits are durable across restarts.
+// Sizing: devices poll every 5s for up to 10 min (~120 calls), and several
+// devices can share one NAT IP; guessing is not a threat here (the claim needs
+// both 128-bit and 256-bit secrets), so the caps only bound database load.
 export async function POST(request: Request) {
   const ip = clientIp(request.headers);
-  const perIp = consume(`tv-claim:${ip}`, 10, WINDOW_MS);
-  const global = consume("tv-claim:global", GLOBAL_MAX_ATTEMPTS, WINDOW_MS);
-  if (!perIp.ok || !global.ok) {
-    const retryAfter = !perIp.ok ? perIp.retryAfterSeconds : (global as { retryAfterSeconds: number }).retryAfterSeconds;
+  const limits = await Promise.all([
+    consumeDurable(`tv-claim:${ip}`, 300, 10 * 60 * 1000),
+    consumeDurable("tv-claim:global", 5_000, 10 * 60 * 1000),
+  ]);
+  const blocked = limits.find((limit): limit is { ok: false; retryAfterSeconds: number } => !limit.ok);
+  if (blocked) {
     return NextResponse.json(
       { error: "Too many attempts. Try again shortly." },
-      { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      { status: 429, headers: { "Retry-After": String(blocked.retryAfterSeconds) } },
     );
   }
 
-  let pin = "";
+  let pairingId = "";
+  let deviceToken = "";
   try {
-    const body = (await request.json()) as { pin?: string };
-    pin = typeof body.pin === "string" ? body.pin : "";
+    const body = (await request.json()) as { pairingId?: unknown; deviceToken?: unknown };
+    pairingId = typeof body.pairingId === "string" ? body.pairingId : "";
+    deviceToken = typeof body.deviceToken === "string" ? body.deviceToken : "";
   } catch {
     return errorResponse("Invalid request body", 400);
   }
 
   try {
-    const result = await claimTvPairing(pin);
-    if (!result) {
-      return errorResponse("That code is invalid or has expired. Generate a new one.", 404);
+    const result = await claimTvPairing(pairingId, deviceToken);
+    if (result.status === "invalid") {
+      return errorResponse("This pairing request is invalid or has expired", 404);
     }
-    return NextResponse.json({ token: result.token });
+    if (result.status === "pending") {
+      return NextResponse.json({ status: "pending" }, { headers: { "Cache-Control": "no-store" } });
+    }
+    return NextResponse.json(
+      { status: "approved", token: result.token },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Unable to sign in", 500);
+    return routeError("api/tv/claim", error, "Unable to complete device sign-in");
   }
 }

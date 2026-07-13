@@ -41,7 +41,8 @@ Select the **Apple TV Simulator** (or a real Apple TV) and press **Run** (⌘R).
 
 ## API endpoints used
 
-All requests go to the 24p Next.js backend — no auth required:
+All requests go to the 24p Next.js backend. Public browsing needs no auth;
+signed-in features use a bearer from the device-approval flow below.
 
 | Endpoint | Purpose |
 |----------|---------|
@@ -51,6 +52,16 @@ All requests go to the 24p Next.js backend — no auth required:
 | `GET /api/watch-providers?tmdbId=&mediaType=` | Streaming providers |
 | `GET /api/lists/public` | All public lists |
 | `GET /api/lists/public/:username/:slug` | Single list detail |
+| `POST /api/tv/pairing` | Start device sign-in (returns a 6-digit approval code to display) |
+| `POST /api/tv/claim` | Poll for browser approval with the pairing id + device token |
+| `GET /api/session` | Validate the stored bearer and load the account |
+
+## Sign in
+
+Choose **Sign In** in the app: it displays a 6-digit code. On the web, open
+**24p.mov → Settings → Apple devices** and enter the code to approve the
+Apple TV. The app finishes signing in by itself and keeps its bearer in the
+Keychain.
 
 ## Requirements
 

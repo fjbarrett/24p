@@ -6,6 +6,17 @@ export function errorResponse(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
+export class PublicHttpError extends Error {
+  constructor(message: string, readonly status = 400) {
+    super(message);
+    this.name = "PublicHttpError";
+  }
+}
+
+export function publicError(message: string, status = 400): never {
+  throw new PublicHttpError(message, status);
+}
+
 // Logs the underlying error server-side and returns a generic message, so
 // internal/pg/config errors (e.g. "DATABASE_URL is not configured",
 // "ANTHROPIC_API_KEY is not configured", raw pg messages) never leak into a
@@ -13,6 +24,13 @@ export function errorResponse(message: string, status = 400) {
 export function serverError(context: string, error: unknown, message = "Something went wrong") {
   console.error(`[${context}]`, error);
   return NextResponse.json({ error: message }, { status: 500 });
+}
+
+export function routeError(context: string, error: unknown, message: string) {
+  if (error instanceof PublicHttpError) {
+    return errorResponse(error.message, error.status);
+  }
+  return serverError(context, error, message);
 }
 
 // TMDB lib throws Error("TMDB request failed: <status>") / similar for upstream
