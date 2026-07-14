@@ -12,5 +12,15 @@ npm-debug.log*
 yarn-error.log*
 bun.lockb
 coverage
-rust-api/target
 **/.DS_Store
+# Not part of the web image: shipping these bloats the build context
+# (git history, native app projects, a growing screenshots folder).
+.git
+.github
+.persist
+apple-tv
+ios
+screenshots
+scripts
+test
+wireframe
