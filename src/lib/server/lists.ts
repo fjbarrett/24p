@@ -383,7 +383,22 @@ export async function deleteListForUser(listId: string, userEmail: string) {
   if (!existing || normalizeEmail(existing.user_email) !== userEmail) {
     publicError("List not found", 404);
   }
-  await pool.query("DELETE FROM lists WHERE id = $1", [listId]);
+  // No FK constraints exist, so dependents must go with the list or they
+  // linger forever (inflating admin counts and blocking nothing).
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM list_items WHERE list_id = $1", [listId]);
+    await client.query("DELETE FROM list_shares WHERE list_id = $1", [listId]);
+    await client.query("DELETE FROM user_favorites WHERE list_id = $1", [listId]);
+    await client.query("DELETE FROM lists WHERE id = $1", [listId]);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // Memoized per request: list-detail pages resolve the same list in both

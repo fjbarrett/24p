@@ -103,6 +103,15 @@ const INCREMENTAL_MIGRATIONS = [
     created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (list_id, shared_with_email)
   )`,
+  // Favorites predate this migration list (the table was created by the
+  // removed rust-api service); the DDL lives here so fresh databases get it.
+  // The primary key doubles as the uniqueness ON CONFLICT in lists.ts relies on.
+  `CREATE TABLE IF NOT EXISTS user_favorites (
+    user_email TEXT NOT NULL,
+    list_id    TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_email, list_id)
+  )`,
   `CREATE TABLE IF NOT EXISTS user_ratings (
     user_email TEXT    NOT NULL,
     tmdb_id    INTEGER NOT NULL,
@@ -169,6 +178,12 @@ const INCREMENTAL_MIGRATIONS = [
     rating     REAL,
     fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  // There are no FK constraints, and list deletion historically removed only
+  // the lists row; purge rows orphaned by those deletes (deleteListForUser now
+  // removes dependents transactionally).
+  `DELETE FROM list_items WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = list_items.list_id)`,
+  `DELETE FROM list_shares WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = list_shares.list_id)`,
+  `DELETE FROM user_favorites WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = user_favorites.list_id)`,
 ];
 
 let migrationPromise: Promise<void> | null = null;
@@ -220,14 +235,17 @@ async function runIncrementalMigrations(pool: Pool): Promise<void> {
 export function getPool() {
   if (!global.__24pPool) {
     const { connectionString, ssl } = resolveDbConfig();
+    // `||` (not ??): docker-compose passes unset vars through as empty strings.
+    const poolMax = Number(process.env.DB_MAX_CONNECTIONS || 5);
     global.__24pPool = new Pool({
       connectionString,
-      max: Number(process.env.DB_MAX_CONNECTIONS ?? 5),
+      max: Number.isFinite(poolMax) && poolMax > 0 ? poolMax : 5,
       ssl,
     });
-    migrationPromise = runIncrementalMigrations(global.__24pPool).catch((err) =>
-      console.error("[db] Incremental migration failed", err),
-    );
+    migrationPromise = runIncrementalMigrations(global.__24pPool);
+    // Handled here only to avoid an unhandled-rejection crash before
+    // waitForMigrations() awaits (and rethrows from) the original promise.
+    migrationPromise.catch(() => {});
   }
   return global.__24pPool;
 }
