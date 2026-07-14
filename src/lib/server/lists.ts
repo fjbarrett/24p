@@ -261,7 +261,7 @@ export const listListsForUser = cache(async (userEmail: string, includeShared = 
         LEFT JOIN profiles ON lists.user_email = profiles.user_email
         LEFT JOIN list_shares ON list_shares.list_id = lists.id AND list_shares.shared_with_email = $1
         WHERE lists.user_email = $1
-           OR (list_shares.shared_with_email = $1 AND list_shares.can_edit = true)
+           OR list_shares.shared_with_email = $1
         ORDER BY lists.created_at DESC
       `
     : `
@@ -540,7 +540,7 @@ export async function loadListSharesForUser(listId: string, userEmail: string) {
   if (!list || normalizeEmail(list.user_email) !== userEmail) {
     publicError("List not found", 404);
   }
-  await ensureUserHasUsername(userEmail);
+  // Reading existing shares needs no username; only creating one does.
   return fetchListShares(listId);
 }
 

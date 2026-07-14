@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { StreamingPlatform } from "@/lib/server/justwatch";
 
@@ -44,7 +44,14 @@ export function StreamingDiscoveryControls({
     router.replace(`${pathname}?${params.toString()}`);
   }
 
+  // Skip the mount-time save: it fires with URL-derived defaults before the
+  // restore effect below reads storage, erasing the saved preference.
+  const skipInitialSave = useRef(true);
   useEffect(() => {
+    if (skipInitialSave.current) {
+      skipInitialSave.current = false;
+      return;
+    }
     try {
       const payload: StreamingPreferences = {
         providers: selectedProviders,
