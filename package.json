@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
-    "jose": "4.15.9",
+    "jose": "6.2.3",
     "next": "^16.2.9",
     "next-auth": "^4.24.10",
     "pg": "^8.16.3",
