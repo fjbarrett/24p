@@ -25,7 +25,7 @@ type ListRow = {
 const ITEMS_SUBQUERY = `
   COALESCE(
     (SELECT json_agg(json_build_object('tmdbId', li.tmdb_id, 'mediaType', li.media_type)
-                     ORDER BY li.position DESC)
+                     ORDER BY li.position DESC, li.tmdb_id DESC)
      FROM list_items li WHERE li.list_id = lists.id),
     '[]'::json
   ) AS items
@@ -342,15 +342,13 @@ export async function addMovieToListForUser(
     publicError("List not found", 404);
   }
 
-  const nextPosition = await pool
-    .query<{ max: number | null }>("SELECT MAX(position) AS max FROM list_items WHERE list_id = $1", [listId])
-    .then((r) => (r.rows[0]?.max ?? -1) + 1);
-
+  // Position is computed inside the INSERT so concurrent adds can't both read
+  // the same MAX and collide (the JSON aggregation also breaks ties by id).
   await pool.query(
     `INSERT INTO list_items (list_id, tmdb_id, media_type, position)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (list_id, tmdb_id) DO NOTHING`,
-    [listId, tmdbId, mediaType, nextPosition],
+     VALUES ($1, $2, $3, (SELECT COALESCE(MAX(position), -1) + 1 FROM list_items WHERE list_id = $1))
+     ON CONFLICT (list_id, tmdb_id, media_type) DO NOTHING`,
+    [listId, tmdbId, mediaType],
   );
 
   const updated = await fetchListById(listId);
@@ -358,7 +356,12 @@ export async function addMovieToListForUser(
   return mapList({ ...updated, can_edit: canEdit }, userEmail);
 }
 
-export async function removeMovieFromListForUser(listId: string, tmdbId: number, userEmail: string) {
+export async function removeMovieFromListForUser(
+  listId: string,
+  tmdbId: number,
+  mediaType: "movie" | "tv",
+  userEmail: string,
+) {
   const pool = getPool();
   const existing = await fetchListById(listId);
   if (!existing) {
@@ -370,7 +373,11 @@ export async function removeMovieFromListForUser(listId: string, tmdbId: number,
     publicError("List not found", 404);
   }
 
-  await pool.query("DELETE FROM list_items WHERE list_id = $1 AND tmdb_id = $2", [listId, tmdbId]);
+  await pool.query("DELETE FROM list_items WHERE list_id = $1 AND tmdb_id = $2 AND media_type = $3", [
+    listId,
+    tmdbId,
+    mediaType,
+  ]);
 
   const updated = await fetchListById(listId);
   if (!updated) publicError("List not found", 404);

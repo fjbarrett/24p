@@ -94,7 +94,7 @@ const INCREMENTAL_MIGRATIONS = [
     tmdb_id    INTEGER NOT NULL,
     media_type TEXT    NOT NULL DEFAULT 'movie',
     position   INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (list_id, tmdb_id)
+    PRIMARY KEY (list_id, tmdb_id, media_type)
   )`,
   `CREATE TABLE IF NOT EXISTS list_shares (
     list_id            TEXT    NOT NULL,
@@ -184,6 +184,11 @@ const INCREMENTAL_MIGRATIONS = [
   `DELETE FROM list_items WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = list_items.list_id)`,
   `DELETE FROM list_shares WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = list_shares.list_id)`,
   `DELETE FROM user_favorites WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = user_favorites.list_id)`,
+  // TMDB movie and TV ids are separate, overlapping namespaces; the old
+  // (list_id, tmdb_id) key silently dropped a TV title whenever a movie with
+  // the same id was already on the list.
+  `ALTER TABLE list_items DROP CONSTRAINT IF EXISTS list_items_pkey`,
+  `ALTER TABLE list_items ADD PRIMARY KEY (list_id, tmdb_id, media_type)`,
 ];
 
 let migrationPromise: Promise<void> | null = null;

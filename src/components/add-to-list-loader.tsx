@@ -83,11 +83,14 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
         if (!active) return;
         setLists(data);
         setSelectedListId(data[0]?.id ?? "");
-        setInList(data.some((list) => list.movies.includes(tmdbId)));
+        // Movie and TV ids overlap, so membership must match on type too.
+        setInList(
+          data.some((list) => list.items.some((item) => item.tmdbId === tmdbId && item.mediaType === mediaType)),
+        );
       })
       .catch(() => {/* silently ignore — icon defaults to + */});
     return () => { active = false; };
-  }, [userEmail, tmdbId]);
+  }, [userEmail, tmdbId, mediaType]);
 
   // Focus the title field as soon as the user enters create mode.
   useEffect(() => {

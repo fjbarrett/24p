@@ -97,7 +97,7 @@ export function ListDetailClient({
 
       <div className="flex justify-center">
         <ListExportButton
-          tmdbIds={list.movies}
+          items={list.items}
           ratingsMap={ratingsMap}
           listSlug={list.slug}
           listTitle={list.title}
