@@ -4,6 +4,7 @@ import { cache } from "react";
 import { randomUUID } from "crypto";
 import type { ListItem, ListShare, SavedList } from "@/lib/list-store";
 import { getPool, isUniqueViolation } from "@/lib/server/db";
+import { mapWithConcurrency } from "@/lib/server/justwatch";
 import { publicError } from "@/lib/server/http";
 import { fetchTmdbArtwork, fetchTmdbMovies, fetchTmdbShow, findTmdbMovieId } from "@/lib/server/tmdb";
 import { saveRatingsForUser } from "@/lib/server/ratings";
@@ -765,17 +766,17 @@ export async function resolveListPreviewPosters(
     }
   }
 
+  // Bounded like justwatch's artwork backfill: a lists index with dozens of
+  // lists would otherwise burst hundreds of concurrent TMDB fetches.
   const entries = [...wanted.entries()];
-  const artworks = await Promise.allSettled(
-    entries.map(([, item]) => fetchTmdbArtwork(item.tmdbId, item.mediaType)),
+  const artworks = await mapWithConcurrency(entries, 8, ([, item]) =>
+    fetchTmdbArtwork(item.tmdbId, item.mediaType),
   );
 
   const posterByKey = new Map<string, string>();
   entries.forEach(([key], index) => {
-    const result = artworks[index];
-    if (result.status === "fulfilled" && result.value.posterUrl) {
-      posterByKey.set(key, result.value.posterUrl);
-    }
+    const posterUrl = artworks[index]?.posterUrl;
+    if (posterUrl) posterByKey.set(key, posterUrl);
   });
 
   const byList: Record<string, string[]> = {};

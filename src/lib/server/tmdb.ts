@@ -293,7 +293,9 @@ export async function searchTmdb(query: string) {
     return { combined: [] as SearchResultItem[] };
   }
 
-  const [moviesPayload, tvPayload, peoplePayload] = await Promise.all([
+  // One degraded TMDB endpoint (say, /search/person returning 429) must not
+  // take the whole search down; only fail when every sub-search failed.
+  const [moviesResult, tvResult, peopleResult] = await Promise.allSettled([
     tmdbFetch<{ results?: TmdbMovie[] }>("/search/movie", {
       query: trimmed,
       include_adult: false,
@@ -310,6 +312,12 @@ export async function searchTmdb(query: string) {
       page: 1,
     }),
   ]);
+  if (moviesResult.status === "rejected" && tvResult.status === "rejected" && peopleResult.status === "rejected") {
+    throw moviesResult.reason;
+  }
+  const moviesPayload = moviesResult.status === "fulfilled" ? moviesResult.value : {};
+  const tvPayload = tvResult.status === "fulfilled" ? tvResult.value : {};
+  const peoplePayload = peopleResult.status === "fulfilled" ? peopleResult.value : {};
 
   // Filter movies/TV to those with posters before firing Wikipedia checks
   const rawMovies = [
@@ -461,31 +469,29 @@ export async function fetchWatchProviders(
   }
 }
 
+// Throws on upstream failure: a null embedUrl means "this title has no
+// trailer" (cacheable), never "TMDB was down" (which must not be cached).
 export async function fetchTmdbTrailerForMovie(tmdbId: number): Promise<MovieTrailer> {
-  try {
-    const data = await tmdbFetch<TmdbMovie>(`/movie/${tmdbId}`, {
-      append_to_response: "videos",
-    });
+  const data = await tmdbFetch<TmdbMovie>(`/movie/${tmdbId}`, {
+    append_to_response: "videos",
+  });
 
-    const videos = data.videos?.results ?? [];
-    const youtubeVideos = videos.filter((video) => video.site === "YouTube" && video.key);
-    const scored = youtubeVideos
-      .map((video) => ({
-        key: video.key as string,
-        score: scoreTrailer(video),
-      }))
-      .sort((a, b) => b.score - a.score);
+  const videos = data.videos?.results ?? [];
+  const youtubeVideos = videos.filter((video) => video.site === "YouTube" && video.key);
+  const scored = youtubeVideos
+    .map((video) => ({
+      key: video.key as string,
+      score: scoreTrailer(video),
+    }))
+    .sort((a, b) => b.score - a.score);
 
-    const best = scored[0]?.key;
-    if (!best) return { embedUrl: null, source: null };
+  const best = scored[0]?.key;
+  if (!best) return { embedUrl: null, source: null };
 
-    return {
-      embedUrl: `https://www.youtube-nocookie.com/embed/${best}?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${best}&enablejsapi=1`,
-      source: "youtube",
-    };
-  } catch {
-    return { embedUrl: null, source: null };
-  }
+  return {
+    embedUrl: `https://www.youtube-nocookie.com/embed/${best}?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${best}&enablejsapi=1`,
+    source: "youtube",
+  };
 }
 
 function scoreTrailer(video: NonNullable<NonNullable<TmdbMovie["videos"]>["results"]>[number]) {
@@ -509,23 +515,20 @@ function scoreTrailer(video: NonNullable<NonNullable<TmdbMovie["videos"]>["resul
 
 type TmdbVideoResult = NonNullable<NonNullable<TmdbMovie["videos"]>["results"]>[number];
 
+// Same contract as fetchTmdbTrailerForMovie: throws on upstream failure.
 export async function fetchTmdbTrailerForShow(tmdbId: number): Promise<MovieTrailer> {
-  try {
-    const data = await tmdbFetch<{ results?: TmdbVideoResult[] }>(`/tv/${tmdbId}/videos`);
-    const videos = data.results ?? [];
-    const youtubeVideos = videos.filter((video) => video.site === "YouTube" && video.key);
-    const scored = youtubeVideos
-      .map((video) => ({ key: video.key as string, score: scoreTrailer(video) }))
-      .sort((a, b) => b.score - a.score);
-    const best = scored[0]?.key;
-    if (!best) return { embedUrl: null, source: null };
-    return {
-      embedUrl: `https://www.youtube-nocookie.com/embed/${best}?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${best}&enablejsapi=1`,
-      source: "youtube",
-    };
-  } catch {
-    return { embedUrl: null, source: null };
-  }
+  const data = await tmdbFetch<{ results?: TmdbVideoResult[] }>(`/tv/${tmdbId}/videos`);
+  const videos = data.results ?? [];
+  const youtubeVideos = videos.filter((video) => video.site === "YouTube" && video.key);
+  const scored = youtubeVideos
+    .map((video) => ({ key: video.key as string, score: scoreTrailer(video) }))
+    .sort((a, b) => b.score - a.score);
+  const best = scored[0]?.key;
+  if (!best) return { embedUrl: null, source: null };
+  return {
+    embedUrl: `https://www.youtube-nocookie.com/embed/${best}?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${best}&enablejsapi=1`,
+    source: "youtube",
+  };
 }
 
 export async function fetchTmdbRecommendationsForMovie(tmdbId: number): Promise<SimplifiedMovie[]> {

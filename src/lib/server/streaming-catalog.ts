@@ -38,11 +38,11 @@ export async function getStreamingCatalogPayload(params: {
     movies = allMovies.slice((page - 1) * 24, page * 24);
     hasNextPage = allMovies.length > page * 24;
   } else {
-    movies = sortStreamingMovies(
-      await fetchStreamingCatalog({ providerShortNames: selectedProviders, seed, page }),
-      "popularity",
-    );
-    hasNextPage = movies.length === 24;
+    // The catalog returns up to 25 (24 + a next-page probe); slice before
+    // sorting so the probe never displaces a displayed title.
+    const fetched = await fetchStreamingCatalog({ providerShortNames: selectedProviders, seed, page });
+    hasNextPage = fetched.length > 24;
+    movies = sortStreamingMovies(fetched.slice(0, 24), "popularity");
   }
 
   const providerIcons = Object.fromEntries(

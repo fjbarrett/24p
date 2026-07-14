@@ -9,7 +9,6 @@ const DEFAULT_LANGUAGE = "en";
 const DEFAULT_PLATFORM = "WEB";
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_BATCHES = 3;
-const PAGE_STRIDE_MULTIPLIER = 3;
 const RATING_SORT_LIMIT = 240;
 const RATING_SORT_BATCH_SIZE = 100;
 
@@ -68,7 +67,7 @@ async function cachedResponse<T>(
 }
 
 // Bounded fan-out for upstream lookups; failures resolve to null.
-async function mapWithConcurrency<T, R>(
+export async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
   fn: (item: T) => Promise<R>,
@@ -558,8 +557,10 @@ function getStreamingOffer(movie: JwMovie, providerShortNames?: string[]) {
         const matchesProvider = packageKeys.some((key) => allowedProviders.has(key));
         if (!matchesProvider || offerPriority(offer) === Number.POSITIVE_INFINITY) return false;
 
-        // Plex should only surface when JustWatch marks it as free/watchable, not rent-only.
-        if (packageKeys.includes("plx")) return false;
+        // Plex proper mixes rent-only listings into its package; surface it
+        // only for free/watchable monetization. (A blanket drop here hid
+        // titles that stream free on Plex, leaving the filter mostly empty.)
+        if (packageKeys.includes("plx") && offer.monetizationType === "RENT") return false;
 
         return true;
       })
@@ -709,13 +710,20 @@ async function fetchStreamingCatalogImpl({
       .filter(Boolean),
   )];
   const queryProviders = expandProviderShortNames(normalizedProviders);
-  const collected = new Map<number, StreamingCatalogMovie>();
+  const collected = new Map<string, StreamingCatalogMovie>();
   const pageNumber = Math.max(1, Math.floor(page));
+  // Pages advance one `limit` of JustWatch offsets at a time. When local
+  // filtering made a page scan deeper, the next page rescans that overlap —
+  // clients de-dupe by id, and a duplicate beats the unreachable titles the
+  // old 3x stride skipped whenever a page filled from its first batch.
   const offsetBase =
     (scoreSeed(`${normalizedProviders.sort().join(",") || "all"}:${seed}`) % 120) +
-    (pageNumber - 1) * limit * PAGE_STRIDE_MULTIPLIER;
+    (pageNumber - 1) * limit;
+  // Collect one extra as a next-page probe so hasNextPage is observed, not
+  // guessed from a full page.
+  const target = limit + 1;
 
-  for (let batch = 0; batch < MAX_BATCHES && collected.size < limit; batch += 1) {
+  for (let batch = 0; batch < MAX_BATCHES && collected.size < target; batch += 1) {
     const data = await postJustWatch<JwPopularTitlesResult>(POPULAR_TITLES_QUERY, {
       country: locale,
       language: DEFAULT_LANGUAGE,
@@ -741,13 +749,15 @@ async function fetchStreamingCatalogImpl({
       const offer = getStreamingOffer(node, normalizedProviders);
       if (!offer) continue;
       const mapped = mapCatalogMovie(node, offer);
-      if (!mapped || collected.has(mapped.tmdbId)) continue;
-      collected.set(mapped.tmdbId, mapped);
-      if (collected.size >= limit) break;
+      // De-dupe by JustWatch id: movie and TV tmdb ids overlap, so keying on
+      // tmdbId dropped whichever title collided with an earlier one.
+      if (!mapped || collected.has(mapped.justWatchId)) continue;
+      collected.set(mapped.justWatchId, mapped);
+      if (collected.size >= target) break;
     }
   }
 
-  return backfillArtwork(Array.from(collected.values()).slice(0, limit));
+  return backfillArtwork(Array.from(collected.values()).slice(0, target));
 }
 
 // Fills in posters/backdrops from TMDB for entries JustWatch returned without
@@ -799,7 +809,7 @@ async function fetchStreamingCatalogAllImpl({
       .filter(Boolean),
   )];
   const queryProviders = expandProviderShortNames(normalizedProviders);
-  const collected = new Map<number, StreamingCatalogMovie>();
+  const collected = new Map<string, StreamingCatalogMovie>();
 
   // The batches have fixed, independent offsets, so fire them all at once
   // instead of awaiting each in series (was up to 5 sequential 5s round-trips).
@@ -832,8 +842,8 @@ async function fetchStreamingCatalogAllImpl({
       const offer = getStreamingOffer(node, normalizedProviders);
       if (!offer) continue;
       const mapped = mapCatalogMovie(node, offer);
-      if (!mapped || collected.has(mapped.tmdbId)) continue;
-      collected.set(mapped.tmdbId, mapped);
+      if (!mapped || collected.has(mapped.justWatchId)) continue;
+      collected.set(mapped.justWatchId, mapped);
     }
   }
 
