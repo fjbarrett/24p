@@ -52,8 +52,9 @@ final class StreamingViewModel: ObservableObject {
             let resp = try await APIClient.shared.streamingCatalog(
                 providers: Array(selected), sort: sort, seed: seed, page: next)
             guard token == loadToken else { loadingMore = false; return }
-            let existing = Set(movies.map(\.tmdbId))
-            movies.append(contentsOf: resp.movies.filter { !existing.contains($0.tmdbId) })
+            // De-dupe by justWatchId — movie and TV tmdbId namespaces overlap.
+            let existing = Set(movies.map(\.id))
+            movies.append(contentsOf: resp.movies.filter { !existing.contains($0.id) })
             hasNext = resp.hasNextPage
             page = next
         } catch {

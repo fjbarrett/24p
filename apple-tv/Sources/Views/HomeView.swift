@@ -7,24 +7,31 @@ final class HomeViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
+    /// Bumped on every load so a newer load (e.g. sign-in flipping) supersedes
+    /// an in-flight one instead of being skipped, and stale results are discarded.
+    private var generation = 0
+
     func load(signedIn: Bool) async {
-        guard !isLoading else { return }
+        generation += 1
+        let token = generation
         isLoading = true
         error = nil
 
-        if signedIn {
-            // Best-effort: a failed personal-list load shouldn't hide public lists.
-            myLists = (try? await APIClient.shared.myLists()) ?? []
-        } else {
-            myLists = []
-        }
+        // Best-effort: a failed personal-list load shouldn't hide public lists.
+        let my = signedIn ? ((try? await APIClient.shared.myLists()) ?? []) : []
+        guard token == generation, !Task.isCancelled else { return }
+        myLists = my
 
         do {
-            publicLists = try await APIClient.shared.publicLists()
+            let lists = try await APIClient.shared.publicLists()
+            guard token == generation, !Task.isCancelled else { return }
+            publicLists = lists
         } catch {
+            // A superseded task's cancellation must not paint an error.
+            guard token == generation, !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
-        isLoading = false
+        if token == generation { isLoading = false }
     }
 }
 

@@ -6,7 +6,10 @@ final class ListDetailViewModel: ObservableObject {
     @Published var movies: [SimplifiedMovie] = []
     @Published var isLoading = false
     @Published var error: String?
-    private let pageSize = 40
+    /// The server budgets ~120 detail requests/min per IP, so cap the burst
+    /// and keep the fan-out narrow instead of fetching whole lists at once.
+    private let maxItems = 100
+    private let maxConcurrentFetches = 8
     /// Owned lists are private to the user and already carry their items, so we
     /// load titles straight from `list.items` instead of the public endpoint.
     private let owned: Bool
@@ -32,32 +35,35 @@ final class ListDetailViewModel: ObservableObject {
                 ids = list.items
             }
 
-            var orderedMovies: [SimplifiedMovie] = []
-            for chunkStart in stride(from: 0, to: ids.count, by: pageSize) {
-                let chunk = Array(ids[chunkStart..<min(chunkStart + pageSize, ids.count)])
-                let results = await withTaskGroup(of: SimplifiedMovie?.self) { group in
-                    for item in chunk {
-                        group.addTask {
-                            try? await item.mediaType == "tv"
-                                ? APIClient.shared.tvDetail(id: item.tmdbId)
-                                : APIClient.shared.movieDetail(id: item.tmdbId)
-                        }
-                    }
-                    var out: [SimplifiedMovie] = []
-                    for await result in group {
-                        if let movie = result { out.append(movie) }
-                    }
-                    return out
+            let capped = Array(ids.prefix(maxItems))
+            let maxConcurrent = maxConcurrentFetches
+            // Sliding window: at most `maxConcurrent` detail requests in flight.
+            let resolved = await withTaskGroup(of: SimplifiedMovie?.self) { group in
+                var out: [Int: SimplifiedMovie] = [:]
+                var iterator = capped.makeIterator()
+                for _ in 0..<maxConcurrent {
+                    guard let item = iterator.next() else { break }
+                    group.addTask { await Self.fetchDetail(for: item) }
                 }
-
-                let lookup = Dictionary(uniqueKeysWithValues: results.map { ($0.tmdbId, $0) })
-                orderedMovies.append(contentsOf: chunk.compactMap { lookup[$0.tmdbId] })
+                for await movie in group {
+                    if let movie { out[movie.tmdbId] = movie }
+                    if let item = iterator.next() {
+                        group.addTask { await Self.fetchDetail(for: item) }
+                    }
+                }
+                return out
             }
-            movies = orderedMovies
+            movies = capped.compactMap { resolved[$0.tmdbId] }
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    private nonisolated static func fetchDetail(for item: SavedList.ListItem) async -> SimplifiedMovie? {
+        try? await item.mediaType == "tv"
+            ? APIClient.shared.tvDetail(id: item.tmdbId)
+            : APIClient.shared.movieDetail(id: item.tmdbId)
     }
 }
 

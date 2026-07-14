@@ -1,7 +1,7 @@
 import Foundation
 
 enum APIEnvironment {
-    /// Override at launch with the `TV_APP_BASE_URL` scheme env var or an
+    /// Override at launch with the `APP_BASE_URL` scheme env var or an
     /// `APIBaseURL` Info.plist key; otherwise talks to production.
     static var baseURL: String {
         if let override = ProcessInfo.processInfo.environment["APP_BASE_URL"]?
@@ -43,7 +43,13 @@ enum APIError: LocalizedError {
 final class APIClient {
     static let shared = APIClient()
 
-    var authToken: String?
+    /// Lock-guarded: written by the main actor, read from concurrent fetch tasks.
+    private let authTokenLock = NSLock()
+    private var _authToken: String?
+    var authToken: String? {
+        get { authTokenLock.withLock { _authToken } }
+        set { authTokenLock.withLock { _authToken = newValue } }
+    }
 
     private let session: URLSession = {
         let config = URLSessionConfiguration.default

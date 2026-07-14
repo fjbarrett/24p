@@ -41,7 +41,13 @@ final class APIClient {
 
     /// Bearer token for authenticated requests. Set by `AuthStore` after sign-in;
     /// attached to every request (public endpoints simply ignore it).
-    var authToken: String?
+    /// Lock-guarded: written by the main actor, read from concurrent fetch tasks.
+    private let authTokenLock = NSLock()
+    private var _authToken: String?
+    var authToken: String? {
+        get { authTokenLock.withLock { _authToken } }
+        set { authTokenLock.withLock { _authToken = newValue } }
+    }
 
     private let session: URLSession = {
         let config = URLSessionConfiguration.default
