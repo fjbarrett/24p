@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getProfileForUser } from "@/lib/server/profiles";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function GET() {
@@ -8,6 +8,10 @@ export async function GET() {
   if (!userEmail) {
     return errorResponse("Unauthorized", 401);
   }
-  const profile = await getProfileForUser(userEmail);
-  return NextResponse.json({ profile });
+  try {
+    const profile = await getProfileForUser(userEmail);
+    return NextResponse.json({ profile });
+  } catch (error) {
+    return routeError("api/profiles:get", error, "Unable to load profile");
+  }
 }

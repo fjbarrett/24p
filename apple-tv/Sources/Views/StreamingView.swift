@@ -56,7 +56,8 @@ final class StreamingViewModel: ObservableObject {
 
         let token = generation
         isLoadingMore = true
-        defer { if token == generation { isLoadingMore = false } }
+        // Reset unconditionally — reload() may bump `generation` while this is in flight.
+        defer { isLoadingMore = false }
 
         do {
             let next = page + 1

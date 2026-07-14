@@ -14,20 +14,6 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-export async function getProfile(userEmail: string): Promise<UserProfile | null> {
-  const email = normalizeEmail(userEmail);
-  if (!email) {
-    throw new Error("userEmail is required to load profile");
-  }
-  try {
-    const data = await apiFetch<{ profile: UserProfile | null }>(`/profiles`);
-    return data.profile ?? null;
-  } catch (error) {
-    console.error("Failed to load profile", error);
-    return null;
-  }
-}
-
 export async function setUsername(userEmail: string, username: string): Promise<UserProfile> {
   const email = normalizeEmail(userEmail);
   if (!email) {
@@ -50,23 +36,4 @@ export async function setProfileVisibility(userEmail: string, isPublic: boolean)
     body: JSON.stringify({ isPublic }),
   });
   return data.profile;
-}
-
-export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
-  const normalized = username.trim().toLowerCase();
-  if (!normalized) {
-    throw new Error("username is required to load a public profile");
-  }
-  try {
-    const data = await apiFetch<{ profile: PublicProfile }>(
-      `/profiles/public/${encodeURIComponent(normalized)}`,
-    );
-    return data.profile ?? null;
-  } catch (error) {
-    if (error instanceof Error && error.message === "Profile not found") {
-      return null;
-    }
-    console.error("Failed to load public profile", error);
-    return null;
-  }
 }

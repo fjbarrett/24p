@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { setProfileVisibility, type UserProfile } from "@/lib/profile-store";
 
 type ProfileVisibilityCardProps = {
@@ -8,11 +8,17 @@ type ProfileVisibilityCardProps = {
   profile: UserProfile | null;
 };
 
+const subscribeNever = () => () => {};
+const readOrigin = () => window.location.origin;
+const readOriginServer = () => "";
+
 export function ProfileVisibilityCard({ userEmail, profile }: ProfileVisibilityCardProps) {
   const [isPublic, setIsPublic] = useState(profile?.isPublic ?? false);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const baseUrl = typeof window === "undefined" ? "" : window.location.origin;
+  // Client-only value with an SSR fallback: reading window.location.origin
+  // during render made server HTML and the hydrating client disagree.
+  const baseUrl = useSyncExternalStore(subscribeNever, readOrigin, readOriginServer);
   const username = profile?.username;
   const canUpdate = Boolean(username);
 

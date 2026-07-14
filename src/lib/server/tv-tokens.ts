@@ -53,7 +53,7 @@ export async function startTvPairing(
     try {
       await pool.query(
         `INSERT INTO tv_pairings (pairing_id, token_hash, pin, label, expires_at)
-         VALUES ($1, $2, $3, $4, NOW() + ($5 || ' milliseconds')::interval)`,
+         VALUES ($1, $2, $3, $4, NOW() + $5 * interval '1 millisecond')`,
         [pairingId, hashToken(deviceToken), pin, label.slice(0, 80), String(PAIRING_TTL_MS)],
       );
       return {
@@ -91,8 +91,8 @@ export async function approveTvPairing(userEmail: string, rawPin: string): Promi
        token_hash, user_email, label, last_used_at, expires_at, absolute_expires_at
      )
      SELECT token_hash, $1, label, NOW(),
-            NOW() + ($3 || ' milliseconds')::interval,
-            NOW() + ($4 || ' milliseconds')::interval
+            NOW() + $3 * interval '1 millisecond',
+            NOW() + $4 * interval '1 millisecond'
      FROM approved
      ON CONFLICT (token_hash) DO NOTHING
      RETURNING token_hash`,
@@ -145,15 +145,15 @@ export async function resolveTvToken(rawToken: string): Promise<string | null> {
        SET last_used_at = NOW(),
            absolute_expires_at = COALESCE(
              absolute_expires_at,
-             created_at + ($3 || ' milliseconds')::interval
+             created_at + $3 * interval '1 millisecond'
            ),
            expires_at = LEAST(
-             NOW() + ($2 || ' milliseconds')::interval,
-             COALESCE(absolute_expires_at, created_at + ($3 || ' milliseconds')::interval)
+             NOW() + $2 * interval '1 millisecond',
+             COALESCE(absolute_expires_at, created_at + $3 * interval '1 millisecond')
            )
      WHERE token_hash = $1
        AND (expires_at IS NULL OR expires_at > NOW())
-       AND COALESCE(absolute_expires_at, created_at + ($3 || ' milliseconds')::interval) > NOW()
+       AND COALESCE(absolute_expires_at, created_at + $3 * interval '1 millisecond') > NOW()
      RETURNING user_email`,
     [hashToken(token), String(TOKEN_IDLE_TTL_MS), String(TOKEN_MAX_TTL_MS)],
   );

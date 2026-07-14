@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { setProfileVisibilityForUser } from "@/lib/server/profiles";
-import { errorResponse, routeError } from "@/lib/server/http";
+import { errorResponse, readJsonObject, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function PATCH(request: Request) {
@@ -10,7 +10,7 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const payload = (await request.json()) as { isPublic?: boolean };
+    const payload = (await readJsonObject(request)) as { isPublic?: boolean };
     if (typeof payload.isPublic !== "boolean") {
       return errorResponse("isPublic is required");
     }

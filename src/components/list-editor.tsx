@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { ListShare, SavedList } from "@/lib/list-store";
-import { addListShare, loadListShares, removeListShare, updateListSharePermission } from "@/lib/list-store";
+import {
+  addListShare,
+  invalidateListsCache,
+  loadListShares,
+  removeListShare,
+  updateListSharePermission,
+} from "@/lib/list-store";
 import { DEFAULT_LIST_COLOR_ID, LIST_COLOR_OPTIONS, normalizeListColor } from "@/lib/list-colors";
 import { apiFetch } from "@/lib/api-client";
 
@@ -157,6 +163,7 @@ export function ListEditor({
           method: "PATCH",
           body: JSON.stringify({ title, slug, color, visibility }),
         });
+        if (normalizedViewerEmail) invalidateListsCache(normalizedViewerEmail);
         setTitle(data.list.title);
         setSlug(data.list.slug);
         setColor(normalizeListColor(data.list.color ?? DEFAULT_LIST_COLOR_ID));
@@ -396,6 +403,7 @@ export function ListEditor({
                       await apiFetch(`/lists/${list.id}`, {
                         method: "DELETE",
                       });
+                      if (normalizedViewerEmail) invalidateListsCache(normalizedViewerEmail);
                       router.push("/");
                       router.refresh();
                     } catch (error) {

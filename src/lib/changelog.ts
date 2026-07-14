@@ -12,6 +12,27 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "sharing-and-lists-fixes",
+    date: "2026-07-13",
+    title: "Shared lists, list editing, and streaming filters work the way they should",
+    summary:
+      "A round of fixes for things that were quietly broken: lists shared with you view-only now actually show up, collaborators can edit shared lists again, your streaming filters are remembered between visits, and TV shows always save to lists correctly.",
+    type: "Improvement",
+    tags: ["lists", "sharing", "streaming", "apple-tv", "ios"],
+    added: [
+      "CSV export now includes TV shows and a Media Type column.",
+      "A retry button when a list's titles fail to load, instead of the list looking empty.",
+    ],
+    changed: [
+      "Lists shared with you as view-only now appear alongside your own lists.",
+      "Editing a list shared with you works again — the edit screen no longer dead-ends.",
+      "Your provider and sort choices on Streaming are remembered between visits.",
+      "Streaming pages no longer skip titles between pages when filtering by provider, and the Plex filter shows titles that stream free on Plex.",
+      "TV shows now save to and remove from lists correctly even when they share an id with a movie.",
+      "On Apple TV: list colors show correctly, scrolling keeps loading after changing filters, and sign-in no longer loses a successful pairing on a flaky connection.",
+    ],
+  },
+  {
     slug: "device-approval-sign-in",
     date: "2026-07-13",
     title: "Safer, simpler sign-in on Apple TV and iPhone",

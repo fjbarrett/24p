@@ -3,7 +3,8 @@ import "server-only";
 import { cache } from "react";
 import { randomUUID } from "crypto";
 import type { ListItem, ListShare, SavedList } from "@/lib/list-store";
-import { getPool } from "@/lib/server/db";
+import { getPool, isUniqueViolation } from "@/lib/server/db";
+import { mapWithConcurrency } from "@/lib/server/justwatch";
 import { publicError } from "@/lib/server/http";
 import { fetchTmdbArtwork, fetchTmdbMovies, fetchTmdbShow, findTmdbMovieId } from "@/lib/server/tmdb";
 import { saveRatingsForUser } from "@/lib/server/ratings";
@@ -25,7 +26,7 @@ type ListRow = {
 const ITEMS_SUBQUERY = `
   COALESCE(
     (SELECT json_agg(json_build_object('tmdbId', li.tmdb_id, 'mediaType', li.media_type)
-                     ORDER BY li.position DESC)
+                     ORDER BY li.position DESC, li.tmdb_id DESC)
      FROM list_items li WHERE li.list_id = lists.id),
     '[]'::json
   ) AS items
@@ -212,26 +213,48 @@ async function insertList(
   userEmail: string,
 ) {
   const pool = getPool();
-  const slug = await generateSlug(title, userEmail);
-  const listId = randomUUID();
-  await pool.query(
-    `INSERT INTO lists (id, title, slug, visibility, color, user_email) VALUES ($1, $2, $3, 'private', $4, $5)`,
-    [listId, title, slug, normalizeColor(color), userEmail],
-  );
-  if (initialItems.length) {
-    const values = initialItems
-      .map((item, index) => `($1, $${index * 2 + 2}, $${index * 2 + 3}, ${initialItems.length - 1 - index})`)
-      .join(", ");
-    const params: unknown[] = [listId];
-    initialItems.forEach((item) => params.push(item.tmdbId, item.mediaType));
-    await pool.query(
-      `INSERT INTO list_items (list_id, tmdb_id, media_type, position) VALUES ${values} ON CONFLICT DO NOTHING`,
-      params,
-    );
+  // The list row and its items commit together: a failed item insert used to
+  // leave a ghost empty list behind (and burn its slug). Slug generation is
+  // check-then-insert, so a concurrent create with the same title can lose the
+  // race — retry with a regenerated slug on unique violation.
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const slug = await generateSlug(title, userEmail);
+    const listId = randomUUID();
+    let committed = false;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `INSERT INTO lists (id, title, slug, visibility, color, user_email) VALUES ($1, $2, $3, 'private', $4, $5)`,
+        [listId, title, slug, normalizeColor(color), userEmail],
+      );
+      if (initialItems.length) {
+        const values = initialItems
+          .map((item, index) => `($1, $${index * 2 + 2}, $${index * 2 + 3}, ${initialItems.length - 1 - index})`)
+          .join(", ");
+        const params: unknown[] = [listId];
+        initialItems.forEach((item) => params.push(item.tmdbId, item.mediaType));
+        await client.query(
+          `INSERT INTO list_items (list_id, tmdb_id, media_type, position) VALUES ${values} ON CONFLICT DO NOTHING`,
+          params,
+        );
+      }
+      await client.query("COMMIT");
+      committed = true;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      if (!isUniqueViolation(error) || attempt === MAX_ATTEMPTS) throw error;
+    } finally {
+      client.release();
+    }
+    if (committed) {
+      const created = await fetchListById(listId);
+      if (!created) publicError("List not found", 404);
+      return mapList({ ...created, can_edit: true }, userEmail);
+    }
   }
-  const created = await fetchListById(listId);
-  if (!created) publicError("List not found", 404);
-  return mapList({ ...created, can_edit: true }, userEmail);
+  publicError("Unable to create list", 500);
 }
 
 export async function getListByIdForEditor(listId: string, userEmail: string) {
@@ -261,7 +284,7 @@ export const listListsForUser = cache(async (userEmail: string, includeShared = 
         LEFT JOIN profiles ON lists.user_email = profiles.user_email
         LEFT JOIN list_shares ON list_shares.list_id = lists.id AND list_shares.shared_with_email = $1
         WHERE lists.user_email = $1
-           OR (list_shares.shared_with_email = $1 AND list_shares.can_edit = true)
+           OR list_shares.shared_with_email = $1
         ORDER BY lists.created_at DESC
       `
     : `
@@ -342,15 +365,13 @@ export async function addMovieToListForUser(
     publicError("List not found", 404);
   }
 
-  const nextPosition = await pool
-    .query<{ max: number | null }>("SELECT MAX(position) AS max FROM list_items WHERE list_id = $1", [listId])
-    .then((r) => (r.rows[0]?.max ?? -1) + 1);
-
+  // Position is computed inside the INSERT so concurrent adds can't both read
+  // the same MAX and collide (the JSON aggregation also breaks ties by id).
   await pool.query(
     `INSERT INTO list_items (list_id, tmdb_id, media_type, position)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (list_id, tmdb_id) DO NOTHING`,
-    [listId, tmdbId, mediaType, nextPosition],
+     VALUES ($1, $2, $3, (SELECT COALESCE(MAX(position), -1) + 1 FROM list_items WHERE list_id = $1))
+     ON CONFLICT (list_id, tmdb_id, media_type) DO NOTHING`,
+    [listId, tmdbId, mediaType],
   );
 
   const updated = await fetchListById(listId);
@@ -358,7 +379,12 @@ export async function addMovieToListForUser(
   return mapList({ ...updated, can_edit: canEdit }, userEmail);
 }
 
-export async function removeMovieFromListForUser(listId: string, tmdbId: number, userEmail: string) {
+export async function removeMovieFromListForUser(
+  listId: string,
+  tmdbId: number,
+  mediaType: "movie" | "tv",
+  userEmail: string,
+) {
   const pool = getPool();
   const existing = await fetchListById(listId);
   if (!existing) {
@@ -370,7 +396,11 @@ export async function removeMovieFromListForUser(listId: string, tmdbId: number,
     publicError("List not found", 404);
   }
 
-  await pool.query("DELETE FROM list_items WHERE list_id = $1 AND tmdb_id = $2", [listId, tmdbId]);
+  await pool.query("DELETE FROM list_items WHERE list_id = $1 AND tmdb_id = $2 AND media_type = $3", [
+    listId,
+    tmdbId,
+    mediaType,
+  ]);
 
   const updated = await fetchListById(listId);
   if (!updated) publicError("List not found", 404);
@@ -383,7 +413,22 @@ export async function deleteListForUser(listId: string, userEmail: string) {
   if (!existing || normalizeEmail(existing.user_email) !== userEmail) {
     publicError("List not found", 404);
   }
-  await pool.query("DELETE FROM lists WHERE id = $1", [listId]);
+  // No FK constraints exist, so dependents must go with the list or they
+  // linger forever (inflating admin counts and blocking nothing).
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM list_items WHERE list_id = $1", [listId]);
+    await client.query("DELETE FROM list_shares WHERE list_id = $1", [listId]);
+    await client.query("DELETE FROM user_favorites WHERE list_id = $1", [listId]);
+    await client.query("DELETE FROM lists WHERE id = $1", [listId]);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // Memoized per request: list-detail pages resolve the same list in both
@@ -525,7 +570,7 @@ export async function loadListSharesForUser(listId: string, userEmail: string) {
   if (!list || normalizeEmail(list.user_email) !== userEmail) {
     publicError("List not found", 404);
   }
-  await ensureUserHasUsername(userEmail);
+  // Reading existing shares needs no username; only creating one does.
   return fetchListShares(listId);
 }
 
@@ -721,17 +766,17 @@ export async function resolveListPreviewPosters(
     }
   }
 
+  // Bounded like justwatch's artwork backfill: a lists index with dozens of
+  // lists would otherwise burst hundreds of concurrent TMDB fetches.
   const entries = [...wanted.entries()];
-  const artworks = await Promise.allSettled(
-    entries.map(([, item]) => fetchTmdbArtwork(item.tmdbId, item.mediaType)),
+  const artworks = await mapWithConcurrency(entries, 8, ([, item]) =>
+    fetchTmdbArtwork(item.tmdbId, item.mediaType),
   );
 
   const posterByKey = new Map<string, string>();
   entries.forEach(([key], index) => {
-    const result = artworks[index];
-    if (result.status === "fulfilled" && result.value.posterUrl) {
-      posterByKey.set(key, result.value.posterUrl);
-    }
+    const posterUrl = artworks[index]?.posterUrl;
+    if (posterUrl) posterByKey.set(key, posterUrl);
   });
 
   const byList: Record<string, string[]> = {};

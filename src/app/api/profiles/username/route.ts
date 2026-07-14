@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { setUsernameForUser } from "@/lib/server/profiles";
-import { errorResponse, routeError } from "@/lib/server/http";
+import { errorResponse, readJsonObject, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function POST(request: Request) {
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const payload = (await request.json()) as { username?: string };
+    const payload = (await readJsonObject(request)) as { username?: string };
     const profile = await setUsernameForUser(userEmail, payload.username ?? "");
     return NextResponse.json({ profile });
   } catch (error) {

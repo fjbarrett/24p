@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { removeListShareForUser, updateListSharePermissionForUser } from "@/lib/server/lists";
-import { errorResponse, routeError } from "@/lib/server/http";
+import { errorResponse, readJsonObject, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function PATCH(
@@ -14,7 +14,7 @@ export async function PATCH(
 
   try {
     const { id, username } = await context.params;
-    const payload = (await request.json()) as { canEdit?: boolean };
+    const payload = (await readJsonObject(request)) as { canEdit?: boolean };
     if (typeof payload.canEdit !== "boolean") {
       return errorResponse("canEdit is required");
     }

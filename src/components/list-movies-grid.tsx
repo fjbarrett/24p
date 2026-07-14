@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { apiFetch } from "@/lib/api-client";
-import type { ListItem, SavedList } from "@/lib/list-store";
+import { invalidateListsCache, type ListItem, type SavedList } from "@/lib/list-store";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 import { toMovieSlug } from "@/lib/slug";
 
@@ -20,6 +20,12 @@ type ListMoviesGridProps = {
   canDelete?: boolean;
 };
 
+// TMDB movie and TV ids are separate, overlapping namespaces, so titles are
+// keyed by media type + id everywhere in this component.
+function titleKey(tmdbId: number, mediaType?: string) {
+  return `${mediaType === "tv" ? "tv" : "movie"}:${tmdbId}`;
+}
+
 export function ListMoviesGrid({
   items,
   fromParam,
@@ -30,17 +36,14 @@ export function ListMoviesGrid({
 }: ListMoviesGridProps) {
   const [movies, setMovies] = useState<SimplifiedMovie[]>([]);
   const [listItems, setListItems] = useState<ListItem[]>(items);
-  const listMovieIds = useMemo(() => listItems.map((item) => item.tmdbId), [listItems]);
-  const mediaTypeMap = useMemo(
-    () => Object.fromEntries(listItems.map((item) => [item.tmdbId, item.mediaType])),
-    [listItems],
-  );
   const [loading, setLoading] = useState(false);
-  const [removingId, setRemovingId] = useState<number | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const [removingKey, setRemovingKey] = useState<string | null>(null);
 
-  const moviesById = useMemo(() => {
-    const map = new Map<number, SimplifiedMovie>();
-    movies.forEach((movie) => map.set(movie.tmdbId, movie));
+  const moviesByKey = useMemo(() => {
+    const map = new Map<string, SimplifiedMovie>();
+    movies.forEach((movie) => map.set(titleKey(movie.tmdbId, movie.mediaType), movie));
     return map;
   }, [movies]);
 
@@ -52,17 +55,18 @@ export function ListMoviesGrid({
     let cancelled = false;
     const controller = new AbortController();
     async function load() {
-      if (!listMovieIds.length) {
+      if (!listItems.length) {
         setMovies([]);
         setLoading(false);
         return;
       }
       setLoading(true);
+      setLoadFailed(false);
       setMovies([]);
       const cached: SimplifiedMovie[] = [];
-      const missing: number[] = [];
-      listMovieIds.forEach((id) => {
-        const raw = window.sessionStorage.getItem(`tmdb:${id}`);
+      const missing: ListItem[] = [];
+      listItems.forEach((item) => {
+        const raw = window.sessionStorage.getItem(`tmdb:${titleKey(item.tmdbId, item.mediaType)}`);
         if (raw) {
           try {
             cached.push(JSON.parse(raw) as SimplifiedMovie);
@@ -71,7 +75,7 @@ export function ListMoviesGrid({
             // fall through to fetch if parse fails
           }
         }
-        missing.push(id);
+        missing.push(item);
       });
 
       if (!cancelled) {
@@ -84,6 +88,7 @@ export function ListMoviesGrid({
       }
 
       const pending: SimplifiedMovie[] = [];
+      let hadError = false;
       let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
       const flush = () => {
@@ -102,14 +107,14 @@ export function ListMoviesGrid({
       // Batch lookups: one request per ~50 titles instead of one per title
       // (a 100-film list previously fired 100 requests from the browser).
       const BATCH_SIZE = 50;
-      const batches: number[][] = [];
+      const batches: ListItem[][] = [];
       for (let start = 0; start < missing.length; start += BATCH_SIZE) {
         batches.push(missing.slice(start, start + BATCH_SIZE));
       }
 
-      async function fetchBatch(ids: number[]) {
-        const movieIds = ids.filter((id) => mediaTypeMap[id] !== "tv");
-        const tvIds = ids.filter((id) => mediaTypeMap[id] === "tv");
+      async function fetchBatch(batchItems: ListItem[]) {
+        const movieIds = batchItems.filter((item) => item.mediaType !== "tv").map((item) => item.tmdbId);
+        const tvIds = batchItems.filter((item) => item.mediaType === "tv").map((item) => item.tmdbId);
         const query = new URLSearchParams();
         if (movieIds.length) query.set("movies", movieIds.join(","));
         if (tvIds.length) query.set("tv", tvIds.join(","));
@@ -123,13 +128,15 @@ export function ListMoviesGrid({
           scheduleFlush();
           for (const title of titles) {
             try {
-              window.sessionStorage.setItem(`tmdb:${title.tmdbId}`, JSON.stringify(title));
+              window.sessionStorage.setItem(`tmdb:${titleKey(title.tmdbId, title.mediaType)}`, JSON.stringify(title));
             } catch {
               // ignore cache write errors
             }
           }
         } catch {
-          // ignore batch lookup failures
+          // Remember the failure: a fully failed load must not render as an
+          // empty list.
+          hadError = true;
         }
       }
 
@@ -152,6 +159,7 @@ export function ListMoviesGrid({
       }
 
       if (!cancelled) {
+        if (hadError) setLoadFailed(true);
         setLoading(false);
       }
     }
@@ -160,59 +168,37 @@ export function ListMoviesGrid({
       cancelled = true;
       controller.abort();
     };
-  }, [listMovieIds, mediaTypeMap]);
-
-  const displayIds = useMemo(() => listMovieIds, [listMovieIds]);
+  }, [listItems, reloadNonce]);
 
   const loadedCount = useMemo(() => {
-    if (!listMovieIds.length) return 0;
+    if (!listItems.length) return 0;
     let count = 0;
-    listMovieIds.forEach((id) => {
-      if (moviesById.has(id)) count += 1;
+    listItems.forEach((item) => {
+      if (moviesByKey.has(titleKey(item.tmdbId, item.mediaType))) count += 1;
     });
     return count;
-  }, [listMovieIds, moviesById]);
+  }, [listItems, moviesByKey]);
 
-  const updateListCache = (updatedItems: ListItem[]) => {
-    if (!userEmail || !listId || typeof window === "undefined") return;
+  const handleRemove = async (item: ListItem) => {
+    if (!listId || !userEmail || removingKey !== null) return;
+    const mediaType = item.mediaType === "tv" ? "tv" : "movie";
+    setRemovingKey(titleKey(item.tmdbId, item.mediaType));
     try {
-      const key = `lists:${userEmail.trim().toLowerCase()}`;
-      const existing = window.localStorage.getItem(key);
-      if (!existing) return;
-      // The store persists a { ts, lists } envelope, not a bare array — parsing
-      // it as SavedList[] threw and the catch swallowed it, so the cache never
-      // actually updated after add/remove (stale "in list" state for ~5 min).
-      const envelope = JSON.parse(existing) as { ts: number; lists: SavedList[] };
-      if (!envelope || !Array.isArray(envelope.lists)) return;
-      const nextLists = envelope.lists.map((entry) =>
-        entry.id === listId
-          ? { ...entry, items: updatedItems, movies: updatedItems.map((item) => item.tmdbId) }
-          : entry,
+      const payload = await apiFetch<{ list: SavedList }>(
+        `/lists/${listId}/items/${item.tmdbId}?mediaType=${mediaType}`,
+        { method: "DELETE" },
       );
-      window.localStorage.setItem(key, JSON.stringify({ ts: Date.now(), lists: nextLists }));
-    } catch {
-      // ignore cache errors
-    }
-  };
-
-  const handleRemove = async (tmdbId: number) => {
-    if (!listId || !userEmail || removingId !== null) return;
-    setRemovingId(tmdbId);
-    try {
-      const payload = await apiFetch<{ list: SavedList }>(`/lists/${listId}/items/${tmdbId}`, {
-        method: "DELETE",
-      });
       const updatedItems = Array.isArray(payload.list.items) ? payload.list.items : [];
       setListItems(updatedItems);
-      updateListCache(updatedItems);
+      invalidateListsCache(userEmail);
     } catch {
       // ignore errors for now; could surface toast
     } finally {
-      setRemovingId(null);
+      setRemovingKey(null);
     }
   };
 
-  if (!listMovieIds.length) {
+  if (!listItems.length) {
     return <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>;
   }
 
@@ -220,18 +206,30 @@ export function ListMoviesGrid({
     <div className="space-y-4">
       {loading ? (
         <p className="text-sm text-black-500">
-          Loading movies… {Math.min(loadedCount, listMovieIds.length)}/{listMovieIds.length}
+          Loading movies… {Math.min(loadedCount, listItems.length)}/{listItems.length}
         </p>
       ) : null}
-      {displayIds.every((tmdbId) => !moviesById.has(tmdbId)) && !loading ? (
+      {loadedCount === 0 && !loading && loadFailed ? (
+        <div className="space-y-2 text-center">
+          <p className="text-sm text-black-500">Couldn&apos;t load this list&apos;s titles.</p>
+          <button
+            type="button"
+            onClick={() => setReloadNonce((nonce) => nonce + 1)}
+            className="rounded-full bg-white px-4 py-1.5 text-sm font-medium text-black transition hover:brightness-95"
+          >
+            Retry
+          </button>
+        </div>
+      ) : loadedCount === 0 && !loading ? (
         <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>
       ) : (
         <ul className="flex flex-wrap justify-center gap-2.5 sm:gap-3">
-          {displayIds.map((tmdbId) => {
-            const movie = moviesById.get(tmdbId);
+          {listItems.map((item) => {
+            const key = titleKey(item.tmdbId, item.mediaType);
+            const movie = moviesByKey.get(key);
             if (!movie) {
               return (
-                <li key={tmdbId} className="w-[calc(50%-6px)] sm:w-[calc(33%-7px)] lg:w-[calc(25%-9px)]">
+                <li key={key} className="w-[calc(50%-6px)] sm:w-[calc(33%-7px)] lg:w-[calc(25%-9px)]">
                   <div className="aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-black-900/40">
                     <div className="h-full w-full animate-pulse bg-black-800/60" />
                   </div>
@@ -240,7 +238,7 @@ export function ListMoviesGrid({
             }
 
             return (
-              <li key={movie.tmdbId} className="w-[calc(50%-6px)] sm:w-[calc(33%-7px)] lg:w-[calc(25%-9px)]">
+              <li key={key} className="w-[calc(50%-6px)] sm:w-[calc(33%-7px)] lg:w-[calc(25%-9px)]">
                 <Link
                   href={movie.mediaType === "tv"
                     ? `/tv/${toMovieSlug(movie.title, movie.releaseYear)}`
@@ -252,9 +250,9 @@ export function ListMoviesGrid({
                       type="button"
                       onClick={(event) => {
                         event.preventDefault();
-                        handleRemove(movie.tmdbId);
+                        handleRemove(item);
                       }}
-                      disabled={removingId === movie.tmdbId}
+                      disabled={removingKey === key}
                       aria-label="Remove from list"
                       className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-white hover:text-black disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100"
                     >
@@ -297,8 +295,8 @@ function toSmallPoster(url: string): string {
 
 function mergeMovies(existing: SimplifiedMovie[], incoming: SimplifiedMovie[]) {
   if (!incoming.length) return existing;
-  const map = new Map<number, SimplifiedMovie>();
-  existing.forEach((movie) => map.set(movie.tmdbId, movie));
-  incoming.forEach((movie) => map.set(movie.tmdbId, movie));
+  const map = new Map<string, SimplifiedMovie>();
+  existing.forEach((movie) => map.set(titleKey(movie.tmdbId, movie.mediaType), movie));
+  incoming.forEach((movie) => map.set(titleKey(movie.tmdbId, movie.mediaType), movie));
   return Array.from(map.values());
 }

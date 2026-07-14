@@ -45,7 +45,7 @@ export async function consumeDurable(
   const pool = getPool();
   const result = await pool.query<{ count: number; retry_after_seconds: number }>(
     `INSERT INTO api_rate_limits (key, count, reset_at)
-     VALUES ($1, 1, NOW() + ($2 || ' milliseconds')::interval)
+     VALUES ($1, 1, NOW() + $2 * interval '1 millisecond')
      ON CONFLICT (key) DO UPDATE SET
        count = CASE
          WHEN api_rate_limits.reset_at <= NOW() THEN 1
@@ -53,7 +53,7 @@ export async function consumeDurable(
        END,
        reset_at = CASE
          WHEN api_rate_limits.reset_at <= NOW()
-           THEN NOW() + ($2 || ' milliseconds')::interval
+           THEN NOW() + $2 * interval '1 millisecond'
          ELSE api_rate_limits.reset_at
        END
      RETURNING count,

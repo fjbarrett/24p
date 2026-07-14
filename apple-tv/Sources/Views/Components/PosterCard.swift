@@ -108,11 +108,16 @@ struct ListCard: View {
     }
 }
 
-// MARK: - Hex color helper
+// MARK: - List color helper
 
+// Maps the app's named list colors (and any hex) to a SwiftUI Color.
 extension Color {
-    init?(hex: String) {
-        var s = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+    init?(hex raw: String) {
+        let named: [String: String] = [
+            "sky": "38BDF8", "emerald": "22C55E", "amber": "FBBF24", "violet": "A78BFA",
+            "rose": "FB7185", "indigo": "818CF8", "slate": "94A3B8",
+        ]
+        var s = (named[raw.lowercased()] ?? raw).trimmingCharacters(in: .whitespacesAndNewlines)
         if s.hasPrefix("#") { s = String(s.dropFirst()) }
         guard s.count == 6, let value = UInt64(s, radix: 16) else { return nil }
         let r = Double((value >> 16) & 0xFF) / 255

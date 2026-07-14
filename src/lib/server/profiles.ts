@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import type { PublicProfile, UserProfile } from "@/lib/profile-store";
-import { getPool } from "@/lib/server/db";
+import { getPool, isUniqueViolation } from "@/lib/server/db";
 import { publicError } from "@/lib/server/http";
 
 type ProfileRow = {
@@ -60,17 +60,24 @@ export async function setUsernameForUser(userEmail: string, username: string) {
     publicError("Username is already taken", 409);
   }
 
-  const result = await pool.query<ProfileRow>(
-    `
-      INSERT INTO profiles (user_email, username)
-      VALUES ($1, $2)
-      ON CONFLICT (user_email)
-      DO UPDATE SET username = EXCLUDED.username
-      RETURNING *
-    `,
-    [userEmail, normalized],
-  );
-  return mapProfile(result.rows[0]);
+  try {
+    const result = await pool.query<ProfileRow>(
+      `
+        INSERT INTO profiles (user_email, username)
+        VALUES ($1, $2)
+        ON CONFLICT (user_email)
+        DO UPDATE SET username = EXCLUDED.username
+        RETURNING *
+      `,
+      [userEmail, normalized],
+    );
+    return mapProfile(result.rows[0]);
+  } catch (error) {
+    // The pre-check above is racy: two concurrent claims of the same free
+    // username both pass it, and the loser hits the UNIQUE(username) index.
+    if (isUniqueViolation(error)) publicError("Username is already taken", 409);
+    throw error;
+  }
 }
 
 export async function setProfileVisibilityForUser(userEmail: string, isPublic: boolean) {

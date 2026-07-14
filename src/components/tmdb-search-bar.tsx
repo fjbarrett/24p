@@ -17,18 +17,23 @@ type TmdbSearchBarProps = {
   bordered?: boolean;
 };
 
+// Movie and TV ids overlap, so results are identified by media type + id.
+function resultKey(tmdbId: number, mediaType?: string) {
+  return `${mediaType === "tv" ? "tv" : "movie"}-${tmdbId}`;
+}
+
 export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false }: TmdbSearchBarProps) {
   const [query, setQuery] = useState("");
   const [combined, setCombined] = useState<SearchResultItem[]>([]);
   const [panelDismissed, setPanelDismissed] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeMovieId, setActiveMovieId] = useState<number | null>(null);
+  const [activeItemKey, setActiveItemKey] = useState<string | null>(null);
   const [selectedListId, setSelectedListId] = useState<string>(lists[0]?.id ?? "");
-  const [savingMovieId, setSavingMovieId] = useState<number | null>(null);
-  const [status, setStatus] = useState<{ movieId: number; message: string; tone: "success" | "error" } | null>(null);
-  // Tracks movies added during this session so the UI stays correct without a page reload
-  const [localAdditions, setLocalAdditions] = useState<Map<number, string>>(new Map());
+  const [savingItemKey, setSavingItemKey] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ itemKey: string; message: string; tone: "success" | "error" } | null>(null);
+  // Tracks titles added during this session so the UI stays correct without a page reload
+  const [localAdditions, setLocalAdditions] = useState<Map<string, string>>(new Map());
   const errorId = useId();
   const panelId = useId();
   const resultsId = useId();
@@ -98,7 +103,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
       if (!(target instanceof Node)) return;
       if (containerRef.current?.contains(target)) return;
       setPanelDismissed(true);
-      setActiveMovieId(null);
+      setActiveItemKey(null);
     };
 
     document.addEventListener("pointerdown", handlePointerDown);
@@ -121,45 +126,50 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
     setCombined([]);
     setError(null);
     setPanelDismissed(false);
-    setActiveMovieId(null);
+    setActiveItemKey(null);
     inputRef.current?.focus();
   }
 
-  // Returns the id of the first list that already contains this movie,
+  // Returns the id of the first list that already contains this title,
   // checking both server-loaded list items and adds made this session.
-  function firstListContaining(tmdbId: number): string | undefined {
-    const localListId = localAdditions.get(tmdbId);
+  function firstListContaining(tmdbId: number, mediaType: "movie" | "tv"): string | undefined {
+    const localListId = localAdditions.get(resultKey(tmdbId, mediaType));
     if (localListId) return localListId;
-    return lists.find((l) => l.items.some((i) => i.tmdbId === tmdbId))?.id;
+    return lists.find((l) => l.items.some((i) => i.tmdbId === tmdbId && i.mediaType === mediaType))?.id;
   }
 
-  // True when the currently selected list already has this movie.
-  function isInSelectedList(tmdbId: number): boolean {
+  // True when the currently selected list already has this title.
+  function isInSelectedList(tmdbId: number, mediaType: "movie" | "tv"): boolean {
     if (!selectedListId) return false;
-    if (localAdditions.get(tmdbId) === selectedListId) return true;
-    return lists.find((l) => l.id === selectedListId)?.items.some((i) => i.tmdbId === tmdbId) ?? false;
+    if (localAdditions.get(resultKey(tmdbId, mediaType)) === selectedListId) return true;
+    return (
+      lists
+        .find((l) => l.id === selectedListId)
+        ?.items.some((i) => i.tmdbId === tmdbId && i.mediaType === mediaType) ?? false
+    );
   }
 
   async function handleAdd(movieId: number, mediaType: "movie" | "tv" = "movie") {
+    const itemKey = resultKey(movieId, mediaType);
     if (!normalizedEmail) {
-      setStatus({ movieId, message: "Sign in to save movies.", tone: "error" });
+      setStatus({ itemKey, message: "Sign in to save movies.", tone: "error" });
       return;
     }
     if (!selectedListId) {
-      setStatus({ movieId, message: "Select a list first.", tone: "error" });
+      setStatus({ itemKey, message: "Select a list first.", tone: "error" });
       return;
     }
     try {
-      setSavingMovieId(movieId);
+      setSavingItemKey(itemKey);
       setStatus(null);
       await addMovieToList(selectedListId, movieId, normalizedEmail, mediaType);
-      setLocalAdditions((prev) => new Map(prev).set(movieId, selectedListId));
-      setActiveMovieId(null);
+      setLocalAdditions((prev) => new Map(prev).set(itemKey, selectedListId));
+      setActiveItemKey(null);
     } catch (err) {
       const detail = err instanceof Error ? err.message : "Unable to add movie.";
-      setStatus({ movieId, message: detail, tone: "error" });
+      setStatus({ itemKey, message: detail, tone: "error" });
     } finally {
-      setSavingMovieId(null);
+      setSavingItemKey(null);
     }
   }
 
@@ -246,11 +256,13 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
               }
 
               const isShow = item.mediaType === "tv";
+              const mediaType = isShow ? ("tv" as const) : ("movie" as const);
+              const itemKey = resultKey(item.tmdbId, mediaType);
               const detailHref = isShow
                 ? `/tv/${toMovieSlug(item.title, item.releaseYear)}`
                 : `/movies/${toMovieSlug(item.title, item.releaseYear)}`;
               return (
-                <li key={`movie-${item.tmdbId}`}>
+                <li key={itemKey}>
                   <div className="flex items-center gap-3 rounded-2xl bg-black-900/70 px-3 py-2.5 transition hover:bg-black-800/70">
                     <Link
                       href={detailHref}
@@ -283,42 +295,42 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
                       <button
                         type="button"
                         aria-label={`Add ${item.title} to a list`}
-                        aria-controls={`add-to-list-${item.tmdbId}`}
-                        aria-expanded={activeMovieId === item.tmdbId}
+                        aria-controls={`add-to-list-${itemKey}`}
+                        aria-expanded={activeItemKey === itemKey}
                         disabled={noLists}
                         onClick={() => {
                           if (noLists) return;
-                          const isOpen = activeMovieId === item.tmdbId;
-                          setActiveMovieId(isOpen ? null : item.tmdbId);
+                          const isOpen = activeItemKey === itemKey;
+                          setActiveItemKey(isOpen ? null : itemKey);
                           if (!isOpen) {
-                            const existing = firstListContaining(item.tmdbId);
+                            const existing = firstListContaining(item.tmdbId, mediaType);
                             setSelectedListId(existing ?? selectedListId ?? lists[0]?.id ?? "");
                           }
                           setStatus(null);
                         }}
                         className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-40"
                       >
-                        {firstListContaining(item.tmdbId)
+                        {firstListContaining(item.tmdbId, mediaType)
                           ? <Check className="h-5 w-5" />
                           : <Plus className="h-5 w-5" />}
                       </button>
                     ) : null}
                   </div>
 
-                  {activeMovieId === item.tmdbId && (
+                  {activeItemKey === itemKey && (
                     <div
-                      id={`add-to-list-${item.tmdbId}`}
+                      id={`add-to-list-${itemKey}`}
                       className="mt-2 space-y-2 rounded-2xl bg-black-900/80 p-3 shadow-inner"
                     >
                       {noLists ? (
                         <p className="text-sm text-black-400">Create a list first to save movies.</p>
                       ) : (
                         <>
-                          <label className="sr-only" htmlFor={`list-picker-${item.tmdbId}`}>
+                          <label className="sr-only" htmlFor={`list-picker-${itemKey}`}>
                             Select a list
                           </label>
                           <select
-                            id={`list-picker-${item.tmdbId}`}
+                            id={`list-picker-${itemKey}`}
                             value={selectedListId}
                             onChange={(event) => setSelectedListId(event.target.value)}
                             className="w-full rounded-2xl bg-black-800/80 px-3 py-2 text-sm text-black-100 outline-none"
@@ -332,12 +344,12 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
                           <button
                             type="button"
                             className="flex w-full items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-50"
-                            onClick={() => handleAdd(item.tmdbId, isShow ? "tv" : "movie")}
-                            disabled={savingMovieId === item.tmdbId || isInSelectedList(item.tmdbId)}
+                            onClick={() => handleAdd(item.tmdbId, mediaType)}
+                            disabled={savingItemKey === itemKey || isInSelectedList(item.tmdbId, mediaType)}
                           >
-                            {savingMovieId === item.tmdbId
+                            {savingItemKey === itemKey
                               ? "Adding..."
-                              : isInSelectedList(item.tmdbId)
+                              : isInSelectedList(item.tmdbId, mediaType)
                                 ? "Added"
                                 : "Add to list"}
                           </button>
@@ -346,7 +358,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
                     </div>
                   )}
 
-                  {status && status.movieId === item.tmdbId && (
+                  {status && status.itemKey === itemKey && (
                     <p
                       className={`mt-1 text-xs ${status.tone === "success" ? "text-emerald-300" : "text-rose-300"}`}
                       role="status"

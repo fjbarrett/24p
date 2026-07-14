@@ -17,7 +17,8 @@ type UserRatingRow = {
 };
 
 export async function saveRatingsForUser(userEmail: string, ratings: RatingInput[]) {
-  const pool = getPool();
+  // Validate the whole batch before writing anything: a 400 must mean
+  // "nothing was saved", not "some rows committed before the bad one".
   for (const entry of ratings) {
     if (!Number.isInteger(entry.tmdbId)) {
       publicError("tmdbId is required", 400);
@@ -25,15 +26,30 @@ export async function saveRatingsForUser(userEmail: string, ratings: RatingInput
     if (!Number.isInteger(entry.rating) || entry.rating < 1 || entry.rating > 10) {
       publicError("rating must be between 1 and 10", 400);
     }
-    await pool.query(
-      `
-        INSERT INTO user_ratings (user_email, tmdb_id, rating, source)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (user_email, tmdb_id)
-        DO UPDATE SET rating = EXCLUDED.rating, source = EXCLUDED.source, updated_at = NOW()
-      `,
-      [userEmail, entry.tmdbId, entry.rating, entry.source || "tmdb"],
-    );
+  }
+  if (!ratings.length) return 0;
+
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    for (const entry of ratings) {
+      await client.query(
+        `
+          INSERT INTO user_ratings (user_email, tmdb_id, rating, source)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (user_email, tmdb_id)
+          DO UPDATE SET rating = EXCLUDED.rating, source = EXCLUDED.source, updated_at = NOW()
+        `,
+        [userEmail, entry.tmdbId, entry.rating, entry.source || "tmdb"],
+      );
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
   return ratings.length;
 }

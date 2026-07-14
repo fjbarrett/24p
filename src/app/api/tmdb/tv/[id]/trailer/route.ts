@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchTmdbTrailerForShow } from "@/lib/server/tmdb";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, tmdbErrorStatus } from "@/lib/server/http";
 import { enforceDurableLimits } from "@/lib/server/rate-limit";
 import { clientIp } from "@/lib/server/client-ip";
 
@@ -23,7 +23,10 @@ export async function GET(
     return NextResponse.json(trailer, {
       headers: { "Cache-Control": "public, max-age=21600, stale-while-revalidate=86400" },
     });
-  } catch {
-    return errorResponse("Unable to load trailer", 500);
+  } catch (error) {
+    // No cache headers here: a transient TMDB outage must not pin
+    // "no trailer" at the CDN for six hours.
+    const status = tmdbErrorStatus(error);
+    return errorResponse(status === 404 ? "Title not found" : "Unable to load trailer", status);
   }
 }

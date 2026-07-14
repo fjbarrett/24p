@@ -16,9 +16,10 @@ final class AuthStore: ObservableObject {
     }
 
     /// Validates a previously stored token on launch (no-op if there isn't one).
+    /// A transient failure keeps the session; only an explicit 401 signs out.
     func restore() async {
         guard let token = APIClient.shared.authToken, !token.isEmpty else { return }
-        await validate()
+        await validate(surfaceError: false)
     }
 
     private var pairingTask: Task<Void, Never>?
@@ -43,9 +44,12 @@ final class AuthStore: ObservableObject {
                 do {
                     let claim = try await APIClient.shared.checkPairing(pairing)
                     if claim.status == "approved", let token = claim.token {
+                        // Persist before validating: the pairing is already consumed
+                        // server-side, so a flaky /api/session must not lose the token.
                         APIClient.shared.authToken = token
-                        if await validate() { Keychain.save(token) }
+                        Keychain.save(token)
                         pairingCode = nil
+                        await validate(surfaceError: true)
                         return
                     }
                 } catch {
@@ -79,17 +83,21 @@ final class AuthStore: ObservableObject {
     }
 
     @discardableResult
-    private func validate() async -> Bool {
+    private func validate(surfaceError: Bool) async -> Bool {
         do {
             let session = try await APIClient.shared.session()
             user = session.user
             error = nil
             return true
         } catch {
-            user = nil
             if case APIError.badStatus(_, 401, _) = error {
-                self.error = "That code didn't work. Generate a fresh one and try again."
-            } else {
+                // The server rejected the bearer outright — wipe it so a stale
+                // token can't wedge the app.
+                signOut()
+                if surfaceError {
+                    self.error = "That code didn't work. Generate a fresh one and try again."
+                }
+            } else if surfaceError {
                 self.error = error.localizedDescription
             }
             return false

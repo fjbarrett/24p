@@ -1,11 +1,8 @@
 import Image from "next/image";
 
 type MovieTrailerToggleProps = {
-  tmdbId: number;
   title: string;
   posterUrl: string | null;
-  backdropUrl: string | null;
-  trailerEndpoint?: string;
 };
 
 export function MovieTrailerToggle({ title, posterUrl }: MovieTrailerToggleProps) {

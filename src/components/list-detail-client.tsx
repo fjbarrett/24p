@@ -32,8 +32,10 @@ export function ListDetailClient({
     setMounted(true);
   }
 
+  // Only the owner edits inside the modal; a collaborator's edit mode lives on
+  // the inline grid, which a full-screen overlay would cover and dead-end.
   const modal =
-    isEditing && mounted
+    isEditing && mounted && isOwner
       ? createPortal(
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 px-3 py-3 sm:px-4 sm:py-4"
@@ -68,7 +70,7 @@ export function ListDetailClient({
       ) : null}
 
       <section className="!mt-0">
-        {!isEditing && !isOwner ? (
+        {!isOwner ? (
           <div className="mb-4">
             <ListEditor
               list={list}
@@ -95,7 +97,7 @@ export function ListDetailClient({
 
       <div className="flex justify-center">
         <ListExportButton
-          tmdbIds={list.movies}
+          items={list.items}
           ratingsMap={ratingsMap}
           listSlug={list.slug}
           listTitle={list.title}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { removeFavoriteForUser } from "@/lib/server/lists";
-import { errorResponse } from "@/lib/server/http";
+import { errorResponse, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function DELETE(
@@ -11,7 +11,11 @@ export async function DELETE(
   if (!userEmail) {
     return errorResponse("Unauthorized", 401);
   }
-  const { listId } = await context.params;
-  await removeFavoriteForUser(listId, userEmail);
-  return NextResponse.json({ ok: true });
+  try {
+    const { listId } = await context.params;
+    await removeFavoriteForUser(listId, userEmail);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return routeError("api/favorites:delete", error, "Unable to remove favorite");
+  }
 }

@@ -7,21 +7,24 @@ import type { ChangelogEntry } from "@/lib/changelog";
 
 type FilterValue = "All" | "Release" | "Improvement" | "Retired";
 
+// Entry dates are UTC instants; format them in UTC too, or the server (UTC)
+// and a browser west of Greenwich render different days and hydration breaks.
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "long",
   day: "numeric",
   year: "numeric",
+  timeZone: "UTC",
 });
 
 function monthKey(value: string) {
   const date = new Date(`${value}T00:00:00Z`);
-  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(date);
+  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(date);
 }
 
 function shortDate(value: string) {
   const date = new Date(`${value}T00:00:00Z`);
-  const month = new Intl.DateTimeFormat("en-US", { month: "short" }).format(date);
-  const day = new Intl.DateTimeFormat("en-US", { day: "2-digit" }).format(date);
+  const month = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(date);
+  const day = new Intl.DateTimeFormat("en-US", { day: "2-digit", timeZone: "UTC" }).format(date);
   return `${month}.${day}`;
 }
 

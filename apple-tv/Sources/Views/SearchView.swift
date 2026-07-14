@@ -25,13 +25,13 @@ final class SearchViewModel: ObservableObject {
             isSearching = true
             error = nil
             do {
-                results = try await APIClient.shared.search(query: trimmed)
-            } catch is CancellationError {
-                // Ignored — superseded by a newer query
+                let found = try await APIClient.shared.search(query: trimmed)
+                if !Task.isCancelled { results = found }
             } catch {
-                self.error = error.localizedDescription
+                // A superseded search's cancellation must not paint an error.
+                if !Task.isCancelled { self.error = error.localizedDescription }
             }
-            isSearching = false
+            if !Task.isCancelled { isSearching = false }
         }
     }
 }

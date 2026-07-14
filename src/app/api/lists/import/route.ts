@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { importListForUser } from "@/lib/server/lists";
-import { errorResponse, routeError } from "@/lib/server/http";
+import { errorResponse, readJsonObject, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 import { consume } from "@/lib/server/rate-limit";
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const payload = (await request.json()) as { title?: string; data?: string };
+    const payload = (await readJsonObject(request)) as { title?: string; data?: string };
     if ((payload.data?.length ?? 0) > MAX_IMPORT_BYTES) {
       return errorResponse("Import data exceeds the 200 KB limit", 413);
     }
