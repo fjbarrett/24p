@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { addMovieToListForUser } from "@/lib/server/lists";
-import { errorResponse, routeError } from "@/lib/server/http";
+import { errorResponse, readJsonObject, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function POST(
@@ -14,7 +14,7 @@ export async function POST(
 
   try {
     const { id } = await context.params;
-    const payload = (await request.json()) as { tmdbId?: number; mediaType?: string };
+    const payload = (await readJsonObject(request)) as { tmdbId?: number; mediaType?: string };
     if (!Number.isInteger(payload.tmdbId)) {
       return errorResponse("tmdbId is required");
     }

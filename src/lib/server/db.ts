@@ -259,3 +259,8 @@ export function getPool() {
 export async function waitForMigrations(): Promise<void> {
   if (migrationPromise) await migrationPromise;
 }
+
+/** True when a pg error is a unique-constraint violation (SQLSTATE 23505). */
+export function isUniqueViolation(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "23505";
+}

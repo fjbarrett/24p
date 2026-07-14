@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { addListShareForUser, loadListSharesForUser } from "@/lib/server/lists";
-import { errorResponse, routeError } from "@/lib/server/http";
+import { errorResponse, readJsonObject, routeError } from "@/lib/server/http";
 import { consumeDurable } from "@/lib/server/rate-limit";
 import { getSessionUserEmail } from "@/lib/server/session";
 
@@ -42,7 +42,7 @@ export async function POST(
       );
     }
     const { id } = await context.params;
-    const payload = (await request.json()) as { username?: string; canEdit?: boolean };
+    const payload = (await readJsonObject(request)) as { username?: string; canEdit?: boolean };
     const shares = await addListShareForUser(id, userEmail, payload.username ?? "", payload.canEdit ?? false);
     return NextResponse.json({ shares });
   } catch (error) {

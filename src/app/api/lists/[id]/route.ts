@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteListForUser, updateListForUser } from "@/lib/server/lists";
-import { errorResponse, routeError } from "@/lib/server/http";
+import { errorResponse, readJsonObject, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function PATCH(
@@ -14,7 +14,7 @@ export async function PATCH(
 
   try {
     const { id } = await context.params;
-    const payload = (await request.json()) as {
+    const payload = (await readJsonObject(request)) as {
       title?: string;
       slug?: string;
       color?: string;

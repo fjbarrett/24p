@@ -17,6 +17,22 @@ export function publicError(message: string, status = 400): never {
   throw new PublicHttpError(message, status);
 }
 
+// request.json() throws SyntaxError on malformed bodies, which routeError
+// treats as an internal 500; a bad body is the caller's 400. Also rejects
+// null/array/scalar payloads so `payload.field` access can't throw.
+export async function readJsonObject<T extends object = Record<string, unknown>>(request: Request): Promise<T> {
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    publicError("Request body must be valid JSON", 400);
+  }
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+    publicError("Request body must be a JSON object", 400);
+  }
+  return payload as T;
+}
+
 // Logs the underlying error server-side and returns a generic message, so
 // internal/pg/config errors (e.g. "DATABASE_URL is not configured",
 // "ANTHROPIC_API_KEY is not configured", raw pg messages) never leak into a

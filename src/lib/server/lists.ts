@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { randomUUID } from "crypto";
 import type { ListItem, ListShare, SavedList } from "@/lib/list-store";
-import { getPool } from "@/lib/server/db";
+import { getPool, isUniqueViolation } from "@/lib/server/db";
 import { publicError } from "@/lib/server/http";
 import { fetchTmdbArtwork, fetchTmdbMovies, fetchTmdbShow, findTmdbMovieId } from "@/lib/server/tmdb";
 import { saveRatingsForUser } from "@/lib/server/ratings";
@@ -212,26 +212,48 @@ async function insertList(
   userEmail: string,
 ) {
   const pool = getPool();
-  const slug = await generateSlug(title, userEmail);
-  const listId = randomUUID();
-  await pool.query(
-    `INSERT INTO lists (id, title, slug, visibility, color, user_email) VALUES ($1, $2, $3, 'private', $4, $5)`,
-    [listId, title, slug, normalizeColor(color), userEmail],
-  );
-  if (initialItems.length) {
-    const values = initialItems
-      .map((item, index) => `($1, $${index * 2 + 2}, $${index * 2 + 3}, ${initialItems.length - 1 - index})`)
-      .join(", ");
-    const params: unknown[] = [listId];
-    initialItems.forEach((item) => params.push(item.tmdbId, item.mediaType));
-    await pool.query(
-      `INSERT INTO list_items (list_id, tmdb_id, media_type, position) VALUES ${values} ON CONFLICT DO NOTHING`,
-      params,
-    );
+  // The list row and its items commit together: a failed item insert used to
+  // leave a ghost empty list behind (and burn its slug). Slug generation is
+  // check-then-insert, so a concurrent create with the same title can lose the
+  // race — retry with a regenerated slug on unique violation.
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const slug = await generateSlug(title, userEmail);
+    const listId = randomUUID();
+    let committed = false;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `INSERT INTO lists (id, title, slug, visibility, color, user_email) VALUES ($1, $2, $3, 'private', $4, $5)`,
+        [listId, title, slug, normalizeColor(color), userEmail],
+      );
+      if (initialItems.length) {
+        const values = initialItems
+          .map((item, index) => `($1, $${index * 2 + 2}, $${index * 2 + 3}, ${initialItems.length - 1 - index})`)
+          .join(", ");
+        const params: unknown[] = [listId];
+        initialItems.forEach((item) => params.push(item.tmdbId, item.mediaType));
+        await client.query(
+          `INSERT INTO list_items (list_id, tmdb_id, media_type, position) VALUES ${values} ON CONFLICT DO NOTHING`,
+          params,
+        );
+      }
+      await client.query("COMMIT");
+      committed = true;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      if (!isUniqueViolation(error) || attempt === MAX_ATTEMPTS) throw error;
+    } finally {
+      client.release();
+    }
+    if (committed) {
+      const created = await fetchListById(listId);
+      if (!created) publicError("List not found", 404);
+      return mapList({ ...created, can_edit: true }, userEmail);
+    }
   }
-  const created = await fetchListById(listId);
-  if (!created) publicError("List not found", 404);
-  return mapList({ ...created, can_edit: true }, userEmail);
+  publicError("Unable to create list", 500);
 }
 
 export async function getListByIdForEditor(listId: string, userEmail: string) {

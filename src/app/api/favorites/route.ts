@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { addFavoriteForUser, loadFavoritesForUser } from "@/lib/server/lists";
-import { errorResponse, routeError } from "@/lib/server/http";
+import { errorResponse, readJsonObject, routeError } from "@/lib/server/http";
 import { getSessionUserEmail } from "@/lib/server/session";
 
 export async function GET() {
@@ -8,8 +8,12 @@ export async function GET() {
   if (!userEmail) {
     return errorResponse("Unauthorized", 401);
   }
-  const lists = await loadFavoritesForUser(userEmail);
-  return NextResponse.json({ lists });
+  try {
+    const lists = await loadFavoritesForUser(userEmail);
+    return NextResponse.json({ lists });
+  } catch (error) {
+    return routeError("api/favorites:get", error, "Unable to load favorites");
+  }
 }
 
 export async function POST(request: Request) {
@@ -19,7 +23,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const payload = (await request.json()) as { listId?: string };
+    const payload = (await readJsonObject(request)) as { listId?: string };
     if (!payload.listId) {
       return errorResponse("listId is required");
     }
