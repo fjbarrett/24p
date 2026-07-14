@@ -14,8 +14,6 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Standalone server-side scripts (not part of the Next.js app)
     "scripts/**",
-    // Bun test suite (run by `bun test`, not part of the Next.js app)
-    "test/**",
   ]),
 ]);
 

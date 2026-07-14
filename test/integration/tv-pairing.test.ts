@@ -11,6 +11,13 @@ if (testDbUrl) {
   process.env.DB_SSLMODE = "disable";
 }
 
+// CI always provides TEST_DATABASE_URL (service container in ci.yml), so its
+// absence there means the wiring broke — a renamed variable or dropped env
+// block would otherwise skip all DB-backed coverage while CI stays green.
+if (process.env.CI && !testDbUrl) {
+  throw new Error("TEST_DATABASE_URL is not set in CI — the integration suite would silently skip");
+}
+
 describe.skipIf(!testDbUrl)("device pairing flow (integration)", () => {
   test("migrations apply cleanly on startup", async () => {
     const { getPool, waitForMigrations } = await import("@/lib/server/db");
@@ -48,7 +55,9 @@ describe.skipIf(!testDbUrl)("device pairing flow (integration)", () => {
     const claim = await claimTvPairing(pairing.pairingId, pairing.deviceToken);
     expect(claim.status).toBe("approved");
     if (claim.status !== "approved") throw new Error("unreachable");
-    expect(claim.token).toBe(pairing.deviceToken);
+    // Assert the returned bearer actually authenticates (resolution), not
+    // that it echoes the input — that assertion could never fail.
+    expect(await resolveTvToken(claim.token)).toBe(email);
 
     // The claim is single-use.
     expect((await claimTvPairing(pairing.pairingId, pairing.deviceToken)).status).toBe("invalid");
@@ -67,8 +76,24 @@ describe.skipIf(!testDbUrl)("device pairing flow (integration)", () => {
 
   test("malformed claim credentials are rejected without touching the table", async () => {
     const { claimTvPairing } = await import("@/lib/server/tv-tokens");
-    expect((await claimTvPairing("not-hex", "also-not-hex")).status).toBe("invalid");
-    expect((await claimTvPairing("", "")).status).toBe("invalid");
+    const { getPool } = await import("@/lib/server/db");
+    // Count queries so this actually fails if the input guard is removed —
+    // a nonexistent pairing id also reports "invalid", so status alone
+    // can't distinguish validation from a table lookup.
+    const pool = getPool();
+    const originalQuery = pool.query.bind(pool);
+    let queries = 0;
+    pool.query = ((...args: Parameters<typeof originalQuery>) => {
+      queries += 1;
+      return originalQuery(...args);
+    }) as typeof pool.query;
+    try {
+      expect((await claimTvPairing("not-hex", "also-not-hex")).status).toBe("invalid");
+      expect((await claimTvPairing("", "")).status).toBe("invalid");
+      expect(queries).toBe(0);
+    } finally {
+      pool.query = originalQuery;
+    }
   });
 
   test("durable limiter blocks after max and reports a retry hint", async () => {
