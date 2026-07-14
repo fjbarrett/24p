@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { apiFetch } from "@/lib/api-client";
+import { addList } from "@/lib/list-store";
 
 export function CreateListButton({ userEmail }: { userEmail: string }) {
   const [expanded, setExpanded] = useState(false);
@@ -51,10 +51,9 @@ export function CreateListButton({ userEmail }: { userEmail: string }) {
           setError("Sign in to create lists");
           return;
         }
-        await apiFetch("/lists", {
-          method: "POST",
-          body: JSON.stringify({ title }),
-        });
+        // The store helper also invalidates the cached lists snapshot, so
+        // add-to-list pickers see the new list immediately.
+        await addList(title, userEmail);
         collapse();
         router.refresh();
       } catch (err) {

@@ -1,63 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
-import { MovieListActions } from "@/components/movie-list-actions";
-import { addList, loadLists, type SavedList } from "@/lib/list-store";
-import { apiFetch } from "@/lib/api-client";
+import { addList, addMovieToList, loadLists, type SavedList } from "@/lib/list-store";
 import { useRouter } from "next/navigation";
 
-type AddToListLoaderProps = {
+type AddToListButtonProps = {
   tmdbId: number;
   userEmail: string;
-};
-
-export function AddToListLoader({ tmdbId, userEmail }: AddToListLoaderProps) {
-  const [lists, setLists] = useState<SavedList[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-
-    loadLists(userEmail)
-      .then((data) => {
-        if (!active) return;
-        setLists(data);
-      })
-      .catch(() => {
-        if (!active) return;
-        setFailed(true);
-      })
-      .finally(() => {
-        if (!active) return;
-        setIsLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [userEmail]);
-
-  if (isLoading) {
-    return (
-      <div className="rounded-2xl border border-white/10 bg-black-950/60 p-4">
-        <p className="text-sm text-black-200">Loading your lists…</p>
-      </div>
-    );
-  }
-
-  if (failed) {
-    return (
-      <div className="rounded-2xl border border-white/10 bg-black-950/60 p-4">
-        <p className="text-sm text-black-200">Unable to load lists.</p>
-      </div>
-    );
-  }
-
-  return <MovieListActions lists={lists} tmdbId={tmdbId} userEmail={userEmail} />;
-}
-
-type AddToListButtonProps = AddToListLoaderProps & {
   onExpandChange?: (expanded: boolean) => void;
   appleTvSlot?: ReactNode;
   mediaType?: "movie" | "tv";
@@ -147,10 +96,9 @@ export function AddToListButton({ tmdbId, userEmail, onExpandChange, appleTvSlot
           await addList(title, userEmail, [tmdbId], undefined, mediaType);
         } else {
           if (!selectedListId) { setMessage("Select a list first"); return; }
-          await apiFetch(`/lists/${selectedListId}/items`, {
-            method: "POST",
-            body: JSON.stringify({ tmdbId, mediaType }),
-          });
+          // The store helper also invalidates the cached lists snapshot, so
+          // the next picker load reflects this add.
+          await addMovieToList(selectedListId, tmdbId, userEmail, mediaType);
         }
         setInList(true);
         collapse();

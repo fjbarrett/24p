@@ -48,7 +48,6 @@ export default async function TvShowDetailPage({ params }: PageProps) {
       media={show}
       mediaType="tv"
       userEmail={userEmail ?? ""}
-      trailerEndpoint={`/tmdb/tv/${show.tmdbId}/trailer`}
     />
   );
 }

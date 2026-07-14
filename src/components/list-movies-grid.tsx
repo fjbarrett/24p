@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { apiFetch } from "@/lib/api-client";
-import type { ListItem, SavedList } from "@/lib/list-store";
+import { invalidateListsCache, type ListItem, type SavedList } from "@/lib/list-store";
 import type { SimplifiedMovie } from "@/lib/tmdb";
 import { toMovieSlug } from "@/lib/slug";
 
@@ -37,6 +37,8 @@ export function ListMoviesGrid({
   const [movies, setMovies] = useState<SimplifiedMovie[]>([]);
   const [listItems, setListItems] = useState<ListItem[]>(items);
   const [loading, setLoading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const [removingKey, setRemovingKey] = useState<string | null>(null);
 
   const moviesByKey = useMemo(() => {
@@ -59,6 +61,7 @@ export function ListMoviesGrid({
         return;
       }
       setLoading(true);
+      setLoadFailed(false);
       setMovies([]);
       const cached: SimplifiedMovie[] = [];
       const missing: ListItem[] = [];
@@ -85,6 +88,7 @@ export function ListMoviesGrid({
       }
 
       const pending: SimplifiedMovie[] = [];
+      let hadError = false;
       let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
       const flush = () => {
@@ -130,7 +134,9 @@ export function ListMoviesGrid({
             }
           }
         } catch {
-          // ignore batch lookup failures
+          // Remember the failure: a fully failed load must not render as an
+          // empty list.
+          hadError = true;
         }
       }
 
@@ -153,6 +159,7 @@ export function ListMoviesGrid({
       }
 
       if (!cancelled) {
+        if (hadError) setLoadFailed(true);
         setLoading(false);
       }
     }
@@ -161,7 +168,7 @@ export function ListMoviesGrid({
       cancelled = true;
       controller.abort();
     };
-  }, [listItems]);
+  }, [listItems, reloadNonce]);
 
   const loadedCount = useMemo(() => {
     if (!listItems.length) return 0;
@@ -171,28 +178,6 @@ export function ListMoviesGrid({
     });
     return count;
   }, [listItems, moviesByKey]);
-
-  const updateListCache = (updatedItems: ListItem[]) => {
-    if (!userEmail || !listId || typeof window === "undefined") return;
-    try {
-      const key = `lists:${userEmail.trim().toLowerCase()}`;
-      const existing = window.localStorage.getItem(key);
-      if (!existing) return;
-      // The store persists a { ts, lists } envelope, not a bare array — parsing
-      // it as SavedList[] threw and the catch swallowed it, so the cache never
-      // actually updated after add/remove (stale "in list" state for ~5 min).
-      const envelope = JSON.parse(existing) as { ts: number; lists: SavedList[] };
-      if (!envelope || !Array.isArray(envelope.lists)) return;
-      const nextLists = envelope.lists.map((entry) =>
-        entry.id === listId
-          ? { ...entry, items: updatedItems, movies: updatedItems.map((item) => item.tmdbId) }
-          : entry,
-      );
-      window.localStorage.setItem(key, JSON.stringify({ ts: Date.now(), lists: nextLists }));
-    } catch {
-      // ignore cache errors
-    }
-  };
 
   const handleRemove = async (item: ListItem) => {
     if (!listId || !userEmail || removingKey !== null) return;
@@ -205,7 +190,7 @@ export function ListMoviesGrid({
       );
       const updatedItems = Array.isArray(payload.list.items) ? payload.list.items : [];
       setListItems(updatedItems);
-      updateListCache(updatedItems);
+      invalidateListsCache(userEmail);
     } catch {
       // ignore errors for now; could surface toast
     } finally {
@@ -224,7 +209,18 @@ export function ListMoviesGrid({
           Loading movies… {Math.min(loadedCount, listItems.length)}/{listItems.length}
         </p>
       ) : null}
-      {loadedCount === 0 && !loading ? (
+      {loadedCount === 0 && !loading && loadFailed ? (
+        <div className="space-y-2 text-center">
+          <p className="text-sm text-black-500">Couldn&apos;t load this list&apos;s titles.</p>
+          <button
+            type="button"
+            onClick={() => setReloadNonce((nonce) => nonce + 1)}
+            className="rounded-full bg-white px-4 py-1.5 text-sm font-medium text-black transition hover:brightness-95"
+          >
+            Retry
+          </button>
+        </div>
+      ) : loadedCount === 0 && !loading ? (
         <p className="text-sm text-black-500">No movies yet. Add some from the detail pages.</p>
       ) : (
         <ul className="flex flex-wrap justify-center gap-2.5 sm:gap-3">

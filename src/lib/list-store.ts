@@ -62,16 +62,6 @@ function isCachedListEntry(value: unknown): value is SavedList {
   );
 }
 
-function slugify(input: string) {
-  return (
-    input
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)+/g, "") || "list"
-  ).slice(0, 60);
-}
-
 function mapApiList(entry: ApiList): SavedList {
   const items: ListItem[] = Array.isArray(entry.items)
     ? entry.items.map((item) => ({ tmdbId: item.tmdbId, mediaType: item.mediaType === "tv" ? "tv" : "movie" }))
@@ -135,6 +125,19 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
   }
 }
 
+// Drops the cached snapshot so the next loadLists() refetches. Every list
+// mutation must call this (directly or via a store helper): patching the
+// cache in place re-stamped its timestamp, which resurrected expired entries
+// (e.g. lists deleted from another device reappearing for five minutes).
+export function invalidateListsCache(userEmail: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(`lists:${normalizeEmail(userEmail)}`);
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export async function addList(
   title: string,
   userEmail: string,
@@ -151,19 +154,8 @@ export async function addList(
     method: "POST",
     body: JSON.stringify({ title, movies: initialMovies, color: normalizedColor, mediaType }),
   });
-  const mapped = mapApiList(data.list);
-  if (typeof window !== "undefined") {
-    try {
-      const email = normalizeEmail(userEmail);
-      const existing = window.localStorage.getItem(`lists:${email}`);
-      const prev = existing ? (JSON.parse(existing) as CacheEnvelope).lists ?? [] : [];
-      const envelope: CacheEnvelope = { ts: Date.now(), lists: [mapped, ...prev] };
-      window.localStorage.setItem(`lists:${email}`, JSON.stringify(envelope));
-    } catch {
-      // ignore cache write errors
-    }
-  }
-  return mapped;
+  invalidateListsCache(email);
+  return mapApiList(data.list);
 }
 
 export async function addMovieToList(
@@ -180,89 +172,8 @@ export async function addMovieToList(
     method: "POST",
     body: JSON.stringify({ tmdbId, mediaType }),
   });
-  const mapped = mapApiList(data.list);
-  cacheSingleList(email, mapped);
-  return mapped;
-}
-
-export async function updateList(
-  listId: string,
-  data: { title?: string; slug?: string; color?: string; visibility?: "public" | "private"; userEmail: string },
-): Promise<SavedList> {
-  const email = normalizeEmail(data.userEmail);
-  if (!email) {
-    throw new Error("userEmail is required to update a list");
-  }
-  const payload: Record<string, string> = {};
-  if (data.title && data.title.trim()) payload.title = data.title.trim();
-  if (data.slug && data.slug.trim()) payload.slug = slugify(data.slug);
-  if (data.color && data.color.trim()) payload.color = normalizeListColor(data.color);
-  if (data.visibility) payload.visibility = data.visibility;
-  const result = await apiFetch<{ list: ApiList }>(`/lists/${listId}`, {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
-  const mapped = mapApiList(result.list);
-  cacheSingleList(email, mapped);
-  return mapped;
-}
-
-export async function getListByUsernameSlug(
-  username: string,
-  slug: string,
-  userEmail?: string | null,
-): Promise<SavedList | undefined> {
-  const email = userEmail ? normalizeEmail(userEmail) : "";
-  void email;
-  try {
-    const data = await apiFetch<{ list: ApiList }>(
-      `/lists/public/${encodeURIComponent(username)}/${encodeURIComponent(slug)}`,
-    );
-    const mapped = mapApiList(data.list);
-    if (email) {
-      cacheSingleList(email, mapped);
-    }
-    return mapped;
-  } catch {
-    return undefined;
-  }
-}
-
-export async function deleteList(listId: string, userEmail: string): Promise<void> {
-  const email = normalizeEmail(userEmail);
-  if (!email) {
-    throw new Error("userEmail is required to delete a list");
-  }
-  await apiFetch<{ ok: boolean }>(`/lists/${listId}`, {
-    method: "DELETE",
-  });
-  if (typeof window !== "undefined") {
-    try {
-      const existing = window.localStorage.getItem(`lists:${email}`);
-      if (existing) {
-        const prev = (JSON.parse(existing) as CacheEnvelope).lists ?? [];
-        const envelope: CacheEnvelope = { ts: Date.now(), lists: prev.filter((list) => list.id !== listId) };
-        window.localStorage.setItem(`lists:${email}`, JSON.stringify(envelope));
-      }
-    } catch {
-      // ignore cache write errors
-    }
-  }
-}
-
-function cacheSingleList(email: string, updated: SavedList) {
-  if (typeof window === "undefined") return;
-  try {
-    const existing = window.localStorage.getItem(`lists:${email}`);
-    const prev = existing ? (JSON.parse(existing) as CacheEnvelope).lists ?? [] : [];
-    const envelope: CacheEnvelope = {
-      ts: Date.now(),
-      lists: [updated, ...prev.filter((list) => list.id !== updated.id)],
-    };
-    window.localStorage.setItem(`lists:${email}`, JSON.stringify(envelope));
-  } catch {
-    // ignore cache write errors
-  }
+  invalidateListsCache(email);
+  return mapApiList(data.list);
 }
 
 export async function loadPublicLists(limit = 24): Promise<SavedList[]> {
@@ -271,37 +182,6 @@ export async function loadPublicLists(limit = 24): Promise<SavedList[]> {
     return data.lists.map(mapApiList);
   } catch (error) {
     console.error("Failed to load public lists", error);
-    return [];
-  }
-}
-
-export async function loadPublicListsForUsername(username: string, limit = 24): Promise<SavedList[]> {
-  const normalized = username.trim().toLowerCase();
-  if (!normalized) {
-    return [];
-  }
-  try {
-    const data = await apiFetch<{ lists: ApiList[] }>(
-      `/lists/public?limit=${limit}&username=${encodeURIComponent(normalized)}`,
-    );
-    return data.lists.map(mapApiList);
-  } catch (error) {
-    console.error("Failed to load public lists for username", error);
-    return [];
-  }
-}
-
-export async function loadFavorites(userEmail: string): Promise<SavedList[]> {
-  const email = normalizeEmail(userEmail);
-  if (!email) {
-    throw new Error("userEmail is required to load favorites");
-  }
-  try {
-    void email;
-    const data = await apiFetch<{ lists: ApiList[] }>(`/favorites`);
-    return data.lists.map(mapApiList);
-  } catch (error) {
-    console.error("Failed to load favorites", error);
     return [];
   }
 }

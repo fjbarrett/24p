@@ -13,14 +13,12 @@ type MediaDetailContentProps = {
   media: SimplifiedMovie;
   mediaType: "movie" | "tv";
   userEmail: string;
-  trailerEndpoint?: string;
 };
 
 export function MediaDetailContent({
   media,
   mediaType,
   userEmail,
-  trailerEndpoint,
 }: MediaDetailContentProps) {
   const jsonLd = buildMediaJsonLd(media, mediaType === "movie" ? "/movies" : "/tv");
 
@@ -32,11 +30,8 @@ export function MediaDetailContent({
       />
       <div className="mx-auto w-full max-w-[800px] px-6 py-8 sm:px-10">
         <MovieTrailerToggle
-          tmdbId={media.tmdbId}
           title={media.title}
           posterUrl={media.posterUrl ? getLargeImage(media.posterUrl, "poster") : null}
-          backdropUrl={media.backdropUrl ? getLargeImage(media.backdropUrl, "backdrop") : null}
-          trailerEndpoint={trailerEndpoint}
         />
 
         <h1 className="mt-6 mb-3 text-center text-2xl font-semibold tracking-tight text-white">

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { apiFetch } from "@/lib/api-client";
+import { invalidateListsCache } from "@/lib/list-store";
 
 type ImportListFormProps = {
   userEmail?: string | null;
@@ -29,6 +30,9 @@ export function ImportListForm({ userEmail, onComplete }: ImportListFormProps) {
           method: "POST",
           body: JSON.stringify({ title, data: raw }),
         });
+        // Without this, the reload below serves the pre-import cache and the
+        // imported list is missing for up to five minutes.
+        invalidateListsCache(email);
         setRaw("");
         setMessage("Import complete");
         onComplete?.();

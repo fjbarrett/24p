@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setUsername, type UserProfile } from "@/lib/profile-store";
 
@@ -17,12 +17,18 @@ function isValidUsername(value: string) {
   return value.length >= 3 && /^[a-z0-9]+$/.test(value);
 }
 
+const subscribeNever = () => () => {};
+const readOrigin = () => window.location.origin;
+const readOriginServer = () => "";
+
 export function UsernameCard({ userEmail, profile }: UsernameCardProps) {
   const [username, setUsernameValue] = useState(profile?.username ?? "");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const baseUrl = typeof window === "undefined" ? "" : window.location.origin;
+  // Client-only value with an SSR fallback: reading window.location.origin
+  // during render made server HTML and the hydrating client disagree.
+  const baseUrl = useSyncExternalStore(subscribeNever, readOrigin, readOriginServer);
   const isPublic = profile?.isPublic ?? false;
   const normalized = normalizeUsernameInput(username);
   const isValid = isValidUsername(normalized);
