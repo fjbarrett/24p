@@ -12,30 +12,32 @@ export const dynamic = "force-dynamic";
 // devices can share one NAT IP; guessing is not a threat here (the claim needs
 // both 128-bit and 256-bit secrets), so the caps only bound database load.
 export async function POST(request: Request) {
-  const ip = clientIp(request.headers);
-  const limits = await Promise.all([
-    consumeDurable(`tv-claim:${ip}`, 300, 10 * 60 * 1000),
-    consumeDurable("tv-claim:global", 5_000, 10 * 60 * 1000),
-  ]);
-  const blocked = limits.find((limit): limit is { ok: false; retryAfterSeconds: number } => !limit.ok);
-  if (blocked) {
-    return NextResponse.json(
-      { error: "Too many attempts. Try again shortly." },
-      { status: 429, headers: { "Retry-After": String(blocked.retryAfterSeconds) } },
-    );
-  }
-
-  let pairingId = "";
-  let deviceToken = "";
   try {
-    const body = (await request.json()) as { pairingId?: unknown; deviceToken?: unknown };
-    pairingId = typeof body.pairingId === "string" ? body.pairingId : "";
-    deviceToken = typeof body.deviceToken === "string" ? body.deviceToken : "";
-  } catch {
-    return errorResponse("Invalid request body", 400);
-  }
+    // Inside the try: consumeDurable hits the DB, so an outage here fails closed
+    // with a clean JSON error instead of an unhandled, bodyless 500.
+    const ip = clientIp(request.headers);
+    const limits = await Promise.all([
+      consumeDurable(`tv-claim:${ip}`, 300, 10 * 60 * 1000),
+      consumeDurable("tv-claim:global", 5_000, 10 * 60 * 1000),
+    ]);
+    const blocked = limits.find((limit): limit is { ok: false; retryAfterSeconds: number } => !limit.ok);
+    if (blocked) {
+      return NextResponse.json(
+        { error: "Too many attempts. Try again shortly." },
+        { status: 429, headers: { "Retry-After": String(blocked.retryAfterSeconds) } },
+      );
+    }
 
-  try {
+    let pairingId = "";
+    let deviceToken = "";
+    try {
+      const body = (await request.json()) as { pairingId?: unknown; deviceToken?: unknown };
+      pairingId = typeof body.pairingId === "string" ? body.pairingId : "";
+      deviceToken = typeof body.deviceToken === "string" ? body.deviceToken : "";
+    } catch {
+      return errorResponse("Invalid request body", 400);
+    }
+
     const result = await claimTvPairing(pairingId, deviceToken);
     if (result.status === "invalid") {
       return errorResponse("This pairing request is invalid or has expired", 404);
