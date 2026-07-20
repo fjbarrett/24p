@@ -18,7 +18,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.111.0",
+    "@anthropic-ai/sdk": "^0.112.3",
     "jose": "4.15.9",
     "next": "^16.2.10",
     "next-auth": "^4.24.14",
