@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 # Deploys run one at a time: two merges in quick succession would otherwise
-# race their SSH sessions on the droplet (concurrent `docker compose up`,
+# race their updates on the production host (concurrent `docker compose up`,
 # interleaved rollback tagging). Queued runs wait instead of cancelling so
 # every merge still ships in order.
 concurrency:
@@ -102,8 +102,9 @@ jobs:
 
   deploy-prod:
     name: Deploy to prod (24p.mov)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, 24p-prod]
     needs: build
+    timeout-minutes: 12
     # Without packages:read the GITHUB_TOKEN can't pull the private GHCR image,
     # so `docker compose pull` on prod was denied on every run.
     permissions:
@@ -112,9 +113,12 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Write env file
+      - name: Install deployment files
         run: |
-          cat > .env <<'EOF'
+          install -d -m 0755 /opt/24p
+          install -m 0644 docker-compose.yml /opt/24p/docker-compose.yml
+          umask 077
+          cat > /opt/24p/.env <<'EOF'
           IMAGE_TAG=latest
           NEXTAUTH_SECRET=${{ secrets.PROD_NEXTAUTH_SECRET }}
           NEXTAUTH_URL=https://24p.mov
@@ -134,24 +138,9 @@ jobs:
           ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
           OMDB_API_KEY=${{ secrets.OMDB_API_KEY }}
           EOF
-          chmod 600 .env
 
-      - name: Copy files to prod server
-        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1
-        with:
-          host: ${{ secrets.PROD_DEPLOY_HOST }}
-          username: deploy
-          key: ${{ secrets.PROD_DEPLOY_SSH_KEY }}
-          source: "docker-compose.yml,.env"
-          target: /opt/24p/
-
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
-        with:
-          host: ${{ secrets.PROD_DEPLOY_HOST }}
-          username: deploy
-          key: ${{ secrets.PROD_DEPLOY_SSH_KEY }}
-          script: |
+      - name: Deploy on production host
+        run: |
             # Health-gated deploy with rollback. `docker compose up` recreates the
             # single web container in place, so a NEW container that fails to start
             # is a live outage, not a no-op — the old one is already gone. If the
@@ -160,6 +149,9 @@ jobs:
             # running container, so we just fail fast and leave prod as-is.)
             set -eo pipefail
             cd /opt/24p
+            task_docker_config=$(mktemp -d)
+            export DOCKER_CONFIG="$task_docker_config"
+            trap 'rm -rf "$task_docker_config"' EXIT
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Image the currently-running web container uses; empty on first deploy.
@@ -230,4 +222,3 @@ jobs:
             fi
             docker image prune -f
             docker builder prune -f --filter 'until=168h' || true
-
