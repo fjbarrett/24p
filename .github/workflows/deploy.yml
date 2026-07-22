@@ -36,7 +36,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
 
@@ -64,7 +64,7 @@ jobs:
     outputs:
       image_tag: ${{ steps.meta.outputs.tag }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Resolve image tag
         id: meta
@@ -110,7 +110,7 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Write env file
         run: |
@@ -206,6 +206,19 @@ jobs:
             if [ "$running_image" != "$pulled_digest" ]; then
               echo "::error::running image ($running_image) is not the pulled image ($pulled_digest) — cutover did not happen; prod still serves the previous build"
               exit 1
+            fi
+
+            # Readiness probe. The smoke test above only proves the app serves
+            # `/` (which renders without a DB round-trip), so a DB outage would
+            # pass it silently. Check DB reachability too — but a DB outage does
+            # NOT justify rolling back the app image (rollback can't fix the DB
+            # and would block shipping app fixes), so warn loudly instead of
+            # failing. Real paging comes from an external monitor on /api/health.
+            ready=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/api/health || true)
+            if [ "$ready" = "200" ]; then
+              echo "readiness ok: /api/health 200 (DB reachable)"
+            else
+              echo "::warning::readiness degraded: /api/health returned $ready — app is up but DB-backed features will 500; investigate the database, not this deploy"
             fi
 
             # Success. Tag the outgoing image so it survives pruning — an
