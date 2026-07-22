@@ -29,6 +29,11 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# The standalone server only needs Node. npm and its dependency tree are unused
+# at runtime, so omit them from the production image and its vulnerability set.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
+
 # Next standalone build includes server.js at project root. Copy as the
 # non-root `node` user (present in the base image) so the server doesn't run
 # as root; `.next` is node-owned so the runtime fetch cache can be written.
