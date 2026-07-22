@@ -4,7 +4,7 @@
 
 ## Context
 
-**Last Updated:** 2026-07-13
+**Last Updated:** 2026-07-21
 **Stage:** Active development
 **Purpose:** Film tracking and sharing app with web, iOS, and tvOS clients.
 **Structure:**
@@ -16,6 +16,7 @@
 
 | Date | Agent | Action |
 | ---- | ----- | ------ |
+| 2026-07-21 | Codex GPT-5.6 | Removed unused npm tooling from the production image, clearing all HIGH/CRITICAL Trivy findings while preserving runtime startup. |
 | 2026-07-13 | Codex GPT-5 | Assessed application, deployment, dependency, secret, and CI/CD security; reported prioritized findings without changing code. |
 | 2026-07-13 | Claude Fable 5 | Completed comprehensive security remediation: device-approval pairing protocol (6-digit code approved from the web, high-entropy device credentials, 30d idle/180d absolute token expiry), browser-only privileged sessions, deny-by-default admin allowlist, DB TLS verify-full with CA + SHA-256 pin, Postgres-backed durable rate limits on public/expensive routes, JustWatch LRU + single-flight cache, Apple-link host validation, raw-error-message hygiene (publicError/routeError), share email removal, dependency bumps, SHA-pinned actions + tests + Dependabot + Trivy schedule, deploy timeouts, GitHub security features enabled, and Cloudflare-only origin (nginx real-IP overwrite + UFW allowlist, verified live). |
 
@@ -25,7 +26,7 @@
 
 | Command | Description |
 | ------- | ----------- |
-| `docker build --pull -t 24p-security-audit:local .` | Reproduce the production image for validation. |
+| `docker build --pull --build-arg NEXT_PUBLIC_APP_URL=https://24p.mov --build-arg NEXT_PUBLIC_AUTH_CALLBACK_URL=https://24p.mov -t 24p-security-audit:local .` | Reproduce the production image for validation. |
 | `trivy fs --scanners vuln,misconfig .` | Scan repository dependencies and configuration. |
 | `trivy image --scanners vuln 24p-security-audit:local` | Scan the built runtime image. |
 | `gitleaks git --redact .` | Scan committed history for secret-shaped content. |
