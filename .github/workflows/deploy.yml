@@ -4,6 +4,14 @@ on:
   push:
     branches: [main]
 
+# Deploys run one at a time: two merges in quick succession would otherwise
+# race their SSH sessions on the droplet (concurrent `docker compose up`,
+# interleaved rollback tagging). Queued runs wait instead of cancelling so
+# every merge still ships in order.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
 env:
   IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/24p-web
 
