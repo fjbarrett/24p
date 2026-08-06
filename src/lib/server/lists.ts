@@ -441,13 +441,15 @@ export const getListByUsernameSlugForViewer = cache(async (username: string, slu
   } catch {
     return null;
   }
-  const owner = await pool.query<{ user_email: string }>("SELECT user_email FROM profiles WHERE username = $1", [
-    normalizedUsername,
-  ]);
+  const owner = await pool.query<{ user_email: string; is_public: boolean }>(
+    "SELECT user_email, is_public FROM profiles WHERE username = $1",
+    [normalizedUsername],
+  );
   const ownerEmail = owner.rows[0]?.user_email;
   if (!ownerEmail) {
     return null;
   }
+  const ownerProfileIsPublic = owner.rows[0]?.is_public === true;
 
   const result = await pool.query<ListRow>(
     `
@@ -469,6 +471,13 @@ export const getListByUsernameSlugForViewer = cache(async (username: string, slu
   const canEdit = isOwner || (normalizedViewer ? await isListSharedWithEdit(list.id, normalizedViewer) : false);
 
   if (list.visibility !== "public" && !isOwner && !isShared) {
+    return null;
+  }
+
+  // A private profile hides its lists from strangers even when an individual
+  // list is public — otherwise /<username>/<slug> stays reachable while
+  // /<username> 404s. Owners and explicit share recipients are unaffected.
+  if (!ownerProfileIsPublic && !isOwner && !isShared) {
     return null;
   }
 
