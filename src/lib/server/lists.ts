@@ -475,13 +475,20 @@ export const getListByUsernameSlugForViewer = cache(async (username: string, slu
   return mapList({ ...list, can_edit: canEdit }, normalizedViewer);
 });
 
+// Anonymous surface: the JSON API, the sitemap, and the /[username] page. A
+// list is only visible here when its own visibility is public AND its owner's
+// profile is public, matching getPublicProfileByUsername. Without the is_public
+// leg, /api/lists/public?username=alice kept serving a profile whose page 404s.
+// The signed-in owner reads their own lists through listListsForUser instead,
+// which is keyed on user_email and unaffected by this filter.
 export async function loadPublicLists(limit = 24, username?: string | null) {
   const pool = getPool();
   if (username) {
     const normalizedUsername = normalizeUsername(username);
-    const owner = await pool.query<{ user_email: string }>("SELECT user_email FROM profiles WHERE username = $1", [
-      normalizedUsername,
-    ]);
+    const owner = await pool.query<{ user_email: string }>(
+      "SELECT user_email FROM profiles WHERE username = $1 AND is_public = true",
+      [normalizedUsername],
+    );
     const ownerEmail = owner.rows[0]?.user_email;
     if (!ownerEmail) {
       return [];
@@ -490,7 +497,7 @@ export async function loadPublicLists(limit = 24, username?: string | null) {
       `
         SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}
         FROM lists
-        JOIN profiles ON lists.user_email = profiles.user_email
+        JOIN profiles ON lists.user_email = profiles.user_email AND profiles.is_public = true
         WHERE lists.visibility = 'public' AND lists.user_email = $1
         ORDER BY lists.created_at DESC
         LIMIT $2
@@ -504,7 +511,7 @@ export async function loadPublicLists(limit = 24, username?: string | null) {
     `
       SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}
       FROM lists
-      JOIN profiles ON lists.user_email = profiles.user_email
+      JOIN profiles ON lists.user_email = profiles.user_email AND profiles.is_public = true
       WHERE lists.visibility = 'public'
       ORDER BY lists.created_at DESC
       LIMIT $1
