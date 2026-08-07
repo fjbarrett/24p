@@ -147,7 +147,7 @@ function SuggestionCard({ movie, onAdd }: { movie: SimplifiedMovie; onAdd: () =>
 
   return (
     <li className="group">
-      <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-white/10 bg-black-900/40">
+      <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-black-900/40">
         {/* Poster link — sits below the add button so both are independently clickable */}
         <Link href={href} className="absolute inset-0 z-10" aria-label={`View ${movie.title}`} />
         {movie.posterUrl ? (
