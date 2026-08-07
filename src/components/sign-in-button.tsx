@@ -29,7 +29,7 @@ export function SignInButton({
     if (pending) return "Connecting...";
     if (status === "loading") return "Checking session...";
     if (session?.user) return "Sign out";
-    return "Sign in with Google";
+    return "Sign in";
   }, [pending, session?.user, status]);
 
   const styles = borderless
