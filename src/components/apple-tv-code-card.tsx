@@ -49,13 +49,15 @@ export function AppleTvCodeCard() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pin: code }),
         });
+        const body = (await res.json().catch(() => null)) as { error?: string; label?: string } | null;
         if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as { error?: string } | null;
           throw new Error(body?.error ?? `Request failed (${res.status})`);
         }
         setApproved(true);
         setCode("");
-        setMessage("Device approved. It will finish signing in on its own within a few seconds.");
+        setMessage(
+          `${body?.label ?? "Device"} approved. It will finish signing in on its own within a few seconds. If that is not a device you are holding, revoke it below.`,
+        );
         await loadDevices();
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Unable to approve the device.");
@@ -102,6 +104,10 @@ export function AppleTvCodeCard() {
         <p className="text-sm text-black-400">
           Open the 24p app on your device and choose Sign In. It will show a 6-digit code — enter it here to
           approve the device.
+        </p>
+        <p className="text-sm text-black-500">
+          Only enter a code you can see on your own screen. A code someone sends you signs their device into
+          your account.
         </p>
       </div>
 

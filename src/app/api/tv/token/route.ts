@@ -31,10 +31,14 @@ export async function POST(request: Request) {
     }
     const body = (await request.json()) as { pin?: unknown };
     const pin = typeof body.pin === "string" ? body.pin : "";
-    if (!(await approveTvPairing(userEmail, pin))) {
+    // The label comes back so the browser can say what it just admitted. Anyone
+    // can start a pairing and read off a valid code, so the approval step is
+    // the only place a user can notice they are approving someone else's device.
+    const label = await approveTvPairing(userEmail, pin);
+    if (!label) {
       return errorResponse("That code is invalid or has expired", 404);
     }
-    return NextResponse.json({ approved: true }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ approved: true, label }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return routeError("api/tv/token:post", error, "Unable to approve Apple device");
   }

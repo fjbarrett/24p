@@ -49,8 +49,10 @@ describe.skipIf(!testDbUrl)("device pairing flow (integration)", () => {
 
     // A wrong six-digit code is rejected; the real one approves.
     const wrongPin = pairing.pin === "000000" ? "000001" : "000000";
-    expect(await approveTvPairing(email, wrongPin)).toBe(false);
-    expect(await approveTvPairing(email, pairing.pin)).toBe(true);
+    expect(await approveTvPairing(email, wrongPin)).toBeNull();
+    // Returns the device's own label, which the settings UI shows back so the
+    // user can tell they approved the thing in front of them.
+    expect(await approveTvPairing(email, pairing.pin)).toBe("Apple TV");
 
     const claim = await claimTvPairing(pairing.pairingId, pairing.deviceToken);
     expect(claim.status).toBe("approved");
