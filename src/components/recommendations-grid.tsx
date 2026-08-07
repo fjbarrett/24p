@@ -24,7 +24,7 @@ export function RecommendationsGrid({ movies }: RecommendationsGridProps) {
         <li key={movie.tmdbId} className="w-[calc(50%-6px)] sm:w-[calc(33%-7px)] lg:w-[calc(25%-9px)]">
           <Link
             href={`/movies/${toMovieSlug(movie.title, movie.releaseYear)}?from=/recommendations`}
-            className="group relative block aspect-[2/3] w-full overflow-hidden rounded-lg border border-white/10 bg-black-900/40 transition hover:border-black-400"
+            className="group relative block aspect-[2/3] w-full overflow-hidden rounded-lg bg-black-900/40"
           >
             {movie.posterUrl ? (
               <Image
@@ -33,13 +33,14 @@ export function RecommendationsGrid({ movies }: RecommendationsGridProps) {
                 width={200}
                 height={300}
                 sizes="(max-width: 640px) 26vw, (max-width: 768px) 22vw, 160px"
-                className="h-full w-full rounded-md object-cover"
+                className="h-full w-full object-cover"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-black-800 text-[10px] text-black-500">
                 No art
               </div>
             )}
+            <div className="pointer-events-none absolute inset-0 rounded-lg shadow-[inset_0_0_20px_rgba(0,0,0,0.55)] transition-shadow duration-300 group-hover:shadow-[inset_0_0_20px_rgba(255,255,255,0.06)]" />
           </Link>
         </li>
       ))}
