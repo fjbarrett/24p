@@ -2,7 +2,11 @@ import type { MetadataRoute } from "next";
 import { getAppUrl } from "@/lib/app-url";
 import { loadPublicLists } from "@/lib/server/lists";
 
-export const dynamic = "force-dynamic";
+// Every request used to re-run loadPublicLists(5000) — a LIMIT 5000 join with a
+// per-row JSON aggregate — on a well-known, unauthenticated URL. A sitemap does
+// not need to be second-fresh; an hour of cache turns the cheapest DoS lever in
+// the app into one query per hour.
+export const revalidate = 3600;
 
 function absolute(path: string) {
   return new URL(path, getAppUrl()).toString();
