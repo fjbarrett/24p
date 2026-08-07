@@ -29,8 +29,20 @@ function resolveDbConfig() {
   const ca = process.env.DB_CA_CERT ?? decodeBase64Certificate(process.env.DB_CA_CERT_BASE64);
   const pinnedFingerprint = normalizeFingerprint(process.env.DB_CERT_FINGERPRINT_SHA256);
   const insecureModes = new Set(["no-verify", "allow", "prefer"]);
-  if (process.env.NODE_ENV === "production" && insecureModes.has(sslMode)) {
-    throw new Error("Production database TLS verification cannot be disabled");
+  if (process.env.NODE_ENV === "production") {
+    if (insecureModes.has(sslMode)) {
+      throw new Error("Production database TLS verification cannot be disabled");
+    }
+    // `disable` skips TLS altogether, so the check above was inverted: it
+    // rejected encrypted-but-unauthenticated while waving through plaintext.
+    // Plaintext is legitimate when Postgres is a sibling container on a private
+    // bridge (how prod runs since the Proxmox move), but that has to be a
+    // deliberate declaration rather than the quietest way to pass.
+    if (sslMode === "disable" && process.env.DB_ALLOW_PLAINTEXT !== "true") {
+      throw new Error(
+        "DB_SSLMODE=disable sends database traffic in plaintext. Set DB_ALLOW_PLAINTEXT=true to confirm the database is only reachable over a trusted private network, or use a TLS-verifying sslmode.",
+      );
+    }
   }
   const ssl =
     sslMode === "disable"
