@@ -20,6 +20,8 @@ type ListRow = {
   user_email: string;
   username: string | null;
   can_edit?: boolean;
+  // Only selected by fetchListById; undefined on the bulk-list queries.
+  owner_is_public?: boolean | null;
 };
 
 // Subquery fragment that aggregates list_items into a JSON array, ordered newest-first
@@ -140,7 +142,7 @@ async function fetchListById(id: string) {
   const pool = getPool();
   const result = await pool.query<ListRow>(
     `
-      SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}
+      SELECT lists.*, profiles.username, profiles.is_public AS owner_is_public, ${ITEMS_SUBQUERY}
       FROM lists
       LEFT JOIN profiles ON lists.user_email = profiles.user_email
       WHERE lists.id = $1
@@ -539,7 +541,10 @@ export const loadFavoritesForUser = cache(async (userEmail: string) => {
       JOIN lists ON lists.id = user_favorites.list_id
       LEFT JOIN profiles ON lists.user_email = profiles.user_email
       WHERE user_favorites.user_email = $1
-        AND (lists.visibility = 'public' OR lists.user_email = $1)
+        AND (
+          lists.user_email = $1
+          OR (lists.visibility = 'public' AND COALESCE(profiles.is_public, false))
+        )
       ORDER BY user_favorites.created_at DESC
     `,
     [userEmail],
@@ -563,7 +568,15 @@ export async function addFavoriteForUser(listId: string, userEmail: string) {
   if (!list) {
     publicError("List not found", 404);
   }
-  if (list.visibility !== "public" && normalizeEmail(list.user_email) !== userEmail) {
+  // A public list on a private profile is off-limits to everyone but its owner,
+  // matching loadPublicLists and getListByUsernameSlugForViewer. Without the
+  // is_public leg, favouriting was a side door: anyone holding the list id
+  // could keep reading its contents through GET /api/favorites after the owner
+  // took their profile private.
+  const visibleToViewer =
+    normalizeEmail(list.user_email) === userEmail ||
+    (list.visibility === "public" && list.owner_is_public === true);
+  if (!visibleToViewer) {
     publicError("List not found", 404);
   }
   await pool.query(
