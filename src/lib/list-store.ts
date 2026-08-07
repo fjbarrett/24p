@@ -44,6 +44,11 @@ function normalizeEmail(email: string) {
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_PREFIX = "lists:";
+
+function cacheKey(email: string) {
+  return `${CACHE_PREFIX}${email}`;
+}
 
 type CacheEnvelope = {
   ts: number;
@@ -87,7 +92,7 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
     throw new Error("userEmail is required to load lists");
   }
   if (typeof window !== "undefined") {
-    const cached = window.localStorage.getItem(`lists:${email}`);
+    const cached = window.localStorage.getItem(cacheKey(email));
     if (cached) {
       try {
         const envelope = JSON.parse(cached) as CacheEnvelope;
@@ -113,7 +118,7 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
     if (typeof window !== "undefined") {
       try {
         const envelope: CacheEnvelope = { ts: Date.now(), lists: mapped };
-        window.localStorage.setItem(`lists:${email}`, JSON.stringify(envelope));
+        window.localStorage.setItem(cacheKey(email), JSON.stringify(envelope));
       } catch {
         // ignore write errors
       }
@@ -132,7 +137,24 @@ export async function loadLists(userEmail: string): Promise<SavedList[]> {
 export function invalidateListsCache(userEmail: string) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(`lists:${normalizeEmail(userEmail)}`);
+    window.localStorage.removeItem(cacheKey(normalizeEmail(userEmail)));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+// Sign-out drops every cached snapshot, not just the departing account's: on a
+// shared machine the storage can still hold entries from whoever used it
+// before, and each one is a readable copy of that person's list contents.
+export function clearCachedLists() {
+  if (typeof window === "undefined") return;
+  try {
+    const stale: string[] = [];
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (key?.startsWith(CACHE_PREFIX)) stale.push(key);
+    }
+    stale.forEach((key) => window.localStorage.removeItem(key));
   } catch {
     // ignore storage errors
   }

@@ -3,6 +3,7 @@
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { clearCachedLists } from "@/lib/list-store";
 
 type SignInButtonProps = {
   variant?: "primary" | "ghost";
@@ -41,6 +42,10 @@ export function SignInButton({
   async function handleClick() {
     if (session?.user) {
       setPending(true);
+      // loadLists keeps a five-minute snapshot of list titles and contents in
+      // localStorage. Signing out has to take it with them, or the next person
+      // at a shared machine can read it straight out of storage.
+      clearCachedLists();
       await signOut();
       setPending(false);
       return;

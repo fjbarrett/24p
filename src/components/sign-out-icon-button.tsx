@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { LogOut } from "@/components/icons";
+import { clearCachedLists } from "@/lib/list-store";
 
 export function SignOutIconButton() {
   const [pending, setPending] = useState(false);
@@ -10,6 +11,9 @@ export function SignOutIconButton() {
   async function handleClick() {
     setPending(true);
     try {
+      // Same reason as SignInButton: the cached list snapshot must not outlive
+      // the session on a shared machine.
+      clearCachedLists();
       await signOut();
     } finally {
       setPending(false);
