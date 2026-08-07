@@ -53,6 +53,24 @@ type ParsedEntry = {
 const DEFAULT_COLOR = "sky";
 const ALLOWED_COLORS = new Set(["sky", "emerald", "amber", "violet", "rose", "indigo", "slate"]);
 
+// A list is a curated set of films, not a bulk dump. The item cap bounds the
+// single INSERT insertList builds (2n+1 bind parameters, against a Postgres
+// ceiling of 65535) and the JSON aggregation every read of the list runs; it
+// matches the limit the CSV import path has always enforced.
+const MAX_LIST_ITEMS = 500;
+const MAX_TITLE_LENGTH = 200;
+
+function normalizeTitleInput(raw: string) {
+  const title = raw.trim();
+  if (!title) {
+    publicError("Title is required", 400);
+  }
+  if (title.length > MAX_TITLE_LENGTH) {
+    publicError(`Title must be ${MAX_TITLE_LENGTH} characters or fewer`, 400);
+  }
+  return title;
+}
+
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
@@ -307,11 +325,11 @@ export async function createListForUser(
   color?: string | null,
   mediaType: "movie" | "tv" = "movie",
 ) {
-  const normalizedTitle = title.trim();
-  if (!normalizedTitle) {
-    publicError("Title is required", 400);
-  }
+  const normalizedTitle = normalizeTitleInput(title);
   const uniqueIds = Array.from(new Set(movies));
+  if (uniqueIds.length > MAX_LIST_ITEMS) {
+    publicError(`A list can hold at most ${MAX_LIST_ITEMS} titles`, 400);
+  }
   const items = uniqueIds.map((id) => ({ tmdbId: id, mediaType }));
   return insertList(normalizedTitle, items, color ?? null, userEmail);
 }
@@ -327,7 +345,7 @@ export async function updateListForUser(
     publicError("List not found", 404);
   }
 
-  const nextTitle = data.title?.trim() || existing.title;
+  const nextTitle = data.title?.trim() ? normalizeTitleInput(data.title) : existing.title;
   const nextSlug = data.slug ? await generateSlug(data.slug, existing.user_email, listId) : existing.slug;
   const nextVisibility = data.visibility ? normalizeVisibility(data.visibility) : existing.visibility;
   if (nextVisibility === "public") {
@@ -747,12 +765,12 @@ function parseImportedTitles(raw: string): ParsedEntry[] {
 }
 
 export async function importListForUser(title: string, raw: string, userEmail: string) {
-  const normalizedTitle = title.trim();
-  if (!normalizedTitle || !raw.trim()) {
-    publicError("Title and data are required", 400);
+  const normalizedTitle = normalizeTitleInput(title);
+  if (!raw.trim()) {
+    publicError("Import data is required", 400);
   }
 
-  const entries = parseImportedTitles(raw).slice(0, 500);
+  const entries = parseImportedTitles(raw).slice(0, MAX_LIST_ITEMS);
   if (!entries.length) {
     publicError("No movies could be parsed from the import data", 400);
   }

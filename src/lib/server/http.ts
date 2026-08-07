@@ -17,10 +17,24 @@ export function publicError(message: string, status = 400): never {
   throw new PublicHttpError(message, status);
 }
 
+// App Router handlers buffer the whole body into memory with no framework-level
+// ceiling, so an authenticated caller could post an arbitrarily large payload.
+// Comfortably above the largest legitimate request (a 200 KB CSV import plus
+// its JSON envelope).
+const MAX_JSON_BODY_BYTES = 512 * 1024;
+
 // request.json() throws SyntaxError on malformed bodies, which routeError
 // treats as an internal 500; a bad body is the caller's 400. Also rejects
 // null/array/scalar payloads so `payload.field` access can't throw.
 export async function readJsonObject<T extends object = Record<string, unknown>>(request: Request): Promise<T> {
+  // Content-Length is advisory — a chunked request omits it — so this is the
+  // cheap first line only. Callers still bound their own array and string
+  // fields, which is what actually caps the work a request can cause.
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_JSON_BODY_BYTES) {
+    publicError("Request body is too large", 413);
+  }
+
   let payload: unknown;
   try {
     payload = await request.json();

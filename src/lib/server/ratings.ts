@@ -16,7 +16,16 @@ type UserRatingRow = {
   updated_at: string;
 };
 
+// Each entry is its own round trip inside one transaction, so an uncapped batch
+// holds a connection (and its locks) open for as long as the caller cares to
+// keep writing. Matches the CSV import ceiling, which is the largest legitimate
+// batch that reaches here.
+const MAX_RATINGS_PER_REQUEST = 500;
+
 export async function saveRatingsForUser(userEmail: string, ratings: RatingInput[]) {
+  if (ratings.length > MAX_RATINGS_PER_REQUEST) {
+    publicError(`At most ${MAX_RATINGS_PER_REQUEST} ratings can be saved at once`, 400);
+  }
   // Validate the whole batch before writing anything: a 400 must mean
   // "nothing was saved", not "some rows committed before the bad one".
   for (const entry of ratings) {
