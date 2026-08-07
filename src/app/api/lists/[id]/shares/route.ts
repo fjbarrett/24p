@@ -2,13 +2,17 @@ import { NextResponse } from "next/server";
 import { addListShareForUser, loadListSharesForUser } from "@/lib/server/lists";
 import { errorResponse, readJsonObject, routeError } from "@/lib/server/http";
 import { consumeDurable } from "@/lib/server/rate-limit";
-import { getSessionUserEmail } from "@/lib/server/session";
+import { getBrowserSessionUserEmail } from "@/lib/server/session";
+
+// Collaborator management grants a third party read (and optionally write)
+// access to the owner's list, so the whole surface takes the browser session
+// rather than the 180-day Apple TV bearer. No native client calls it.
 
 export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const userEmail = await getSessionUserEmail();
+  const userEmail = await getBrowserSessionUserEmail();
   if (!userEmail) {
     return errorResponse("Unauthorized", 401);
   }
@@ -26,7 +30,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const userEmail = await getSessionUserEmail();
+  const userEmail = await getBrowserSessionUserEmail();
   if (!userEmail) {
     return errorResponse("Unauthorized", 401);
   }

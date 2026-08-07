@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { removeListShareForUser, updateListSharePermissionForUser } from "@/lib/server/lists";
 import { errorResponse, readJsonObject, routeError } from "@/lib/server/http";
-import { getSessionUserEmail } from "@/lib/server/session";
+import { getBrowserSessionUserEmail } from "@/lib/server/session";
+
+// Browser-session only, for the same reason as the collection route: changing
+// or revoking a collaborator's access is account-level, not device-level.
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string; username: string }> },
 ) {
-  const userEmail = await getSessionUserEmail();
+  const userEmail = await getBrowserSessionUserEmail();
   if (!userEmail) {
     return errorResponse("Unauthorized", 401);
   }
@@ -29,7 +32,7 @@ export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string; username: string }> },
 ) {
-  const userEmail = await getSessionUserEmail();
+  const userEmail = await getBrowserSessionUserEmail();
   if (!userEmail) {
     return errorResponse("Unauthorized", 401);
   }

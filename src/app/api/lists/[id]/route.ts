@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { deleteListForUser, updateListForUser } from "@/lib/server/lists";
 import { errorResponse, readJsonObject, routeError } from "@/lib/server/http";
-import { getBrowserSessionUserEmail, getSessionUserEmail } from "@/lib/server/session";
+import { getBrowserSessionUserEmail, getSessionUser } from "@/lib/server/session";
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const userEmail = await getSessionUserEmail();
-  if (!userEmail) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
     return errorResponse("Unauthorized", 401);
   }
 
@@ -20,7 +20,14 @@ export async function PATCH(
       color?: string;
       visibility?: "public" | "private";
     };
-    const list = await updateListForUser(id, userEmail, payload);
+    // Publishing a list exposes it to anyone holding the URL — the same class
+    // of action as flipping the whole profile public, which is already browser
+    // only. A lifted Apple TV bearer must not be able to do it. Renames and
+    // recolours stay open to native clients.
+    if (payload.visibility !== undefined && sessionUser.authMethod !== "browser") {
+      return errorResponse("Changing list visibility requires a browser session", 403);
+    }
+    const list = await updateListForUser(id, sessionUser.email, payload);
     return NextResponse.json({ list });
   } catch (error) {
     return routeError("api/lists:patch", error, "Unable to update list");
