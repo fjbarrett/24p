@@ -52,7 +52,7 @@ const ListCard = memo(function ListCard({ list, posterUrls = [], showOwner }: Li
   );
 
   const body = (
-    <div className="flex h-full flex-col gap-3 rounded-2xl border border-white/8 bg-black-900/40 p-3.5 transition hover:border-white/16 hover:bg-black-900/60 sm:p-4">
+    <div className="flex h-full flex-col gap-3 rounded-2xl bg-black-900/40 p-3.5 transition hover:bg-black-900/60 sm:p-4">
       {strip}
       <div className="flex flex-col gap-0.5">
         {showOwner && list.username ? (

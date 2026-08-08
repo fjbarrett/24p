@@ -14,7 +14,7 @@ export function DescriptionExpander({ text }: { text: string }) {
   }, [text]);
 
   return (
-    <div className="w-full text-left">
+    <div className="w-full text-center">
       <p
         ref={ref}
         className="text-sm leading-relaxed text-white/[0.98]"
