@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: [main]
 
+# Nothing here writes to the repo; without this the job inherits whatever the
+# repo-wide default token scope happens to be.
+permissions:
+  contents: read
+
 jobs:
   frontend:
     name: Frontend

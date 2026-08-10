@@ -15,6 +15,11 @@ concurrency:
 env:
   IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/24p-web
 
+# Default for jobs that declare nothing of their own (the test job). build and
+# deploy-prod widen it where they genuinely need to.
+permissions:
+  contents: read
+
 jobs:
   # The PR-triggered CI workflow checks the merge ref, not the commit that
   # lands on main (direct pushes skip it entirely; a stale merge ref can pass

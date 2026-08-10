@@ -4,6 +4,27 @@ import { loadPublicLists } from "@/lib/server/lists";
 
 export const dynamic = "force-dynamic";
 
+// Every request used to re-run loadPublicLists(5000) — a LIMIT 5000 join with a
+// per-row JSON aggregate — on a well-known unauthenticated URL, which made this
+// the cheapest DoS lever in the app. An hour of cache fixes that; a sitemap does
+// not need to be second-fresh.
+//
+// Cached here rather than via `export const revalidate` because that would let
+// Next prerender the route at build time, where there is no database: the query
+// fails, an empty sitemap gets baked, and ISR then serves it as fresh for an
+// hour after every deploy. Staying dynamic keeps the build DB-free.
+const SITEMAP_TTL_MS = 60 * 60 * 1000;
+let cachedLists: { lists: Awaited<ReturnType<typeof loadPublicLists>>; expires: number } | null = null;
+
+async function loadPublicListsCached() {
+  if (cachedLists && cachedLists.expires > Date.now()) return cachedLists.lists;
+  const lists = await loadPublicLists(5000);
+  // An empty result is never cached, so a transient DB failure can't pin an
+  // empty sitemap for an hour.
+  if (lists.length) cachedLists = { lists, expires: Date.now() + SITEMAP_TTL_MS };
+  return lists;
+}
+
 function absolute(path: string) {
   return new URL(path, getAppUrl()).toString();
 }
@@ -28,7 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let lists: Awaited<ReturnType<typeof loadPublicLists>> = [];
   try {
-    lists = await loadPublicLists(5000);
+    lists = await loadPublicListsCached();
   } catch {
     lists = [];
   }

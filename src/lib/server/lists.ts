@@ -20,6 +20,8 @@ type ListRow = {
   user_email: string;
   username: string | null;
   can_edit?: boolean;
+  // Only selected by fetchListById; undefined on the bulk-list queries.
+  owner_is_public?: boolean | null;
 };
 
 // Subquery fragment that aggregates list_items into a JSON array, ordered newest-first
@@ -50,6 +52,24 @@ type ParsedEntry = {
 
 const DEFAULT_COLOR = "sky";
 const ALLOWED_COLORS = new Set(["sky", "emerald", "amber", "violet", "rose", "indigo", "slate"]);
+
+// A list is a curated set of films, not a bulk dump. The item cap bounds the
+// single INSERT insertList builds (2n+1 bind parameters, against a Postgres
+// ceiling of 65535) and the JSON aggregation every read of the list runs; it
+// matches the limit the CSV import path has always enforced.
+const MAX_LIST_ITEMS = 500;
+const MAX_TITLE_LENGTH = 200;
+
+function normalizeTitleInput(raw: string) {
+  const title = raw.trim();
+  if (!title) {
+    publicError("Title is required", 400);
+  }
+  if (title.length > MAX_TITLE_LENGTH) {
+    publicError(`Title must be ${MAX_TITLE_LENGTH} characters or fewer`, 400);
+  }
+  return title;
+}
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
@@ -140,7 +160,7 @@ async function fetchListById(id: string) {
   const pool = getPool();
   const result = await pool.query<ListRow>(
     `
-      SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}
+      SELECT lists.*, profiles.username, profiles.is_public AS owner_is_public, ${ITEMS_SUBQUERY}
       FROM lists
       LEFT JOIN profiles ON lists.user_email = profiles.user_email
       WHERE lists.id = $1
@@ -305,11 +325,11 @@ export async function createListForUser(
   color?: string | null,
   mediaType: "movie" | "tv" = "movie",
 ) {
-  const normalizedTitle = title.trim();
-  if (!normalizedTitle) {
-    publicError("Title is required", 400);
-  }
+  const normalizedTitle = normalizeTitleInput(title);
   const uniqueIds = Array.from(new Set(movies));
+  if (uniqueIds.length > MAX_LIST_ITEMS) {
+    publicError(`A list can hold at most ${MAX_LIST_ITEMS} titles`, 400);
+  }
   const items = uniqueIds.map((id) => ({ tmdbId: id, mediaType }));
   return insertList(normalizedTitle, items, color ?? null, userEmail);
 }
@@ -325,7 +345,7 @@ export async function updateListForUser(
     publicError("List not found", 404);
   }
 
-  const nextTitle = data.title?.trim() || existing.title;
+  const nextTitle = data.title?.trim() ? normalizeTitleInput(data.title) : existing.title;
   const nextSlug = data.slug ? await generateSlug(data.slug, existing.user_email, listId) : existing.slug;
   const nextVisibility = data.visibility ? normalizeVisibility(data.visibility) : existing.visibility;
   if (nextVisibility === "public") {
@@ -441,13 +461,15 @@ export const getListByUsernameSlugForViewer = cache(async (username: string, slu
   } catch {
     return null;
   }
-  const owner = await pool.query<{ user_email: string }>("SELECT user_email FROM profiles WHERE username = $1", [
-    normalizedUsername,
-  ]);
+  const owner = await pool.query<{ user_email: string; is_public: boolean }>(
+    "SELECT user_email, is_public FROM profiles WHERE username = $1",
+    [normalizedUsername],
+  );
   const ownerEmail = owner.rows[0]?.user_email;
   if (!ownerEmail) {
     return null;
   }
+  const ownerProfileIsPublic = owner.rows[0]?.is_public === true;
 
   const result = await pool.query<ListRow>(
     `
@@ -472,16 +494,30 @@ export const getListByUsernameSlugForViewer = cache(async (username: string, slu
     return null;
   }
 
+  // A private profile hides its lists from strangers even when an individual
+  // list is public — otherwise /<username>/<slug> stays reachable while
+  // /<username> 404s. Owners and explicit share recipients are unaffected.
+  if (!ownerProfileIsPublic && !isOwner && !isShared) {
+    return null;
+  }
+
   return mapList({ ...list, can_edit: canEdit }, normalizedViewer);
 });
 
+// Anonymous surface: the JSON API, the sitemap, and the /[username] page. A
+// list is only visible here when its own visibility is public AND its owner's
+// profile is public, matching getPublicProfileByUsername. Without the is_public
+// leg, /api/lists/public?username=alice kept serving a profile whose page 404s.
+// The signed-in owner reads their own lists through listListsForUser instead,
+// which is keyed on user_email and unaffected by this filter.
 export async function loadPublicLists(limit = 24, username?: string | null) {
   const pool = getPool();
   if (username) {
     const normalizedUsername = normalizeUsername(username);
-    const owner = await pool.query<{ user_email: string }>("SELECT user_email FROM profiles WHERE username = $1", [
-      normalizedUsername,
-    ]);
+    const owner = await pool.query<{ user_email: string }>(
+      "SELECT user_email FROM profiles WHERE username = $1 AND is_public = true",
+      [normalizedUsername],
+    );
     const ownerEmail = owner.rows[0]?.user_email;
     if (!ownerEmail) {
       return [];
@@ -490,7 +526,7 @@ export async function loadPublicLists(limit = 24, username?: string | null) {
       `
         SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}
         FROM lists
-        JOIN profiles ON lists.user_email = profiles.user_email
+        JOIN profiles ON lists.user_email = profiles.user_email AND profiles.is_public = true
         WHERE lists.visibility = 'public' AND lists.user_email = $1
         ORDER BY lists.created_at DESC
         LIMIT $2
@@ -504,7 +540,7 @@ export async function loadPublicLists(limit = 24, username?: string | null) {
     `
       SELECT lists.*, profiles.username, ${ITEMS_SUBQUERY}
       FROM lists
-      JOIN profiles ON lists.user_email = profiles.user_email
+      JOIN profiles ON lists.user_email = profiles.user_email AND profiles.is_public = true
       WHERE lists.visibility = 'public'
       ORDER BY lists.created_at DESC
       LIMIT $1
@@ -523,7 +559,10 @@ export const loadFavoritesForUser = cache(async (userEmail: string) => {
       JOIN lists ON lists.id = user_favorites.list_id
       LEFT JOIN profiles ON lists.user_email = profiles.user_email
       WHERE user_favorites.user_email = $1
-        AND (lists.visibility = 'public' OR lists.user_email = $1)
+        AND (
+          lists.user_email = $1
+          OR (lists.visibility = 'public' AND COALESCE(profiles.is_public, false))
+        )
       ORDER BY user_favorites.created_at DESC
     `,
     [userEmail],
@@ -547,7 +586,15 @@ export async function addFavoriteForUser(listId: string, userEmail: string) {
   if (!list) {
     publicError("List not found", 404);
   }
-  if (list.visibility !== "public" && normalizeEmail(list.user_email) !== userEmail) {
+  // A public list on a private profile is off-limits to everyone but its owner,
+  // matching loadPublicLists and getListByUsernameSlugForViewer. Without the
+  // is_public leg, favouriting was a side door: anyone holding the list id
+  // could keep reading its contents through GET /api/favorites after the owner
+  // took their profile private.
+  const visibleToViewer =
+    normalizeEmail(list.user_email) === userEmail ||
+    (list.visibility === "public" && list.owner_is_public === true);
+  if (!visibleToViewer) {
     publicError("List not found", 404);
   }
   await pool.query(
@@ -718,12 +765,12 @@ function parseImportedTitles(raw: string): ParsedEntry[] {
 }
 
 export async function importListForUser(title: string, raw: string, userEmail: string) {
-  const normalizedTitle = title.trim();
-  if (!normalizedTitle || !raw.trim()) {
-    publicError("Title and data are required", 400);
+  const normalizedTitle = normalizeTitleInput(title);
+  if (!raw.trim()) {
+    publicError("Import data is required", 400);
   }
 
-  const entries = parseImportedTitles(raw).slice(0, 500);
+  const entries = parseImportedTitles(raw).slice(0, MAX_LIST_ITEMS);
   if (!entries.length) {
     publicError("No movies could be parsed from the import data", 400);
   }

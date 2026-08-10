@@ -69,13 +69,15 @@ export async function startTvPairing(
   throw new Error("Unable to allocate a unique device approval code");
 }
 
-/** Approves a device from an authenticated browser session. */
-export async function approveTvPairing(userEmail: string, rawPin: string): Promise<boolean> {
+/** Approves a device from an authenticated browser session. Returns the label
+ * of the device that was approved, so the browser can name what it just let in,
+ * or null when no pending pairing matched. */
+export async function approveTvPairing(userEmail: string, rawPin: string): Promise<string | null> {
   const pin = normalizePin(rawPin);
-  if (pin.length !== PAIRING_PIN_LENGTH) return false;
+  if (pin.length !== PAIRING_PIN_LENGTH) return null;
 
   const pool = getPool();
-  const result = await pool.query(
+  const result = await pool.query<{ label: string }>(
     `WITH approved AS (
        UPDATE tv_pairings
        SET user_email = $1, approved_at = NOW()
@@ -95,10 +97,10 @@ export async function approveTvPairing(userEmail: string, rawPin: string): Promi
             NOW() + $4 * interval '1 millisecond'
      FROM approved
      ON CONFLICT (token_hash) DO NOTHING
-     RETURNING token_hash`,
+     RETURNING label`,
     [userEmail, pin, String(TOKEN_IDLE_TTL_MS), String(TOKEN_MAX_TTL_MS)],
   );
-  return (result.rowCount ?? 0) > 0;
+  return result.rows[0]?.label ?? null;
 }
 
 export type TvPairingClaim =

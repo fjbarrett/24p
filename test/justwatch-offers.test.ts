@@ -1,7 +1,32 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 
+// bun module mocks are process-global: this replaces @/lib/server/tmdb for every
+// file in the run, including modules that import other functions from it. An
+// export missing here surfaces in an unrelated test as "Export named 'x' not
+// found", so the stub covers the whole surface other server modules import.
+// Only fetchTmdbArtwork is exercised; the rest throw rather than hand back
+// plausible-looking data to a caller that should not be reaching TMDB at all.
+function unstubbed(name: string) {
+  return () => {
+    throw new Error(`@/lib/server/tmdb.${name} is stubbed out for this test run`);
+  };
+}
+
 mock.module("@/lib/server/tmdb", () => ({
   fetchTmdbArtwork: async () => null,
+  fetchTmdbMovie: unstubbed("fetchTmdbMovie"),
+  fetchTmdbMovies: unstubbed("fetchTmdbMovies"),
+  fetchTmdbPersonWithFilmography: unstubbed("fetchTmdbPersonWithFilmography"),
+  fetchTmdbRecommendationsForMovie: unstubbed("fetchTmdbRecommendationsForMovie"),
+  fetchTmdbShow: unstubbed("fetchTmdbShow"),
+  fetchTmdbTrailerForMovie: unstubbed("fetchTmdbTrailerForMovie"),
+  fetchTmdbTrailerForShow: unstubbed("fetchTmdbTrailerForShow"),
+  fetchWatchProviders: unstubbed("fetchWatchProviders"),
+  findTmdbMovieId: unstubbed("findTmdbMovieId"),
+  resolveMovieSlug: unstubbed("resolveMovieSlug"),
+  resolvePersonSlug: unstubbed("resolvePersonSlug"),
+  resolveTvSlug: unstubbed("resolveTvSlug"),
+  searchTmdb: unstubbed("searchTmdb"),
 }));
 
 const { fetchJustWatchOffers } = await import("@/lib/server/justwatch");

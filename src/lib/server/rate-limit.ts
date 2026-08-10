@@ -14,16 +14,28 @@ import { getPool } from "@/lib/server/db";
 type Bucket = { count: number; reset: number };
 
 const buckets = new Map<string, Bucket>();
+// Hard ceiling on tracked keys. Purging only expired entries leaves the map
+// unbounded whenever new keys arrive faster than old ones age out.
+const MAX_BUCKETS = 10_000;
 
 export type RateLimitResult = { ok: true } | { ok: false; retryAfterSeconds: number };
+
+function evict(now: number) {
+  for (const [key, bucket] of buckets) {
+    if (bucket.reset < now) buckets.delete(key);
+  }
+  // Still full: drop oldest-first (Map iterates in insertion order).
+  for (const key of buckets.keys()) {
+    if (buckets.size < MAX_BUCKETS) break;
+    buckets.delete(key);
+  }
+}
 
 export function consume(key: string, max: number, windowMs: number): RateLimitResult {
   const now = Date.now();
   const bucket = buckets.get(key);
   if (!bucket || now > bucket.reset) {
-    if (buckets.size > 10_000) {
-      for (const [k, v] of buckets) if (v.reset < now) buckets.delete(k);
-    }
+    if (buckets.size >= MAX_BUCKETS) evict(now);
     buckets.set(key, { count: 1, reset: now + windowMs });
     return { ok: true };
   }
