@@ -12,6 +12,22 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "search-results-redesign",
+    date: "2026-08-07",
+    title: "Search results tell you what you're looking at",
+    summary:
+      "Every result now says whether it's a film or a series, what year it came out, and how it's rated, so you can pick the right Titans without opening three of them first. People show up with a round photo and what they're known for.",
+    type: "Improvement",
+    tags: ["search"],
+    changed: [
+      "Results are denser and easier to scan, with the poster, title, and details lined up in a column.",
+      "Cast and crew results now show their department and a couple of credits.",
+      "The results panel lines up with the search box and stops at the bottom of the window instead of running off the screen.",
+      "Placeholder rows appear while a search is running, so the panel no longer sits empty.",
+      "Posters across lists and recommendations lost their grey outlines.",
+    ],
+  },
+  {
     slug: "sharing-and-lists-fixes",
     date: "2026-07-13",
     title: "Shared lists, list editing, and streaming filters work the way they should",

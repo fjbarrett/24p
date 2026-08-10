@@ -6,7 +6,6 @@
       "name": "24p",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.111.0",
-        "jose": "4.15.9",
         "next": "^16.2.10",
         "next-auth": "^4.24.14",
         "pg": "^8.22.0",

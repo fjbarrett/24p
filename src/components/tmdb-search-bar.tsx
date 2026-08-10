@@ -22,6 +22,12 @@ function resultKey(tmdbId: number, mediaType?: string) {
   return `${mediaType === "tv" ? "tv" : "movie"}-${tmdbId}`;
 }
 
+const ROW_CLASS = "flex items-center gap-3 rounded-[18px] px-2 py-1.5 transition hover:bg-white/6";
+const FOCUS_CLASS =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60";
+const RATING_VOTE_FLOOR = 20;
+const SKELETON_WIDTHS = ["w-[62%]", "w-[45%]", "w-[54%]"];
+
 export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false }: TmdbSearchBarProps) {
   const [query, setQuery] = useState("");
   const [combined, setCombined] = useState<SearchResultItem[]>([]);
@@ -32,6 +38,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
   const [selectedListId, setSelectedListId] = useState<string>(lists[0]?.id ?? "");
   const [savingItemKey, setSavingItemKey] = useState<string | null>(null);
   const [status, setStatus] = useState<{ itemKey: string; message: string; tone: "success" | "error" } | null>(null);
+  const [panelMaxHeight, setPanelMaxHeight] = useState<number>();
   // Tracks titles added during this session so the UI stays correct without a page reload
   const [localAdditions, setLocalAdditions] = useState<Map<string, string>>(new Map());
   const errorId = useId();
@@ -118,6 +125,21 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
 
   const showResultsPanel = !panelDismissed && (query.trim().length >= 2 || isSearching || !!error);
 
+  // The home page centres the search bar vertically, so a fixed cap would run the
+  // panel off the bottom of the window. Give it whatever room is left instead.
+  useEffect(() => {
+    if (!showResultsPanel) return;
+    const measure = () => {
+      const bottom = containerRef.current?.getBoundingClientRect().bottom ?? 0;
+      // Capped so the dropdown never becomes a full-height curtain under the
+      // slim page header, floored so it stays usable on short windows.
+      setPanelMaxHeight(Math.min(560, Math.max(240, Math.round(window.innerHeight - bottom - 24))));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [showResultsPanel]);
+
   const noLists = !lists.length;
   const canManageLists = Boolean(normalizedEmail);
 
@@ -177,7 +199,10 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
     <div ref={containerRef} className="relative w-full" role="search" aria-label="Movie search">
       <div className="flex items-center gap-2">
         <div className={`relative mx-auto flex w-full items-center gap-2 overflow-hidden rounded-3xl bg-black-950/70 px-3.5 py-2 shadow-inner transition ${wide ? "max-w-[760px]" : "max-w-[480px]"} ${bordered ? "border-[2.5px] border-white/15" : ""}`}>
-          <span className="flex items-center justify-center rounded-full p-1.5 text-white" aria-hidden>
+          <span
+            className={`flex items-center justify-center rounded-full p-1.5 text-white ${isSearching ? "animate-pulse" : ""}`}
+            aria-hidden
+          >
             <Search className="h-4.5 w-4.5" />
           </span>
           <input
@@ -206,21 +231,16 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
             </button>
           ) : null}
         </div>
-        {isSearching && <span className="text-xs text-black-500">Searching...</span>}
       </div>
-      {error && (
-        <p className="mt-2 text-xs text-rose-300" role="alert" aria-live="assertive" id={errorId}>
-          {error}
-        </p>
-      )}
       {showResultsPanel && (
         <div
-          className="search-results-scrollbar absolute left-1/2 top-12 z-40 w-[min(90vw,720px)] max-h-[70vh] -translate-x-1/2 space-y-3 overflow-y-auto rounded-3xl bg-black p-4 backdrop-blur"
+          className={`search-results-scrollbar animate-fade-slide-in absolute left-1/2 top-full z-40 mt-2 max-h-[70vh] -translate-x-1/2 overflow-y-auto overscroll-contain rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,#1a1a1a,#0d0d0d)] p-1.5 text-left shadow-[0_36px_120px_rgba(0,0,0,0.72)] ring-1 ring-white/5 ${wide ? "w-[min(92vw,760px)]" : "w-[min(92vw,480px)]"}`}
+          style={panelMaxHeight ? { maxHeight: panelMaxHeight } : undefined}
           id={panelId}
           aria-label="Search results"
         >
           <ul
-            className="space-y-3"
+            className="space-y-0.5"
             id={resultsId}
             aria-live="polite"
             aria-busy={isSearching}
@@ -228,27 +248,35 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
           >
             {displayItems.map((item) => {
               if (item.resultType === "artist") {
+                // A circular crop reads as a person at a glance, so people and
+                // titles stay distinguishable without labelling every row.
+                const meta = [item.department, item.knownFor.slice(0, 2).join(", ")]
+                  .filter(Boolean)
+                  .join(" · ");
                 return (
                   <li key={`artist-${item.tmdbId}`}>
                     <Link
                       href={`/artists/${toArtistSlug(item.name)}`}
-                      className="flex items-center gap-3 rounded-2xl bg-black-900/70 px-3 py-2.5 transition hover:bg-black-800/70"
+                      className={`${ROW_CLASS} ${FOCUS_CLASS}`}
                     >
                       {item.profileUrl ? (
                         <Image
                           src={item.profileUrl}
                           alt={item.name}
-                          width={48}
-                          height={64}
-                          className="h-16 w-12 flex-shrink-0 rounded-xl object-cover object-top"
+                          width={44}
+                          height={44}
+                          className="h-11 w-11 flex-shrink-0 rounded-full object-cover object-top"
                         />
                       ) : (
-                        <div className="flex h-16 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-black-800 text-[10px] text-black-500">
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-white/5 text-[10px] text-black-500">
                           No art
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-white leading-snug">{item.name}</p>
+                        <p className="truncate text-[15px] font-medium leading-snug text-white">{item.name}</p>
+                        {meta ? (
+                          <p className="mt-1 truncate text-xs leading-none text-black-500">{meta}</p>
+                        ) : null}
                       </div>
                     </Link>
                   </li>
@@ -261,40 +289,58 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
               const detailHref = isShow
                 ? `/tv/${toMovieSlug(item.title, item.releaseYear)}`
                 : `/movies/${toMovieSlug(item.title, item.releaseYear)}`;
+              // TMDB averages swing hard on a handful of votes, so a score only
+              // earns its place once enough people have rated the title.
+              const rating =
+                typeof item.rating === "number" && item.rating > 0 && (item.voteCount ?? 0) >= RATING_VOTE_FLOOR
+                  ? item.rating.toFixed(1)
+                  : null;
+              const savedListId = firstListContaining(item.tmdbId, mediaType);
               return (
                 <li key={itemKey}>
-                  <div className="flex items-center gap-3 rounded-2xl bg-black-900/70 px-3 py-2.5 transition hover:bg-black-800/70">
+                  <div className={ROW_CLASS}>
                     <Link
                       href={detailHref}
-                      className="flex flex-1 items-center gap-3"
-                      aria-label={`${item.title}${item.releaseYear ? ` (${item.releaseYear})` : ""}`}
+                      className={`flex min-w-0 flex-1 items-center gap-3 rounded-xl ${FOCUS_CLASS}`}
+                      aria-label={`${item.title}${item.releaseYear ? `, ${item.releaseYear}` : ""}, ${isShow ? "TV series" : "film"}`}
                     >
                       {item.posterUrl ? (
                         <Image
                           src={item.posterUrl}
-                          alt={`${item.title} poster`}
-                          width={48}
-                          height={64}
-                          className="h-16 w-12 flex-shrink-0 rounded-xl object-cover"
+                          alt=""
+                          width={44}
+                          height={66}
+                          className="h-[66px] w-11 flex-shrink-0 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="flex h-16 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-black-800 text-xs text-black-500">
+                        <div className="flex h-[66px] w-11 flex-shrink-0 items-center justify-center rounded-lg bg-white/5 text-[10px] text-black-500">
                           No art
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-sm font-normal text-white leading-snug">
-                          {item.title}{item.releaseYear ? <span className="text-black-500"> ({item.releaseYear})</span> : null}
-                        </h4>
-                        {item.genres?.length ? (
-                          <p className="mt-0.5 text-xs text-black-500">{item.genres.slice(0, 2).join(" · ")}</p>
-                        ) : null}
+                        <h4 className="truncate text-[15px] font-medium leading-snug text-white">{item.title}</h4>
+                        <p className="mt-1 flex items-center gap-1.5 text-xs leading-none text-black-500">
+                          <span>{isShow ? "Series" : "Film"}</span>
+                          {item.releaseYear ? (
+                            <>
+                              <span aria-hidden>·</span>
+                              <span>{item.releaseYear}</span>
+                            </>
+                          ) : null}
+                          {rating ? (
+                            <>
+                              <span aria-hidden>·</span>
+                              <span className="text-amber-400" aria-hidden>★</span>
+                              <span>{rating}</span>
+                            </>
+                          ) : null}
+                        </p>
                       </div>
                     </Link>
                     {canManageLists ? (
                       <button
                         type="button"
-                        aria-label={`Add ${item.title} to a list`}
+                        aria-label={savedListId ? `${item.title} is in a list` : `Add ${item.title} to a list`}
                         aria-controls={`add-to-list-${itemKey}`}
                         aria-expanded={activeItemKey === itemKey}
                         disabled={noLists}
@@ -303,16 +349,17 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
                           const isOpen = activeItemKey === itemKey;
                           setActiveItemKey(isOpen ? null : itemKey);
                           if (!isOpen) {
-                            const existing = firstListContaining(item.tmdbId, mediaType);
-                            setSelectedListId(existing ?? selectedListId ?? lists[0]?.id ?? "");
+                            setSelectedListId(savedListId ?? selectedListId ?? lists[0]?.id ?? "");
                           }
                           setStatus(null);
                         }}
-                        className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:brightness-95 active:brightness-90 disabled:opacity-40"
+                        className={`inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border transition disabled:opacity-30 ${FOCUS_CLASS} ${
+                          savedListId
+                            ? "border-white/15 bg-white/12 text-white"
+                            : "border-white/12 bg-white/5 text-white/70 hover:border-white/30 hover:bg-white hover:text-black"
+                        }`}
                       >
-                        {firstListContaining(item.tmdbId, mediaType)
-                          ? <Check className="h-5 w-5" />
-                          : <Plus className="h-5 w-5" />}
+                        {savedListId ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                       </button>
                     ) : null}
                   </div>
@@ -320,7 +367,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
                   {activeItemKey === itemKey && (
                     <div
                       id={`add-to-list-${itemKey}`}
-                      className="mt-2 space-y-2 rounded-2xl bg-black-900/80 p-3 shadow-inner"
+                      className="mx-2 mb-1 mt-1 space-y-2 rounded-[18px] border border-white/10 bg-white/5 p-2.5"
                     >
                       {noLists ? (
                         <p className="text-sm text-black-400">Create a list first to save movies.</p>
@@ -333,7 +380,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
                             id={`list-picker-${itemKey}`}
                             value={selectedListId}
                             onChange={(event) => setSelectedListId(event.target.value)}
-                            className="w-full rounded-2xl bg-black-800/80 px-3 py-2 text-sm text-black-100 outline-none"
+                            className="w-full rounded-full bg-black-900 px-3.5 py-2 text-sm text-black-100 outline-none"
                           >
                             {lists.map((list) => (
                               <option key={list.id} value={list.id} className="bg-black-900 text-black-100">
@@ -360,7 +407,7 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
 
                   {status && status.itemKey === itemKey && (
                     <p
-                      className={`mt-1 text-xs ${status.tone === "success" ? "text-emerald-300" : "text-rose-300"}`}
+                      className={`mx-2 mb-1 text-xs ${status.tone === "success" ? "text-emerald-300" : "text-rose-300"}`}
                       role="status"
                     >
                       {status.message}
@@ -369,9 +416,27 @@ export function TmdbSearchBar({ lists, userEmail, wide = false, bordered = false
                 </li>
               );
             })}
+            {isSearching && !displayItems.length && !error
+              ? SKELETON_WIDTHS.map((width, index) => (
+                  <li key={`placeholder-${index}`} className={ROW_CLASS} aria-hidden>
+                    <div className="h-[66px] w-11 flex-shrink-0 animate-pulse rounded-lg bg-white/8" />
+                    <div className="min-w-0 flex-1 space-y-2.5">
+                      <div className={`h-3.5 animate-pulse rounded-full bg-white/8 ${width}`} />
+                      <div className="h-2.5 w-20 animate-pulse rounded-full bg-white/5" />
+                    </div>
+                  </li>
+                ))
+              : null}
+            {error ? (
+              <li>
+                <p className="px-3 py-2.5 text-sm text-rose-300" role="alert" aria-live="assertive" id={errorId}>
+                  {error}
+                </p>
+              </li>
+            ) : null}
             {!displayItems.length && query.trim().length >= 2 && !isSearching && !error && (
               <li>
-                <p className="text-sm text-black-500" role="status">
+                <p className="px-3 py-2.5 text-sm text-black-500" role="status">
                   No matches yet. Try a different title.
                 </p>
               </li>

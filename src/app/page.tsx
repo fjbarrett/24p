@@ -20,7 +20,7 @@ export default async function Home() {
     <div className="relative flex min-h-screen items-center justify-center px-4 py-8 text-black-100 sm:px-6">
       {!isSignedIn ? (
         <div className="absolute right-4 top-8 z-10 sm:right-6">
-          <SignInButton ariaLabel="Sign in with Google" className="px-5 py-2 text-sm" />
+          <SignInButton ariaLabel="Sign in" className="px-5 py-2 text-sm" />
         </div>
       ) : null}
       <div className={`mx-auto flex w-full flex-col items-center ${isSignedIn ? "max-w-[900px]" : "max-w-[1280px] -translate-y-16"}`}>
