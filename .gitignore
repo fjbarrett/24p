@@ -8,6 +8,8 @@ node_modules/
 .next/
 out/
 build/
+# Local postgres bind-mount if a dev ever swaps the named volume for one
+db-data/
 
 # Env/config secrets
 .env*
