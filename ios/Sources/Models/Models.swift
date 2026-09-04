@@ -97,6 +97,14 @@ struct WatchLinkOffer: Codable, Identifiable, Hashable {
     var iconURL: URL? { iconUrl.flatMap(URL.init(string:)) }
 }
 
+// GET /api/apple-tv answers 200 with nullable url/price even for unknown IDs
+// (null means "no offer"), so both stay optional — a 2xx never fails to decode.
+struct AppleTvLink: Codable, Hashable {
+    let url: String?
+    let price: String?
+    var linkURL: URL? { url.flatMap(URL.init(string:)) }
+}
+
 // MARK: - Session / Auth
 
 struct SessionUser: Codable, Hashable {

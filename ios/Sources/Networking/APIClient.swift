@@ -147,6 +147,13 @@ final class APIClient {
         return try await get("/api/watch-links", query: query)
     }
 
+    /// Apple TV purchase link. The endpoint answers 200 with nullable
+    /// url/price even for unknown IDs (null means "no offer"), so success
+    /// always decodes — only 429/5xx throw, via the shared error path.
+    func appleTvLink(imdbId: String, title: String) async throws -> AppleTvLink {
+        try await get("/api/apple-tv", query: ["imdbId": imdbId, "title": title])
+    }
+
     // MARK: - Streaming catalog
 
     func streamingCatalog(
