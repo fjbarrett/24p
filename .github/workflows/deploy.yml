@@ -98,10 +98,15 @@ jobs:
             ${{ env.IMAGE_WEB }}:${{ steps.meta.outputs.tag }}
             ${{ env.IMAGE_WEB }}:${{ github.sha }}
           # NEXT_PUBLIC_* values are inlined into the client bundle at build
-          # time — runtime env on the server cannot change them.
+          # time — runtime env on the server cannot change them. GA keeps its
+          # in-code fallback when the secret is unset; NO_INDEX defaults to
+          # indexed (prod) and STRAWBERRY to disabled, matching local builds.
           build-args: |
             NEXT_PUBLIC_APP_URL=https://24p.mov
             NEXT_PUBLIC_AUTH_CALLBACK_URL=https://24p.mov
+            NEXT_PUBLIC_GA_MEASUREMENT_ID=${{ secrets.PROD_GA_MEASUREMENT_ID || 'G-6PH21R5KXN' }}
+            NEXT_PUBLIC_NO_INDEX=${{ secrets.PROD_NEXT_PUBLIC_NO_INDEX }}
+            NEXT_PUBLIC_STRAWBERRY_BASE_URL=${{ secrets.PROD_STRAWBERRY_BASE_URL }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 
@@ -131,6 +136,7 @@ jobs:
           NEXT_PUBLIC_AUTH_CALLBACK_URL=https://24p.mov
           GOOGLE_CLIENT_ID=${{ secrets.PROD_GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET=${{ secrets.PROD_GOOGLE_CLIENT_SECRET }}
+          STRAWBERRY_BASE_URL=${{ secrets.PROD_STRAWBERRY_BASE_URL }}
           TMDB_API_KEY=${{ secrets.PROD_TMDB_API_KEY }}
           DATABASE_URL=${{ secrets.PROD_DATABASE_URL }}
           DB_SSLMODE=${{ secrets.PROD_DB_SSLMODE }}
@@ -207,15 +213,17 @@ jobs:
 
             # Readiness probe. The smoke test above only proves the app serves
             # `/` (which renders without a DB round-trip), so a DB outage would
-            # pass it silently. Check DB reachability too — but a DB outage does
-            # NOT justify rolling back the app image (rollback can't fix the DB
-            # and would block shipping app fixes), so warn loudly instead of
-            # failing. Real paging comes from an external monitor on /api/health.
+            # pass it silently. Check DB reachability too, and FAIL the deploy
+            # on degraded — but WITHOUT rolling back the app image (rollback
+            # can't fix the DB and would block shipping app fixes). The
+            # failure pages the database, not the deploy: the app stays up on
+            # the new image while DB-backed features 500.
             ready=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/api/health || true)
             if [ "$ready" = "200" ]; then
               echo "readiness ok: /api/health 200 (DB reachable)"
             else
-              echo "::warning::readiness degraded: /api/health returned $ready — app is up but DB-backed features will 500; investigate the database, not this deploy"
+              echo "::error::readiness degraded: /api/health returned $ready — app is up but DB-backed features will 500; investigate the database, not this deploy"
+              exit 1
             fi
 
             # Success. Tag the outgoing image so it survives pruning — an

@@ -39,6 +39,9 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       STRAWBERRY_BASE_URL: ${STRAWBERRY_BASE_URL:-}
+      # Mirrors the canonical server var: server code accepts both names, and
+      # without this the NEXT_PUBLIC_* reader silently disagrees at runtime.
+      NEXT_PUBLIC_STRAWBERRY_BASE_URL: ${STRAWBERRY_BASE_URL:-}
       TMDB_API_KEY: ${TMDB_API_KEY:-}
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/24p}
       DB_MAX_CONNECTIONS: ${DB_MAX_CONNECTIONS:-}
