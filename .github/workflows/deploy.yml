@@ -213,15 +213,17 @@ jobs:
 
             # Readiness probe. The smoke test above only proves the app serves
             # `/` (which renders without a DB round-trip), so a DB outage would
-            # pass it silently. Check DB reachability too — but a DB outage does
-            # NOT justify rolling back the app image (rollback can't fix the DB
-            # and would block shipping app fixes), so warn loudly instead of
-            # failing. Real paging comes from an external monitor on /api/health.
+            # pass it silently. Check DB reachability too, and FAIL the deploy
+            # on degraded — but WITHOUT rolling back the app image (rollback
+            # can't fix the DB and would block shipping app fixes). The
+            # failure pages the database, not the deploy: the app stays up on
+            # the new image while DB-backed features 500.
             ready=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/api/health || true)
             if [ "$ready" = "200" ]; then
               echo "readiness ok: /api/health 200 (DB reachable)"
             else
-              echo "::warning::readiness degraded: /api/health returned $ready — app is up but DB-backed features will 500; investigate the database, not this deploy"
+              echo "::error::readiness degraded: /api/health returned $ready — app is up but DB-backed features will 500; investigate the database, not this deploy"
+              exit 1
             fi
 
             # Success. Tag the outgoing image so it survives pruning — an

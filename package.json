@@ -12,7 +12,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint . --max-warnings 0",
     "test": "bun test",
     "generate:favicon": "node scripts/generate-favicon.mjs",
     "prepare": "husky"
