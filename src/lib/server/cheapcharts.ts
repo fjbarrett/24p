@@ -306,7 +306,7 @@ export async function syncMovieAdditionToCheapCharts(listId: string, tmdbId: num
               link.last_sync_error
        FROM cheapcharts_list_links link
        JOIN cheapcharts_accounts a ON a.user_email = link.user_email
-       JOIN lists ON lists.id = link.list_id AND lists.user_email = link.user_email
+       JOIN lists ON lists.id::text = link.list_id AND lists.user_email = link.user_email
        WHERE link.list_id = $1 AND link.media_type = 'movies'`,
       [listId],
     );
