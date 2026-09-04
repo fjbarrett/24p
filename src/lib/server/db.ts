@@ -221,7 +221,12 @@ const INCREMENTAL_MIGRATIONS = [
   `DELETE FROM list_items WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = list_items.list_id)`,
   `DELETE FROM list_shares WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = list_shares.list_id)`,
   `DELETE FROM user_favorites WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = user_favorites.list_id)`,
-  `DELETE FROM cheapcharts_list_links WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = cheapcharts_list_links.list_id)`,
+  // lists.id is TEXT on fresh installs but uuid on legacy databases (the
+  // column predates the TEXT DDL and CREATE TABLE never alters it), while
+  // cheapcharts_list_links.list_id is always TEXT. Compare as text so this
+  // runs on both — a bare `=` errors with `uuid = text` on legacy DBs and
+  // fails the boot-time migration, which takes the container down.
+  `DELETE FROM cheapcharts_list_links WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id::text = cheapcharts_list_links.list_id)`,
   // TMDB movie and TV ids are separate, overlapping namespaces; the old
   // (list_id, tmdb_id) key silently dropped a TV title whenever a movie with
   // the same id was already on the list.
