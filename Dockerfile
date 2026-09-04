@@ -13,10 +13,18 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 # NEXT_PUBLIC_* values are inlined into the client bundle at build time;
 # setting them at runtime cannot change client behavior, so they arrive here.
+# Defaults mirror the in-code fallbacks so an unset build-arg behaves exactly
+# like a local `bun run build` (GA fallback lives in src/app/layout.tsx).
 ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_AUTH_CALLBACK_URL
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID=G-6PH21R5KXN
+ARG NEXT_PUBLIC_NO_INDEX=
+ARG NEXT_PUBLIC_STRAWBERRY_BASE_URL=
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_AUTH_CALLBACK_URL=$NEXT_PUBLIC_AUTH_CALLBACK_URL
+ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
+ENV NEXT_PUBLIC_NO_INDEX=$NEXT_PUBLIC_NO_INDEX
+ENV NEXT_PUBLIC_STRAWBERRY_BASE_URL=$NEXT_PUBLIC_STRAWBERRY_BASE_URL
 COPY tsconfig.json next.config.ts postcss.config.mjs ./
 COPY public ./public
 COPY src ./src
