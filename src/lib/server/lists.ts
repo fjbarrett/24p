@@ -8,6 +8,7 @@ import { mapWithConcurrency } from "@/lib/server/justwatch";
 import { publicError } from "@/lib/server/http";
 import { fetchTmdbArtwork, fetchTmdbMovies, fetchTmdbShow, findTmdbMovieId } from "@/lib/server/tmdb";
 import { saveRatingsForUser } from "@/lib/server/ratings";
+import { syncMovieAdditionToCheapCharts } from "@/lib/server/cheapcharts";
 
 type ListRow = {
   id: string;
@@ -387,12 +388,20 @@ export async function addMovieToListForUser(
 
   // Position is computed inside the INSERT so concurrent adds can't both read
   // the same MAX and collide (the JSON aggregation also breaks ties by id).
-  await pool.query(
+  const insertResult = await pool.query(
     `INSERT INTO list_items (list_id, tmdb_id, media_type, position)
      VALUES ($1, $2, $3, (SELECT COALESCE(MAX(position), -1) + 1 FROM list_items WHERE list_id = $1))
      ON CONFLICT (list_id, tmdb_id, media_type) DO NOTHING`,
     [listId, tmdbId, mediaType],
   );
+
+  // CheapCharts custom lists are movie-only. Sync only a newly inserted film;
+  // retrying an already-present item should not create unnecessary upstream
+  // traffic. A CheapCharts failure is recorded on the link but never rolls
+  // back the canonical 24p list mutation.
+  if (insertResult.rowCount === 1 && mediaType === "movie") {
+    await syncMovieAdditionToCheapCharts(listId, tmdbId);
+  }
 
   const updated = await fetchListById(listId);
   if (!updated) publicError("List not found", 404);
@@ -441,6 +450,7 @@ export async function deleteListForUser(listId: string, userEmail: string) {
     await client.query("DELETE FROM list_items WHERE list_id = $1", [listId]);
     await client.query("DELETE FROM list_shares WHERE list_id = $1", [listId]);
     await client.query("DELETE FROM user_favorites WHERE list_id = $1", [listId]);
+    await client.query("DELETE FROM cheapcharts_list_links WHERE list_id = $1", [listId]);
     await client.query("DELETE FROM lists WHERE id = $1", [listId]);
     await client.query("COMMIT");
   } catch (error) {

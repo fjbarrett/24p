@@ -12,6 +12,7 @@ import {
 } from "@/lib/list-store";
 import { DEFAULT_LIST_COLOR_ID, LIST_COLOR_OPTIONS, normalizeListColor } from "@/lib/list-colors";
 import { apiFetch } from "@/lib/api-client";
+import { CheapChartsListSync } from "@/components/cheapcharts-list-sync";
 
 export function ListEditor({
   list,
@@ -306,6 +307,8 @@ export function ListEditor({
           </div>
         </section>
       </div>
+
+      <CheapChartsListSync listId={list.id} />
 
       <section className="space-y-3 rounded-[20px] border border-white/8 bg-white/[0.03] p-3 sm:p-4">
         <div className="flex flex-col gap-2 sm:flex-row">

@@ -12,6 +12,19 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    slug: "cheapcharts-list-sync",
+    date: "2026-09-03",
+    title: "Send new list additions to CheapCharts",
+    summary:
+      "You can now connect an individual 24p list to a CheapCharts custom movie list. New films added in 24p are mirrored automatically, including additions made from the iPhone app.",
+    type: "Release",
+    tags: ["lists", "cheapcharts", "ios"],
+    added: [
+      "An optional CheapCharts connection inside each list's editor.",
+      "One-way syncing for new movie additions; existing films, TV shows, and removals stay unchanged.",
+    ],
+  },
+  {
     slug: "search-results-redesign",
     date: "2026-08-07",
     title: "Search results tell you what you're looking at",

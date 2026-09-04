@@ -104,7 +104,7 @@ export function proxy(request: NextRequest) {
     `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://image.tmdb.org https://images.justwatch.com",
-    "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
+    "connect-src 'self' https://buster.cheapcharts.de https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
     "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com",
     "object-src 'none'",
     "base-uri 'self'",

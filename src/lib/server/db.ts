@@ -168,6 +168,31 @@ const INCREMENTAL_MIGRATIONS = [
     reset_at TIMESTAMPTZ NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS api_rate_limits_reset_at_idx ON api_rate_limits (reset_at)`,
+  // CheapCharts accounts are connected once per 24p user. The upstream
+  // session token is encrypted at rest with a key derived from NEXTAUTH_SECRET;
+  // passwords never reach this app. Individual 24p lists opt into syncing by
+  // selecting one of that account's CheapCharts movie lists.
+  `CREATE TABLE IF NOT EXISTS cheapcharts_accounts (
+    user_email               TEXT PRIMARY KEY,
+    session_token_ciphertext TEXT NOT NULL,
+    country                  TEXT NOT NULL DEFAULT 'us',
+    connected_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE TABLE IF NOT EXISTS cheapcharts_list_links (
+    list_id                   TEXT PRIMARY KEY,
+    user_email                TEXT NOT NULL,
+    cheapcharts_list_id       TEXT NOT NULL,
+    cheapcharts_list_name     TEXT NOT NULL,
+    country                   TEXT NOT NULL DEFAULT 'us',
+    store                     TEXT NOT NULL DEFAULT 'itunes',
+    media_type                TEXT NOT NULL DEFAULT 'movies',
+    last_synced_at            TIMESTAMPTZ,
+    last_sync_error           TEXT,
+    created_at                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at                TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS cheapcharts_list_links_user_email_idx ON cheapcharts_list_links (user_email)`,
   // Remove the legacy global-PIN flow, including plaintext pending bearers.
   `DO $$
    BEGIN
@@ -196,6 +221,7 @@ const INCREMENTAL_MIGRATIONS = [
   `DELETE FROM list_items WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = list_items.list_id)`,
   `DELETE FROM list_shares WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = list_shares.list_id)`,
   `DELETE FROM user_favorites WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = user_favorites.list_id)`,
+  `DELETE FROM cheapcharts_list_links WHERE NOT EXISTS (SELECT 1 FROM lists WHERE lists.id = cheapcharts_list_links.list_id)`,
   // TMDB movie and TV ids are separate, overlapping namespaces; the old
   // (list_id, tmdb_id) key silently dropped a TV title whenever a movie with
   // the same id was already on the list.

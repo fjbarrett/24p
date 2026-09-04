@@ -22,6 +22,7 @@ A film tracking app for building and sharing movie and TV lists. Search any titl
 - Reorder items, move between lists, bulk manage
 - Import lists from Letterboxd or IMDb CSV exports
 - Share public lists via vanity URL (`/@username/list-slug`)
+- Optionally mirror new movie additions from a 24p list to a connected CheapCharts custom list
 
 ### Discovery
 - Search movies, TV shows, and people with live TMDB results
