@@ -1,5 +1,5 @@
 # Build Next.js app with Bun and ship a slim Node runtime image.
-FROM oven/bun:1.3 AS base
+FROM oven/bun:1.4 AS base
 WORKDIR /app
 
 # Only the manifests before install: a config or source tweak must not
