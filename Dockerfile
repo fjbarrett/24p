@@ -25,7 +25,7 @@ ENV NEXT_PUBLIC_AUTH_CALLBACK_URL=$NEXT_PUBLIC_AUTH_CALLBACK_URL
 ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
 ENV NEXT_PUBLIC_NO_INDEX=$NEXT_PUBLIC_NO_INDEX
 ENV NEXT_PUBLIC_STRAWBERRY_BASE_URL=$NEXT_PUBLIC_STRAWBERRY_BASE_URL
-COPY tsconfig.json next.config.ts postcss.config.mjs ./
+COPY tsconfig.json next.config.ts postcss.config.mjs cache-handler.mjs ./
 COPY public ./public
 COPY src ./src
 RUN bun run build -- --webpack
